@@ -61,7 +61,7 @@ scripts\check-harness.cmd init
 
 Review Agent 刚写完 `review-report.md`、尚未由 Execution Agent 返修时，运行 `sh scripts/check-harness.sh review`。
 
-涉及分支、worktree、commit、merge、push 或 rebase 时，必须先阅读 `docs/process/git-workflow.md`。普通模式下不自动提交；用户明确要求创建分支/worktree 执行任务时，可在隔离开发模式下阶段性提交。
+涉及分支、worktree、commit、merge、push 或 rebase 时，必须先阅读 `docs/process/git-workflow.md`。普通模式下不自动提交；用户明确要求创建分支/worktree 执行任务时，隔离开发模式下必须按计划阶段 commit。
 
 完成验证时，必须按 `docs/ai-harness/verification.md` 选择最小充分验证组合。编译或构建只是最低门槛，不能替代运行态冒烟、接口联调、权限验证或端到端验证。
 

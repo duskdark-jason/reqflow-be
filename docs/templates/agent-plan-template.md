@@ -39,4 +39,4 @@
 - Execution Agent 必须按本计划执行，不得自行扩大范围。
 - 创建任务分支前必须确认基线分支；客户定制需求不得默认从主线创建分支。
 - 如发现计划缺失、契约冲突或验证无法执行，停止实现并更新 `execution-report.md`。
-- 隔离分支内允许阶段性 commit；merge、push、rebase 和删除 worktree 仍需用户确认。
+- 隔离开发模式下必须按计划阶段 commit，并在 `execution-report.md` 记录 commit、验证命令和结果；merge、push、rebase 和删除 worktree 仍需用户确认。

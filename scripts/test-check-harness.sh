@@ -234,6 +234,12 @@ printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agen
 sh "$CHECK_SCRIPT" "$root" complete --spec docs/specs/active/demo >"$OUT_FILE" 2>&1
 
 make_root "$root"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- 状态：已完成' '- 分支：feature/demo' '- commit：无' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/demo/execution-report.md"
+printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/demo/review-report.md"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：隔离开发模式' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/demo/meta.md"
+expect_fail "$root" complete "isolated mode without commit record" "隔离开发模式"
+
+make_root "$root"
 printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/demo/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/demo/review-report.md"
 if sh "$CHECK_SCRIPT" "$root" complete --spec docs/specs/active/demo >"$OUT_FILE" 2>&1; then

@@ -285,6 +285,24 @@ check_repair_handoff() {
   done
 }
 
+check_isolated_commit_record() {
+  spec_dir=$1
+  meta_file="$spec_dir/meta.md"
+  execution_file="$spec_dir/execution-report.md"
+
+  [ -f "$meta_file" ] || return
+  [ -f "$execution_file" ] || return
+
+  if ! grep -E '执行模式[：:][[:space:]]*隔离开发模式' "$meta_file" >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! grep -E '(commit|提交)[：:][[:space:]]*[^[:space:]]+' "$execution_file" >/dev/null 2>&1 ||
+     grep -E '(commit|提交)[：:][[:space:]]*(无|未提交|未执行|N/A|n/a|none|None)[[:space:]]*$' "$execution_file" >/dev/null 2>&1; then
+    fail "隔离开发模式必须在 execution-report.md 记录阶段性 commit：$execution_file"
+  fi
+}
+
 check_one_spec() {
   spec_dir=$1
 
@@ -299,6 +317,7 @@ check_one_spec() {
 
   if [ -f "$spec_dir/execution-report.md" ]; then
     check_pattern "$spec_dir/execution-report.md" '命令|未开始|未执行' "执行报告缺少命令或状态说明"
+    check_isolated_commit_record "$spec_dir"
   fi
 
   if [ -f "$spec_dir/review-report.md" ] && [ ! -f "$spec_dir/execution-report.md" ]; then

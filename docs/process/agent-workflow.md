@@ -92,6 +92,6 @@ sh scripts/check-harness.sh           # 等同 complete
 ## Git 配合
 
 - 普通模式下不自动提交。
-- 用户明确要求创建分支或 worktree 执行任务时，执行 agent 可在隔离分支内按阶段提交。
+- 用户明确要求创建分支或 worktree 执行任务时，执行 agent 必须在隔离分支内按计划阶段提交。
 - merge、push、rebase、删除 worktree 或删除远端分支仍需用户明确确认。
 - 多仓联调时，相关仓库应使用相同需求目录名和分支名，便于追踪。
