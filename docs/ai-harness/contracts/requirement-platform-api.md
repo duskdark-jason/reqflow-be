@@ -23,6 +23,21 @@
 | 客户线 CRUD | `/requirement/variant/**` | GET/POST/PUT/DELETE | `req:variant:*` | 一个客户定制线 |
 | 模块 CRUD | `/requirement/module/**` | GET/POST/PUT/DELETE | `req:module:*` | 一个模块或功能点 |
 
+## 项目索引接口
+
+| 路径 | 方法 | 权限 | 说明 |
+|---|---|---|---|
+| `/requirement/index/batch/list` | GET | `req:index:list` | 查询仓库索引批次 |
+| `/requirement/index/module/tree` | GET | `req:index:list` | 查询索引生成的模块知识列表 |
+| `/requirement/index/impact/suggest` | GET | `req:index:list` | 按项目、仓库、客户线和模块推荐影响面 |
+| `/requirement/index/import` | POST | `req:index:import` | 备用 JSON 导入入口 |
+
+索引导入只保存 Git 远端、仓库类型、分支、commit、相对路径和结构化影响面。上传内容如果包含个人本机绝对路径，服务端必须拒绝导入。
+
+索引导入时 `branchName` 必须是当前索引分支或客户基线分支。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按 `projectId + branchName + status=0` 反查客户线并沉淀到索引模块和影响面条目。
+
+影响面推荐请求可传 `projectId`、`repoId`、`variantId`、`moduleId`、`moduleCode`。当传入 `variantId` 时，服务端必须校验客户线属于当前项目，并使用该客户线 `baselineBranch` 过滤影响面；查询只返回目标仓库或每个仓库最新 `imported` 批次的数据。返回 `pages`、`apis`、`tables`、`permissions` 和 `documents` 五类列表，每一项来自 `req_impact_item`，同类资源按 `itemKey/apiPath/permissionKey/tableName/relativePath/itemName` 去重。
+
 ## 需求接口
 
 | 路径 | 方法 | 权限 | 说明 |
@@ -89,7 +104,7 @@ review_report
 
 ## MCP 接口
 
-入口：`POST /requirement/mcp`，权限为 `req:package:save`。
+入口：`POST /requirement/mcp`，Controller 粗授权为 `req:package:save` 或 `req:index:import`，Service 必须继续按 tool name 做细粒度权限校验。
 
 支持方法：
 
@@ -110,12 +125,14 @@ save_development_plan
 upload_execution_report
 upload_review_report
 register_harness_init_result
+publish_repository_index
 ```
 
 MCP 安全边界：
 
 - 只能读取平台资源或写入平台表。
 - 不允许执行 Git、shell、clone、branch、文件系统写入或大模型调用。
-- `register_harness_init_result` 只更新 `req_repository` 的 harness 字段。
-- 报告上传和计划保存只追加 `req_package_version`。
+- `register_harness_init_result` 只更新 `req_repository` 的 harness 字段，必须校验 `req:package:save`。
+- `publish_repository_index` 必须校验 `req:index:import`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
+- 报告上传、计划保存和执行资料类工具必须校验 `req:package:save`，并且只追加 `req_package_version`。
 - `artifactType` 必须属于本文列出的支持类型。

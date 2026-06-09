@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.requirement.mapper.ReqImpactItemMapper">
+    <resultMap id="ReqImpactItemResult" type="ReqImpactItem">
+        <id property="impactId" column="impact_id"/>
+        <result property="batchId" column="batch_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="repoId" column="repo_id"/>
+        <result property="variantId" column="variant_id"/>
+        <result property="branchName" column="branch_name"/>
+        <result property="moduleCode" column="module_code"/>
+        <result property="moduleId" column="module_id"/>
+        <result property="itemType" column="item_type"/>
+        <result property="itemName" column="item_name"/>
+        <result property="itemKey" column="item_key"/>
+        <result property="relativePath" column="relative_path"/>
+        <result property="httpMethod" column="http_method"/>
+        <result property="apiPath" column="api_path"/>
+        <result property="permissionKey" column="permission_key"/>
+        <result property="tableName" column="table_name"/>
+        <result property="summary" column="summary"/>
+        <result property="tags" column="tags"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectReqImpactItemVo">
+        select impact_id, batch_id, project_id, repo_id, variant_id, branch_name, module_code, module_id, item_type, item_name, item_key,
+               relative_path, http_method, api_path, permission_key, table_name, summary, tags, status, create_by,
+               create_time, update_by, update_time, remark
+        from req_impact_item
+    </sql>
+
+    <select id="selectReqImpactItemList" parameterType="ReqImpactItem" resultMap="ReqImpactItemResult">
+        <include refid="selectReqImpactItemVo"/>
+        <where>
+            <if test="projectId != null">and project_id = #{projectId}</if>
+            <if test="repoId != null">and repo_id = #{repoId}</if>
+            <if test="variantId != null">and variant_id = #{variantId}</if>
+            <if test="branchName != null and branchName != ''">and branch_name = #{branchName}</if>
+            <if test="moduleCode != null and moduleCode != ''">and module_code = #{moduleCode}</if>
+            <if test="moduleId != null">and module_id = #{moduleId}</if>
+            <if test="itemType != null and itemType != ''">and item_type = #{itemType}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by impact_id desc
+    </select>
+
+    <select id="selectLatestImpactItems" parameterType="com.ruoyi.requirement.dto.ReqImpactSuggestQuery" resultMap="ReqImpactItemResult">
+        <include refid="selectReqImpactItemVo"/>
+        <where>
+            <if test="projectId != null">and project_id = #{projectId}</if>
+            <if test="repoId != null">and repo_id = #{repoId}</if>
+            <if test="moduleId != null">and module_id = #{moduleId}</if>
+            <if test="moduleCode != null and moduleCode != ''">and module_code = #{moduleCode}</if>
+            <if test="variantId != null">and variant_id = #{variantId}</if>
+            <if test="branchName != null and branchName != ''">and branch_name = #{branchName}</if>
+            and status = '0'
+            and batch_id in (
+                select latest_batch_id from (
+                    select max(batch_id) as latest_batch_id
+                    from req_repository_index_batch
+                    where project_id = #{projectId}
+                    <if test="repoId != null">and repo_id = #{repoId}</if>
+                    <if test="branchName != null and branchName != ''">and branch_name = #{branchName}</if>
+                    and status = 'imported'
+                    group by repo_id
+                ) latest_batches
+            )
+        </where>
+        order by impact_id desc
+    </select>
+
+    <insert id="insertReqImpactItem" parameterType="ReqImpactItem" useGeneratedKeys="true" keyProperty="impactId">
+        insert into req_impact_item
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="batchId != null">batch_id,</if>
+            <if test="projectId != null">project_id,</if>
+            <if test="repoId != null">repo_id,</if>
+            <if test="variantId != null">variant_id,</if>
+            <if test="branchName != null and branchName != ''">branch_name,</if>
+            <if test="moduleCode != null and moduleCode != ''">module_code,</if>
+            <if test="moduleId != null">module_id,</if>
+            <if test="itemType != null and itemType != ''">item_type,</if>
+            <if test="itemName != null and itemName != ''">item_name,</if>
+            <if test="itemKey != null and itemKey != ''">item_key,</if>
+            <if test="relativePath != null and relativePath != ''">relative_path,</if>
+            <if test="httpMethod != null and httpMethod != ''">http_method,</if>
+            <if test="apiPath != null and apiPath != ''">api_path,</if>
+            <if test="permissionKey != null and permissionKey != ''">permission_key,</if>
+            <if test="tableName != null and tableName != ''">table_name,</if>
+            <if test="summary != null and summary != ''">summary,</if>
+            <if test="tags != null and tags != ''">tags,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="batchId != null">#{batchId},</if>
+            <if test="projectId != null">#{projectId},</if>
+            <if test="repoId != null">#{repoId},</if>
+            <if test="variantId != null">#{variantId},</if>
+            <if test="branchName != null and branchName != ''">#{branchName},</if>
+            <if test="moduleCode != null and moduleCode != ''">#{moduleCode},</if>
+            <if test="moduleId != null">#{moduleId},</if>
+            <if test="itemType != null and itemType != ''">#{itemType},</if>
+            <if test="itemName != null and itemName != ''">#{itemName},</if>
+            <if test="itemKey != null and itemKey != ''">#{itemKey},</if>
+            <if test="relativePath != null and relativePath != ''">#{relativePath},</if>
+            <if test="httpMethod != null and httpMethod != ''">#{httpMethod},</if>
+            <if test="apiPath != null and apiPath != ''">#{apiPath},</if>
+            <if test="permissionKey != null and permissionKey != ''">#{permissionKey},</if>
+            <if test="tableName != null and tableName != ''">#{tableName},</if>
+            <if test="summary != null and summary != ''">#{summary},</if>
+            <if test="tags != null and tags != ''">#{tags},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+</mapper>

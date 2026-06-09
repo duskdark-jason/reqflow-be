@@ -81,6 +81,13 @@ SELECT '模块删除', @req_module_id, 4, '#', '', 1, 0, 'F', '0', '0', 'req:mod
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_module_id AND perms = 'req:module:remove');
 
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT '索引查询', @req_project_id, 5, '#', '', 1, 0, 'F', '0', '0', 'req:index:list', '#', 'admin', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_project_id AND perms = 'req:index:list');
+INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT '索引导入', @req_project_id, 6, '#', '', 1, 0, 'F', '0', '0', 'req:index:import', '#', 'admin', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_project_id AND perms = 'req:index:import');
+
+INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
 SELECT '需求列表', @req_parent_id, 5, 'demand', 'requirement/demand/index', 1, 0, 'C', '0', '0', 'req:demand:list', 'form', 'admin', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'demand');
 

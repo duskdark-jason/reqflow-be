@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper">
+    <resultMap id="ReqRepositoryIndexBatchResult" type="ReqRepositoryIndexBatch">
+        <id property="batchId" column="batch_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="repoId" column="repo_id"/>
+        <result property="repoType" column="repo_type"/>
+        <result property="remoteUrl" column="remote_url"/>
+        <result property="branchName" column="branch_name"/>
+        <result property="commitHash" column="commit_hash"/>
+        <result property="indexVersion" column="index_version"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="moduleCount" column="module_count"/>
+        <result property="pageCount" column="page_count"/>
+        <result property="apiCount" column="api_count"/>
+        <result property="tableCount" column="table_count"/>
+        <result property="permissionCount" column="permission_count"/>
+        <result property="documentCount" column="document_count"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectReqRepositoryIndexBatchVo">
+        select batch_id, project_id, repo_id, repo_type, remote_url, branch_name, commit_hash, index_version,
+               source_type, module_count, page_count, api_count, table_count, permission_count, document_count,
+               status, create_by, create_time, update_by, update_time, remark
+        from req_repository_index_batch
+    </sql>
+
+    <select id="selectReqRepositoryIndexBatchList" parameterType="ReqRepositoryIndexBatch" resultMap="ReqRepositoryIndexBatchResult">
+        <include refid="selectReqRepositoryIndexBatchVo"/>
+        <where>
+            <if test="projectId != null">and project_id = #{projectId}</if>
+            <if test="repoId != null">and repo_id = #{repoId}</if>
+            <if test="repoType != null and repoType != ''">and repo_type = #{repoType}</if>
+            <if test="branchName != null and branchName != ''">and branch_name = #{branchName}</if>
+            <if test="commitHash != null and commitHash != ''">and commit_hash = #{commitHash}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by batch_id desc
+    </select>
+
+    <insert id="insertReqRepositoryIndexBatch" parameterType="ReqRepositoryIndexBatch" useGeneratedKeys="true" keyProperty="batchId">
+        insert into req_repository_index_batch
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="projectId != null">project_id,</if>
+            <if test="repoId != null">repo_id,</if>
+            <if test="repoType != null and repoType != ''">repo_type,</if>
+            <if test="remoteUrl != null and remoteUrl != ''">remote_url,</if>
+            <if test="branchName != null and branchName != ''">branch_name,</if>
+            <if test="commitHash != null and commitHash != ''">commit_hash,</if>
+            <if test="indexVersion != null and indexVersion != ''">index_version,</if>
+            <if test="sourceType != null and sourceType != ''">source_type,</if>
+            <if test="moduleCount != null">module_count,</if>
+            <if test="pageCount != null">page_count,</if>
+            <if test="apiCount != null">api_count,</if>
+            <if test="tableCount != null">table_count,</if>
+            <if test="permissionCount != null">permission_count,</if>
+            <if test="documentCount != null">document_count,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="projectId != null">#{projectId},</if>
+            <if test="repoId != null">#{repoId},</if>
+            <if test="repoType != null and repoType != ''">#{repoType},</if>
+            <if test="remoteUrl != null and remoteUrl != ''">#{remoteUrl},</if>
+            <if test="branchName != null and branchName != ''">#{branchName},</if>
+            <if test="commitHash != null and commitHash != ''">#{commitHash},</if>
+            <if test="indexVersion != null and indexVersion != ''">#{indexVersion},</if>
+            <if test="sourceType != null and sourceType != ''">#{sourceType},</if>
+            <if test="moduleCount != null">#{moduleCount},</if>
+            <if test="pageCount != null">#{pageCount},</if>
+            <if test="apiCount != null">#{apiCount},</if>
+            <if test="tableCount != null">#{tableCount},</if>
+            <if test="permissionCount != null">#{permissionCount},</if>
+            <if test="documentCount != null">#{documentCount},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+</mapper>

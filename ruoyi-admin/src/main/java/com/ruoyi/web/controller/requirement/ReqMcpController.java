@@ -17,7 +17,7 @@ public class ReqMcpController
     @Autowired
     private McpService mcpService;
 
-    @PreAuthorize("@ss.hasPermi('req:package:save')")
+    @PreAuthorize("@ss.hasAnyPermi('req:package:save,req:index:import')")
     @PostMapping
     public McpResponse handle(@RequestBody McpRequest request)
     {
