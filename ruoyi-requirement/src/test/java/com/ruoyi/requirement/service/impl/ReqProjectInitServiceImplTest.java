@@ -116,6 +116,7 @@ class ReqProjectInitServiceImplTest
         assertEquals("def456", response.getIndexSummary().getLatestCommit());
         assertEquals(2, response.getIndexSummary().getIndexedRepositoryCount());
         assertEquals(0, response.getIndexSummary().getUnindexedRepositoryCount());
+        assertEquals("主线", response.getVariants().get(0).getBranchLabel());
         assertTrue(response.getInitChecklist().getProjectReady());
         assertTrue(response.getInitChecklist().getRepositoryReady());
         assertTrue(response.getInitChecklist().getVariantReady());
@@ -137,6 +138,68 @@ class ReqProjectInitServiceImplTest
         assertThrows(ServiceException.class, () -> service.insertProjectInit(request, "admin"));
 
         verifyNoInteractions(projectMapper, repositoryMapper, variantMapper);
+    }
+
+    @Test
+    void acceptsBranchLabelAndRealBranchNameWithoutManualVariantCode()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                mock(ReqModuleMapper.class), mock(ReqIndexModuleMapper.class), mock(ReqRepositoryIndexBatchMapper.class));
+
+        doAnswer(invocation -> {
+            ReqProject project = invocation.getArgument(0);
+            project.setProjectId(10L);
+            return 1;
+        }).when(projectMapper).insertReqProject(any(ReqProject.class));
+
+        ReqProjectInitRequest request = baseRequest();
+        ReqProjectInitVariantItem branch = request.getVariants().get(0);
+        branch.setBranchLabel("黑龙江医保");
+        branch.setVariantName(null);
+        branch.setVariantCode(null);
+        branch.setCustomerName(null);
+        branch.setBaselineBranch("release/hlj-main");
+
+        service.insertProjectInit(request, "admin");
+
+        ArgumentCaptor<ReqVariant> variantCaptor = forClass(ReqVariant.class);
+        verify(variantMapper).insertReqVariant(variantCaptor.capture());
+        ReqVariant savedBranch = variantCaptor.getValue();
+        assertEquals("黑龙江医保", savedBranch.getVariantName());
+        assertEquals("release/hlj-main", savedBranch.getBaselineBranch());
+        assertEquals("RELEASE_HLJ_MAIN", savedBranch.getVariantCode());
+    }
+
+    @Test
+    void generatesDistinctVariantCodeWhenBranchNameHasNoAsciiToken()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                mock(ReqModuleMapper.class), mock(ReqIndexModuleMapper.class), mock(ReqRepositoryIndexBatchMapper.class));
+
+        doAnswer(invocation -> {
+            ReqProject project = invocation.getArgument(0);
+            project.setProjectId(10L);
+            return 1;
+        }).when(projectMapper).insertReqProject(any(ReqProject.class));
+
+        ReqProjectInitRequest request = baseRequest();
+        ReqProjectInitVariantItem branch = request.getVariants().get(0);
+        branch.setBranchLabel("黑龙江医保");
+        branch.setVariantName(null);
+        branch.setVariantCode(null);
+        branch.setBaselineBranch("黑龙江主线");
+
+        service.insertProjectInit(request, "admin");
+
+        ArgumentCaptor<ReqVariant> variantCaptor = forClass(ReqVariant.class);
+        verify(variantMapper).insertReqVariant(variantCaptor.capture());
+        assertTrue(variantCaptor.getValue().getVariantCode().startsWith("BRANCH_"));
     }
 
     @Test

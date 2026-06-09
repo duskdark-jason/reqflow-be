@@ -4,6 +4,7 @@ public class ReqProjectInitVariantItem
 {
     private Long variantId;
     private Long projectId;
+    private String branchLabel;
     private String variantName;
     private String variantCode;
     private String customerName;
@@ -18,6 +19,8 @@ public class ReqProjectInitVariantItem
     public void setVariantId(Long variantId) { this.variantId = variantId; }
     public Long getProjectId() { return projectId; }
     public void setProjectId(Long projectId) { this.projectId = projectId; }
+    public String getBranchLabel() { return branchLabel; }
+    public void setBranchLabel(String branchLabel) { this.branchLabel = branchLabel; }
     public String getVariantName() { return variantName; }
     public void setVariantName(String variantName) { this.variantName = variantName; }
     public String getVariantCode() { return variantCode; }

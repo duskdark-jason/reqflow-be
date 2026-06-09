@@ -320,9 +320,9 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         ReqVariant variant = new ReqVariant();
         variant.setVariantId(item.getVariantId());
         variant.setProjectId(projectId);
-        variant.setVariantName(item.getVariantName());
-        variant.setVariantCode(item.getVariantCode());
-        variant.setCustomerName(item.getCustomerName());
+        variant.setVariantName(firstNotEmpty(item.getBranchLabel(), item.getVariantName()));
+        variant.setVariantCode(firstNotEmpty(item.getVariantCode(), buildVariantCode(item.getBaselineBranch())));
+        variant.setCustomerName(firstNotEmpty(item.getCustomerName(), item.getBranchLabel(), item.getVariantName()));
         variant.setScopeType(firstNotEmpty(item.getScopeType(), "MAINLINE"));
         variant.setBaselineBranch(item.getBaselineBranch());
         variant.setBranchPolicy(firstNotEmpty(item.getBranchPolicy(), "shared_baseline"));
@@ -355,6 +355,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         ReqProjectInitVariantItem item = new ReqProjectInitVariantItem();
         item.setVariantId(variant.getVariantId());
         item.setProjectId(variant.getProjectId());
+        item.setBranchLabel(variant.getVariantName());
         item.setVariantName(variant.getVariantName());
         item.setVariantCode(variant.getVariantCode());
         item.setCustomerName(variant.getCustomerName());
@@ -422,10 +423,10 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         }
         for (ReqProjectInitVariantItem variant : safeList(variants))
         {
-            if (StringUtils.isEmpty(variant.getVariantName()) || StringUtils.isEmpty(variant.getVariantCode())
-                    || StringUtils.isEmpty(variant.getBaselineBranch()))
+            String branchLabel = firstNotEmpty(variant.getBranchLabel(), variant.getVariantName());
+            if (StringUtils.isEmpty(branchLabel) || StringUtils.isEmpty(variant.getBaselineBranch()))
             {
-                throw new ServiceException("客户线名称、编码和统一基线分支不能为空");
+                throw new ServiceException("分支中文标签和真实分支名不能为空");
             }
             validateText(variant.getBaselineBranch());
             validateText(variant.getDescription());
@@ -495,6 +496,16 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
             if (StringUtils.isNotEmpty(value)) return value;
         }
         return "";
+    }
+
+    private String buildVariantCode(String branchName)
+    {
+        if (StringUtils.isEmpty(branchName))
+        {
+            return "";
+        }
+        String code = branchName.trim().replaceAll("[^A-Za-z0-9]+", "_").replaceAll("^_+|_+$", "").toUpperCase();
+        return StringUtils.isEmpty(code) ? "BRANCH_" + Integer.toHexString(branchName.hashCode()).toUpperCase() : code;
     }
 
     private <T> List<T> safeList(List<T> source)

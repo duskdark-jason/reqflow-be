@@ -23,6 +23,27 @@
 | 客户线 CRUD | `/requirement/variant/**` | GET/POST/PUT/DELETE | `req:variant:*` | 一个客户定制线 |
 | 模块 CRUD | `/requirement/module/**` | GET/POST/PUT/DELETE | `req:module:*` | 一个模块或功能点 |
 
+## 项目初始化接口
+
+| 路径 | 方法 | 权限 | 说明 |
+|---|---|---|---|
+| `/requirement/project/init/{projectId}` | GET | `req:project:query` | 查询一个项目的初始化上下文 |
+| `/requirement/project/init` | POST | `req:project:add`、`req:repo:add`、`req:variant:add` | 新增项目并同步保存前后端仓库和分支配置 |
+| `/requirement/project/init` | PUT | `req:project:edit`、`req:repo:edit`、`req:variant:edit` | 更新项目并同步保存仓库和分支配置 |
+
+初始化上下文响应 `data` 包含：
+
+- `project`：`req_project` 项目基础信息。
+- `repositories`：项目下团队共享仓库列表，一行代表一个 Git 远端仓库，接口返回时不回传个人本机路径。
+- `variants`：项目下分支配置列表，一行代表一个可供需求人员选择的项目分支。`branchLabel` 是需求人员可见中文标签，`baselineBranch` 是真实 Git 分支名；`variantName`、`variantCode`、`customerName`、`scopeType`、`branchPolicy` 继续作为 `req_variant` 兼容字段返回。
+- `moduleSummary`：`totalModules`、`indexedModules`、`manualModules`，分别表示模块总数、索引模块数和人工维护模块数。
+- `indexSummary`：`latestIndexedAt`、`latestCommit`、`indexedRepositoryCount`、`unindexedRepositoryCount`。
+- `initChecklist`：`projectReady`、`repositoryReady`、`variantReady`、`moduleReady`、`indexReady`。
+
+初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条 `FRONTEND` 和一条 `BACKEND`，且仓库名称、仓库类型、Git 远端和默认分支不能为空；`variants` 至少包含一条分支配置，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码。
+
+初始化保存必须在同一事务内完成。新增时先写 `req_project`，再写 `req_repository` 和 `req_variant`；更新时按传入 ID 更新已有仓库/分支配置、插入新增行，并删除本次维护弹窗中移除的仓库/分支配置。接口拒绝仓库地址、默认分支、真实分支名、项目说明或备注中的个人本机绝对路径。
+
 ## 项目索引接口
 
 | 路径 | 方法 | 权限 | 说明 |
