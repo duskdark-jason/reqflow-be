@@ -22,8 +22,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.sql.SQLException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.requirement.domain.ReqIndexModule;
@@ -341,6 +343,39 @@ class ReqProjectInitServiceImplTest
         assertFalse(response.getInitChecklist().getVariantReady());
         assertFalse(response.getInitChecklist().getModuleReady());
         assertFalse(response.getInitChecklist().getIndexReady());
+    }
+
+    @Test
+    void keepsProjectInitUsableWhenIndexModuleTableIsMissing()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqModuleMapper moduleMapper = mock(ReqModuleMapper.class);
+        ReqIndexModuleMapper indexModuleMapper = mock(ReqIndexModuleMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                moduleMapper, indexModuleMapper, batchMapper);
+
+        when(projectMapper.selectReqProjectByProjectId(10L)).thenReturn(project(10L));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L, "BACKEND")));
+        when(variantMapper.selectReqVariantList(any())).thenReturn(Collections.singletonList(variant(31L)));
+        when(moduleMapper.selectReqModuleList(any())).thenReturn(Collections.emptyList());
+        when(indexModuleMapper.selectReqIndexModuleList(any())).thenThrow(new BadSqlGrammarException(
+                "selectReqIndexModuleList",
+                "select * from req_index_module",
+                new SQLException("Table 'ry-vue.req_index_module' doesn't exist", "42S02")));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.emptyList());
+
+        ReqProjectInitResponse response = service.selectProjectInit(10L);
+
+        assertEquals("需求平台", response.getProject().getProjectName());
+        assertTrue(response.getInitChecklist().getProjectReady());
+        assertTrue(response.getInitChecklist().getRepositoryReady());
+        assertTrue(response.getInitChecklist().getVariantReady());
+        assertFalse(response.getInitChecklist().getModuleReady());
+        assertFalse(response.getInitChecklist().getIndexReady());
+        assertEquals(0, response.getModuleSummary().getIndexedModules());
     }
 
     private ReqProjectInitServiceImpl newService(ReqProjectMapper projectMapper, ReqRepositoryMapper repositoryMapper,

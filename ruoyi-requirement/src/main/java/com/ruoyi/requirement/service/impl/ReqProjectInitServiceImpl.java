@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.exception.ServiceException;
@@ -286,7 +287,18 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         ReqIndexModule query = new ReqIndexModule();
         query.setProjectId(projectId);
         query.setStatus("0");
-        return safeList(indexModuleMapper.selectReqIndexModuleList(query));
+        try
+        {
+            return safeList(indexModuleMapper.selectReqIndexModuleList(query));
+        }
+        catch (DataAccessException e)
+        {
+            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module"))
+            {
+                return Collections.emptyList();
+            }
+            throw e;
+        }
     }
 
     private List<ReqRepositoryIndexBatch> loadBatches(Long projectId)
@@ -294,7 +306,18 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         ReqRepositoryIndexBatch query = new ReqRepositoryIndexBatch();
         query.setProjectId(projectId);
         query.setStatus("imported");
-        return safeList(batchMapper.selectReqRepositoryIndexBatchList(query));
+        try
+        {
+            return safeList(batchMapper.selectReqRepositoryIndexBatchList(query));
+        }
+        catch (DataAccessException e)
+        {
+            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_repository_index_batch"))
+            {
+                return Collections.emptyList();
+            }
+            throw e;
+        }
     }
 
     private ReqRepository toRepository(Long projectId, ReqProjectInitRepositoryItem item)

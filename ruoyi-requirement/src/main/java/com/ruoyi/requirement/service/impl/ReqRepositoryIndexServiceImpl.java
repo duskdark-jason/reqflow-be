@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.exception.ServiceException;
@@ -88,13 +89,35 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     @Override
     public List<ReqRepositoryIndexBatch> selectBatchList(ReqRepositoryIndexBatch batch)
     {
-        return batchMapper.selectReqRepositoryIndexBatchList(batch);
+        try
+        {
+            return batchMapper.selectReqRepositoryIndexBatchList(batch);
+        }
+        catch (DataAccessException e)
+        {
+            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_repository_index_batch"))
+            {
+                return Collections.emptyList();
+            }
+            throw e;
+        }
     }
 
     @Override
     public List<ReqIndexModule> selectModuleList(ReqIndexModule module)
     {
-        return moduleMapper.selectReqIndexModuleList(module);
+        try
+        {
+            return moduleMapper.selectReqIndexModuleList(module);
+        }
+        catch (DataAccessException e)
+        {
+            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module"))
+            {
+                return Collections.emptyList();
+            }
+            throw e;
+        }
     }
 
     @Override

@@ -15,8 +15,10 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.sql.SQLException;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.requirement.domain.ReqImpactItem;
@@ -191,6 +193,40 @@ class ReqRepositoryIndexServiceImplTest
         verify(impactMapper).selectLatestImpactItems(captor.capture());
         assertEquals("customer/hlj", captor.getValue().getBranchName());
         assertEquals(8L, captor.getValue().getVariantId());
+    }
+
+    @Test
+    void returnsEmptyBatchListWhenIndexBatchTableIsMissing()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, mock(ReqIndexModuleMapper.class),
+                mock(ReqImpactItemMapper.class), mock(ReqRepositoryMapper.class), mock(ReqVariantMapper.class),
+                mock(ReqActivityLogService.class));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenThrow(new BadSqlGrammarException(
+                "selectReqRepositoryIndexBatchList",
+                "select * from req_repository_index_batch",
+                new SQLException("Table 'ry-vue.req_repository_index_batch' doesn't exist", "42S02")));
+
+        List<ReqRepositoryIndexBatch> result = service.selectBatchList(new ReqRepositoryIndexBatch());
+
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    void returnsEmptyModuleListWhenIndexModuleTableIsMissing()
+    {
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqRepositoryIndexServiceImpl service = newService(mock(ReqRepositoryIndexBatchMapper.class), moduleMapper,
+                mock(ReqImpactItemMapper.class), mock(ReqRepositoryMapper.class), mock(ReqVariantMapper.class),
+                mock(ReqActivityLogService.class));
+        when(moduleMapper.selectReqIndexModuleList(any())).thenThrow(new BadSqlGrammarException(
+                "selectReqIndexModuleList",
+                "select * from req_index_module",
+                new SQLException("Table 'ry-vue.req_index_module' doesn't exist", "42S02")));
+
+        List<?> result = service.selectModuleList(new com.ruoyi.requirement.domain.ReqIndexModule());
+
+        assertEquals(0, result.size());
     }
 
     private ReqRepositoryIndexServiceImpl newService(ReqRepositoryIndexBatchMapper batchMapper, ReqIndexModuleMapper moduleMapper,

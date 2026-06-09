@@ -42,6 +42,8 @@
 - `indexSummary`：`latestIndexedAt`、`latestCommit`、`indexedRepositoryCount`、`unindexedRepositoryCount`。
 - `initChecklist`：`projectReady`、`repositoryReady`、`variantReady`、`moduleReady`、`indexReady`。
 
+在本地库处于部分迁移状态、尚未创建可选索引表 `req_index_module` 或 `req_repository_index_batch` 时，初始化上下文仍必须稳定返回项目、仓库和项目分支数据；模块摘要和索引摘要按空集合计算，`moduleReady` 与 `indexReady` 为 `false`。除这两个可选索引表缺失外，其他数据库异常不得被吞掉。
+
 初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成。
 
 初始化保存必须在同一事务内完成。新增时先写 `req_project`，再写 `req_repository` 和 `req_variant`；更新时按传入 ID 更新已有仓库/分支配置、插入新增行，并删除本次维护弹窗中移除的仓库/分支配置。接口拒绝仓库地址、默认分支、真实分支名、项目说明或备注中的个人本机绝对路径。
@@ -72,6 +74,8 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | `/requirement/index/import` | POST | `req:index:import` | 备用 JSON 导入入口 |
 
 索引导入只保存 Git 远端、仓库类型、分支、commit、相对路径和结构化影响面。上传内容如果包含个人本机绝对路径，服务端必须拒绝导入。
+
+索引批次列表和模块知识只读接口用于项目接入中心展示。部分迁移库缺少 `req_repository_index_batch` 或 `req_index_module` 时，这两个只读接口返回空列表和成功响应，避免项目接入中心整页不可用；索引导入、影响面推荐和其他表异常仍按真实错误处理。
 
 索引导入优先支持 `mcpKey + remoteUrl`：服务端按 `mcpKey` 解析项目分支，并在同项目下按 `remoteUrl` 定位代码仓库；同时兼容旧的 `projectId + repoId + branchName`。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。
 
