@@ -6,7 +6,7 @@
 
 编译或构建只证明静态阶段通过，不证明应用能启动、接口能调用、页面能打开、权限能生效或用户流程可用。每次变更都要按影响范围选择“最小充分验证组合”。
 
-涉及 L3/L4 时，执行 agent 必须先阅读 `docs/runbooks/local-run.md` 并尝试启动项目。未执行启动命令、未记录连通性或浏览器检查命令和错误摘要时，不允许写“DB 不可达”“服务不可用”“环境不可达”等绝对结论。
+涉及 L3，或主动选择 L4 时，执行 agent 必须先阅读 `docs/runbooks/local-run.md` 并尝试启动项目。未执行启动命令、未记录连通性或浏览器检查命令和错误摘要时，不允许写“DB 不可达”“服务不可用”“环境不可达”等绝对结论。
 
 环境相关结论只能描述为“当前执行 agent 所在环境未验证通过”，不能推断用户本机、同事机器、测试环境或生产环境不可用。
 
@@ -18,9 +18,9 @@
 | L1 编译/构建 | 代码能通过静态编译或打包 | 大多数代码修改 | `mvn -pl ruoyi-admin -am -DskipTests package` |
 | L2 单元/契约 | 核心逻辑、接口契约、组件契约可验证 | Service、utils、DTO/VO、组件状态 | `mvn -pl ruoyi-requirement -am test` |
 | L3 运行态冒烟 | 应用能启动，接口/页面能真实运行 | Controller、页面、权限、配置 | `SPRING_PROFILES_ACTIVE=druid,test mvn -pl ruoyi-admin spring-boot:run` |
-| L4 端到端/跨端 | 真实用户流程可用 | 保存、导出、异步任务、跨服务联调 | `curl -s http://localhost:8080/system/config/configKey/sys.index.skinName` |
+| L4 端到端/跨端 | 高价值用户流程可回归验证 | 可选：保存、导出、异步任务、跨服务联调 | `curl -s http://localhost:8080/system/config/configKey/sys.index.skinName` |
 
-只改纯文档时通常跑 L0。改代码至少跑 L1。改业务逻辑或契约应补 L2。改接口、配置、权限或用户可见页面应补 L3。影响跨端、导出、保存、异步任务或核心流程时应补 L4。
+只改纯文档时通常跑 L0。改代码至少跑 L1。改业务逻辑或契约应补 L2。改接口、配置、权限或用户可见页面应补 L3。L4 是按风险选择的增强验证层，不作为完成态默认强制项；影响跨端、导出、保存、异步任务或核心流程时，应在计划中判断是否执行 L4，不执行时写明不适用原因或后续补验环境。
 
 Harness 初始化或纯文档接入只跑 L0/init 检查，不启动项目、不运行项目构建、测试或 L3/L4 冒烟。
 
@@ -79,7 +79,7 @@ playwright-cli requests
 
 ## L4 端到端或跨端验证
 
-涉及保存、删除、导出、历史记录、异步任务、跨端联调或核心用户流程时，应完成真实流程冒烟。
+涉及保存、删除、导出、历史记录、异步任务、跨端联调或核心用户流程时，应评估是否需要真实流程冒烟。L4 不作为完成态默认强制项；如果暂不执行，应在 `plan.md` 或 `execution-report.md` 写明不适用原因、风险判断或后续补验环境。
 
 可回归的 Web 流程优先沉淀为 Playwright Test：
 
@@ -89,7 +89,7 @@ npx playwright test --grep @smoke --reporter=line
 
 默认只读取摘要输出。trace、screenshot、video 只在失败时保存并在 `execution-report.md` 记录路径，不要把完整 HTML report 或 trace 内容复制进对话。
 
-如果当前执行 agent 环境缺失导致无法执行 L3/L4，完成说明中必须写明已执行命令、错误摘要、该结论只代表当前执行 agent 环境，以及后续补验环境。
+如果当前执行 agent 环境缺失导致无法执行 L3，或已选择 L4 但无法执行，完成说明中必须写明已执行命令、错误摘要、该结论只代表当前执行 agent 环境，以及后续补验环境。
 
 ## 验收点
 

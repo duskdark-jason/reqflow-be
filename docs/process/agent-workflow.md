@@ -7,7 +7,7 @@
 新需求默认使用目录式 spec：
 
 ```text
-docs/specs/active/YYYY-MM-DD-需求简称/
+docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
   meta.md
   requirement.md
   plan.md
@@ -32,7 +32,7 @@ docs/specs/active/YYYY-MM-DD-需求简称/
 - 不自行扩展需求范围，不新增计划外接口、字段、依赖或架构。
 - 如果发现计划缺失、冲突或无法执行，停止并在 `execution-report.md` 写明阻断点。
 - 完成后写 `execution-report.md`，包含修改文件、验证命令、结果、未验证风险和与计划的偏差。
-- L3/L4 失败或跳过时，必须记录启动命令、执行目录、profile/env 或 mode、检查命令、错误摘要和补验环境；不得把当前 agent 环境问题写成用户环境问题。
+- L3 失败或跳过，或已选择 L4 但失败/跳过时，必须记录启动命令、执行目录、profile/env 或 mode、检查命令、错误摘要和补验环境；不得把当前 agent 环境问题写成用户环境问题。
 - Review Agent 产生 `RF-001` 形式的返修项后，执行 agent 必须按相同修复 ID 在 `execution-report.md` 的 `Review 返修记录` 中回填处理结果、修改文件和验证命令。
 
 ### 审查阶段（Review Agent）
@@ -52,7 +52,7 @@ docs/specs/active/YYYY-MM-DD-需求简称/
 | 级别 | 使用场景 |
 |---|---|
 | 阻断 | 需求不可用、数据错误、安全/权限风险、迁移风险、缺少关键验收证据、无证据环境结论 |
-| 重要 | 契约不一致、关键测试缺口、L3/L4 未验证且影响真实流程 |
+| 重要 | 契约不一致、关键测试缺口、计划承诺的运行态或增强验证未完成且影响真实流程 |
 | 一般 | 命名、文档清晰度、低风险维护建议 |
 
 ## 状态流转
@@ -79,7 +79,7 @@ draft requirement -> approved plan -> executing -> ready for review -> reviewed 
 sh scripts/check-harness.sh init      # Harness 初始化或纯文档接入后使用，不检查 active spec，不启动项目
 sh scripts/check-harness.sh review    # Review Agent 输出 review-report.md 后使用，允许阻断结论和未回填 RF
 sh scripts/check-harness.sh complete  # 默认完成态门禁，要求 RF 已回填且阻断已复审关闭
-sh scripts/check-harness.sh complete --spec docs/specs/active/YYYY-MM-DD-需求简称  # 只检查指定需求，要求 meta.md 状态为 complete
+sh scripts/check-harness.sh complete --spec docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题  # 只检查指定需求，要求 meta.md 状态为 complete
 sh scripts/check-harness.sh           # 等同 complete
 ```
 
@@ -94,4 +94,4 @@ sh scripts/check-harness.sh           # 等同 complete
 - 普通模式下不自动提交。
 - 用户明确要求创建分支或 worktree 执行任务时，执行 agent 必须在隔离分支内按计划阶段提交。
 - merge、push、rebase、删除 worktree 或删除远端分支仍需用户明确确认。
-- 多仓联调时，相关仓库应使用相同需求目录名和分支名，便于追踪。
+- 多仓联调时，相关仓库应使用相同中文 spec 目录名，并使用相同 ASCII 任务分支名，便于追踪。

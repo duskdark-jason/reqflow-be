@@ -18,7 +18,7 @@
 新需求优先使用目录式文件交接，详见 `agent-workflow.md`：
 
 ```text
-docs/specs/active/YYYY-MM-DD-需求名称/
+docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
   meta.md
   requirement.md
   plan.md
@@ -79,7 +79,7 @@ docs/specs/active/YYYY-MM-DD-需求名称/
 
 ## 7. 验证
 
-按 `ai-harness/verification.md` 选择最小充分验证组合。编译或构建只是 L1，不能替代运行态冒烟、接口联调、权限验证或端到端验证。
+按 `ai-harness/verification.md` 选择最小充分验证组合。编译或构建只是 L1，不能替代必要的运行态冒烟、接口联调或权限验证；L4 端到端测试按影响和风险选择，不作为完成态默认强制项。
 
 Harness 初始化或纯文档接入时运行：
 

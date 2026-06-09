@@ -16,7 +16,7 @@
 - 每个子仓库都要更新自己的 `meta.md` 和 `execution-report.md`。
 - 后端执行报告覆盖 `AC-BE-*`；前端执行报告覆盖 `AC-FE-*`。
 - 如果某一仓发现计划缺失、契约冲突或无法验证，停止该仓执行并写入对应 `execution-report.md`，不要让另一个仓自行猜测。
-- L3/L4 失败或跳过时，只能描述当前执行 agent 环境，并按各仓 `docs/runbooks/local-run.md` 留证。
+- L3 失败或跳过，或已选择 L4 但失败/跳过时，只能描述当前执行 agent 环境，并按各仓 `docs/runbooks/local-run.md` 留证。
 
 完成输出：
 

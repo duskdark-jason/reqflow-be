@@ -4,7 +4,7 @@
 
 ## 新需求主流程
 
-在 `docs/specs/active/YYYY-MM-DD-需求简称/` 下复制并填写：
+在 `docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/` 下复制并填写：
 
 | 模板 | 目标文件 | 用途 |
 |---|---|---|
@@ -19,7 +19,7 @@
 | 模板 | 使用场景 |
 |---|---|
 | `db-change-template.md` | 新增 DDL、字段、索引或迁移脚本 |
-| `e2e-smoke-template.md` | 沉淀 Playwright smoke 流程 |
+| `e2e-smoke-template.md` | 可选沉淀 Playwright smoke 流程 |
 
 ## 辅助或旧版模板
 

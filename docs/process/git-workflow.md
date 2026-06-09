@@ -55,14 +55,16 @@ git branch --show-current
 ## 分支命名建议
 
 ```text
-feature/YYYYMMDD-需求简称
-feature/客户标识/YYYYMMDD-需求简称
-fix/YYYYMMDD-问题简称
-docs/YYYYMMDD-文档或harness说明
-chore/YYYYMMDD-工程维护说明
+feature/REQ-YYYYMMDD-001-ascii-task
+feature/customer-code/REQ-YYYYMMDD-001-ascii-task
+fix/REQ-YYYYMMDD-001-ascii-fix
+docs/REQ-YYYYMMDD-001-harness-docs
+chore/REQ-YYYYMMDD-001-maintenance
 ```
 
-多仓联调时，建议相关仓库使用相同分支名，便于追踪。客户定制需求应从对应客户基线分支创建任务分支，并在 `docs/specs/active/.../meta.md` 记录目标客户和基线分支。
+Git 任务分支必须使用 ASCII，避免 CI、Webhook、URL、Shell 和远端平台兼容问题。需求 spec 目录可使用 `YYYY-MM-DD-REQ-001-中文需求标题`，但不要直接复用为分支名。
+
+多仓联调时，建议相关仓库使用相同 ASCII 分支名，便于追踪。客户定制需求应从对应客户基线分支创建任务分支，并在 `docs/specs/active/.../meta.md` 记录目标客户和基线分支。
 
 ## worktree 使用建议
 
@@ -71,7 +73,7 @@ chore/YYYYMMDD-工程维护说明
 示例：
 
 ```bash
-git worktree add ../项目名-需求简称 -b feature/YYYYMMDD-需求简称
+git worktree add ../project-req-001 -b feature/REQ-YYYYMMDD-001-ascii-task
 ```
 
 多仓联调时，应分别在相关仓库创建对应分支或 worktree。

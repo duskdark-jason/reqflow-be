@@ -18,8 +18,9 @@
 
 跨仓需求要求：
 
-- 两边使用同一个需求 slug：`YYYY-MM-DD-需求简称`。
-- 两边都创建或更新 `docs/specs/active/YYYY-MM-DD-需求简称/`。
+- 两边使用同一个中文 spec 目录名：`YYYY-MM-DD-REQ-001-中文需求标题`。
+- 两边都创建或更新 `docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/`。
+- Git 任务分支另行使用 ASCII，例如 `feature/REQ-YYYYMMDD-001-ascii-task`。
 - 两边 `meta.md` 互相写清 companion 仓库和 spec 路径。
 - 后端验收 ID 使用 `AC-BE-001`；前端验收 ID 使用 `AC-FE-001`。
 - 后端计划先锁定接口、权限、数据库和响应结构；前端计划引用后端契约或 companion spec。

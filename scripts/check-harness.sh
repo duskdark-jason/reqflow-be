@@ -89,6 +89,20 @@ check_dir() {
   fi
 }
 
+check_spec_dir_name() {
+  spec_dir=$1
+  spec_name=$(basename "$spec_dir")
+
+  if ! printf '%s\n' "$spec_name" | grep -E '^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-REQ-[0-9][0-9][0-9]-' >/dev/null 2>&1; then
+    fail "spec 目录名必须使用 YYYY-MM-DD-REQ-001-中文需求标题：$spec_dir"
+    return
+  fi
+
+  if ! printf '%s' "$spec_name" | LC_ALL=C grep '[^ -~]' >/dev/null 2>&1; then
+    fail "spec 目录名必须包含中文需求标题：$spec_dir"
+  fi
+}
+
 check_pattern() {
   file=$1
   pattern=$2
@@ -339,6 +353,7 @@ check_active_specs() {
       fail "指定 spec 目录不存在：$TARGET_SPEC_DIR"
       return
     fi
+    check_spec_dir_name "$TARGET_SPEC_DIR"
     check_one_spec "$TARGET_SPEC_DIR"
     return
   fi
@@ -352,6 +367,7 @@ check_active_specs() {
       .* ) continue ;;
     esac
 
+    check_spec_dir_name "$spec_dir"
     check_one_spec "$spec_dir"
   done
 }

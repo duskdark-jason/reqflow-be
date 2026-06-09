@@ -30,7 +30,7 @@
 ## 文档维护原则
 
 - 长期有效业务规则写入 `ai-harness/` 或 `domains/`。
-- 单次需求过程文档优先写入 `specs/active/YYYY-MM-DD-需求名称/` 目录。
+- 单次需求过程文档优先写入 `specs/active/YYYY-MM-DD-REQ-001-中文需求标题/` 目录。
 - 已完成但仍有参考价值的方案移入 `specs/done/`。
 - 重要技术或业务决策写入 `ai-harness/decisions/`。
 - 不要把个人本机路径、临时草稿和过期计划作为新需求默认入口。
