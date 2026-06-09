@@ -8,7 +8,7 @@ import com.ruoyi.requirement.mapper.ReqVariantMapper;
 import com.ruoyi.requirement.service.IReqVariantService;
 
 /**
- * 需求平台客户定制线Service业务层处理
+ * 需求平台项目分支Service业务层处理
  */
 @Service
 public class ReqVariantServiceImpl implements IReqVariantService

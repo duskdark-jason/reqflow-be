@@ -20,7 +20,7 @@ import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.service.IReqVariantService;
 
 /**
- * 客户定制线Controller
+ * 项目分支兼容Controller
  */
 @RestController
 @RequestMapping("/requirement/variant")
@@ -46,7 +46,7 @@ public class ReqVariantController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('req:variant:add')")
-    @Log(title = "客户定制线", businessType = BusinessType.INSERT)
+    @Log(title = "项目分支", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody ReqVariant reqVariant)
     {
@@ -55,7 +55,7 @@ public class ReqVariantController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('req:variant:edit')")
-    @Log(title = "客户定制线", businessType = BusinessType.UPDATE)
+    @Log(title = "项目分支", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody ReqVariant reqVariant)
     {
@@ -64,7 +64,7 @@ public class ReqVariantController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('req:variant:remove')")
-    @Log(title = "客户定制线", businessType = BusinessType.DELETE)
+    @Log(title = "项目分支", businessType = BusinessType.DELETE)
     @DeleteMapping("/{variantIds}")
     public AjaxResult remove(@PathVariable Long[] variantIds)
     {

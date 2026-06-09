@@ -6,25 +6,25 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import com.ruoyi.common.core.domain.BaseEntity;
 
 /**
- * 需求平台客户定制线对象 req_variant
+ * 需求平台项目分支对象 req_variant
  */
 public class ReqVariant extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
 
-    /** 定制线ID */
+    /** 分支ID */
     private Long variantId;
 
     /** 项目ID */
     private Long projectId;
 
-    /** 定制线名称 */
+    /** 分支展示名称 */
     private String variantName;
 
-    /** 定制线编码 */
+    /** 分支编码 */
     private String variantCode;
 
-    /** 客户名称 */
+    /** 兼容客户名称 */
     private String customerName;
 
     /** 范围类型 */
@@ -35,6 +35,9 @@ public class ReqVariant extends BaseEntity
 
     /** 分支策略 */
     private String branchPolicy;
+
+    /** MCP项目分支识别key */
+    private String mcpKey;
 
     /** 说明 */
     private String description;
@@ -122,6 +125,16 @@ public class ReqVariant extends BaseEntity
         this.branchPolicy = branchPolicy;
     }
 
+    public String getMcpKey()
+    {
+        return mcpKey;
+    }
+
+    public void setMcpKey(String mcpKey)
+    {
+        this.mcpKey = mcpKey;
+    }
+
     public String getDescription()
     {
         return description;
@@ -154,6 +167,7 @@ public class ReqVariant extends BaseEntity
             .append("scopeType", getScopeType())
             .append("baselineBranch", getBaselineBranch())
             .append("branchPolicy", getBranchPolicy())
+            .append("mcpKey", getMcpKey())
             .append("description", getDescription())
             .append("status", getStatus())
             .append("createBy", getCreateBy())

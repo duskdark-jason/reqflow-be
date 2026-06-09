@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS req_variant (
   scope_type VARCHAR(32) NOT NULL DEFAULT 'mainline',
   baseline_branch VARCHAR(100) NOT NULL DEFAULT 'main',
   branch_policy VARCHAR(1000) DEFAULT NULL,
+  mcp_key VARCHAR(128) DEFAULT NULL,
   description VARCHAR(500) DEFAULT NULL,
   status CHAR(1) NOT NULL DEFAULT '0',
   create_by VARCHAR(64) DEFAULT '',
@@ -53,8 +54,9 @@ CREATE TABLE IF NOT EXISTS req_variant (
   update_time DATETIME DEFAULT NULL,
   remark VARCHAR(500) DEFAULT NULL,
   PRIMARY KEY (variant_id),
-  UNIQUE KEY uk_req_variant_code (project_id, variant_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台客户定制线';
+  UNIQUE KEY uk_req_variant_code (project_id, variant_code),
+  UNIQUE KEY uk_req_variant_mcp_key (mcp_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台项目分支';
 
 CREATE TABLE IF NOT EXISTS req_module (
   module_id BIGINT NOT NULL AUTO_INCREMENT,

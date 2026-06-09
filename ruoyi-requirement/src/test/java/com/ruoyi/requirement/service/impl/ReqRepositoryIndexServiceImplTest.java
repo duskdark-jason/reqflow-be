@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -90,6 +91,55 @@ class ReqRepositoryIndexServiceImplTest
         verify(impactMapper, times(2)).insertReqImpactItem(any());
         verify(repositoryMapper).updateHarnessInitResult(any(ReqRepository.class));
         verify(activityLogService).record(7L, 1L, null, "repository_index_published", "mcp", "仓库索引发布：git@example.com:reqflow-ui.git", null);
+    }
+
+    @Test
+    void importsIndexByMcpKeyAndRemoteUrl()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, moduleMapper, impactMapper, repositoryMapper, variantMapper, activityLogService);
+
+        ReqVariant branch = new ReqVariant();
+        branch.setVariantId(8L);
+        branch.setProjectId(1L);
+        branch.setBaselineBranch("release/hlj-main");
+        branch.setMcpKey("REQFLOW:HLJ");
+        when(variantMapper.selectReqVariantList(any())).thenReturn(Collections.singletonList(branch));
+
+        ReqRepository repository = new ReqRepository();
+        repository.setRepoId(2L);
+        repository.setProjectId(1L);
+        repository.setRepoUrl("git@example.com:reqflow-be.git");
+        repository.setRepoType("BACKEND");
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository));
+        doAnswer(invocation -> {
+            ReqRepositoryIndexBatch batch = invocation.getArgument(0);
+            batch.setBatchId(101L);
+            return 1;
+        }).when(batchMapper).insertReqRepositoryIndexBatch(any(ReqRepositoryIndexBatch.class));
+
+        ReqRepositoryIndexImportRequest request = new ReqRepositoryIndexImportRequest();
+        request.setMcpKey("REQFLOW:HLJ");
+        request.setRemoteUrl("git@example.com:reqflow-be.git");
+        request.setCommitHash("def456");
+        request.setIndexVersion("v1");
+
+        ReqIndexImportResult result = service.importRepositoryIndex(request, "mcp", "tester", 7L);
+
+        assertEquals(101L, result.getBatchId());
+        ArgumentCaptor<ReqRepositoryIndexBatch> batchCaptor = forClass(ReqRepositoryIndexBatch.class);
+        verify(batchMapper).insertReqRepositoryIndexBatch(batchCaptor.capture());
+        assertEquals(1L, batchCaptor.getValue().getProjectId());
+        assertEquals(2L, batchCaptor.getValue().getRepoId());
+        assertEquals("BACKEND", batchCaptor.getValue().getRepoType());
+        assertEquals("release/hlj-main", batchCaptor.getValue().getBranchName());
+        verify(repositoryMapper, never()).selectReqRepositoryByRepoId(any());
+        verify(activityLogService).record(7L, 1L, null, "repository_index_published", "mcp", "仓库索引发布：git@example.com:reqflow-be.git", null);
     }
 
     @Test

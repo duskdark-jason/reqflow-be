@@ -2,6 +2,7 @@ package com.ruoyi.requirement.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -87,6 +88,71 @@ class ReqProjectInitServiceImplTest
         verify(variantMapper).insertReqVariant(variantCaptor.capture());
         assertEquals(10L, variantCaptor.getValue().getProjectId());
         assertEquals("admin", variantCaptor.getValue().getCreateBy());
+    }
+
+    @Test
+    void createsPureBackendProjectWithOneRepository()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                mock(ReqModuleMapper.class), mock(ReqIndexModuleMapper.class), mock(ReqRepositoryIndexBatchMapper.class));
+
+        doAnswer(invocation -> {
+            ReqProject project = invocation.getArgument(0);
+            project.setProjectId(10L);
+            return 1;
+        }).when(projectMapper).insertReqProject(any(ReqProject.class));
+        doAnswer(invocation -> {
+            ReqRepository repository = invocation.getArgument(0);
+            repository.setRepoId(22L);
+            return 1;
+        }).when(repositoryMapper).insertReqRepository(any(ReqRepository.class));
+        doAnswer(invocation -> {
+            ReqVariant variant = invocation.getArgument(0);
+            variant.setVariantId(31L);
+            return 1;
+        }).when(variantMapper).insertReqVariant(any(ReqVariant.class));
+
+        ReqProjectInitRequest request = baseRequest();
+        request.setRepositories(Collections.singletonList(repositoryItem("REQFLOW-BE", "BACKEND", "git@example.com:reqflow-be.git", "main")));
+
+        ReqProjectInitResponse response = service.insertProjectInit(request, "admin");
+
+        assertEquals(1, response.getRepositories().size());
+        assertEquals("BACKEND", response.getRepositories().get(0).getRepoType());
+        assertTrue(response.getInitChecklist().getRepositoryReady());
+    }
+
+    @Test
+    void returnsStableMcpKeyForProjectBranch()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                mock(ReqModuleMapper.class), mock(ReqIndexModuleMapper.class), mock(ReqRepositoryIndexBatchMapper.class));
+
+        doAnswer(invocation -> {
+            ReqProject project = invocation.getArgument(0);
+            project.setProjectId(10L);
+            return 1;
+        }).when(projectMapper).insertReqProject(any(ReqProject.class));
+        doAnswer(invocation -> {
+            ReqVariant variant = invocation.getArgument(0);
+            variant.setVariantId(31L);
+            return 1;
+        }).when(variantMapper).insertReqVariant(any(ReqVariant.class));
+
+        ReqProjectInitResponse response = service.insertProjectInit(baseRequest(), "admin");
+
+        assertNotNull(response.getVariants().get(0).getMcpKey());
+        assertEquals("REQFLOW:MAIN", response.getVariants().get(0).getMcpKey());
+
+        ArgumentCaptor<ReqVariant> variantCaptor = forClass(ReqVariant.class);
+        verify(variantMapper).insertReqVariant(variantCaptor.capture());
+        assertEquals("REQFLOW:MAIN", variantCaptor.getValue().getMcpKey());
     }
 
     @Test
@@ -256,7 +322,7 @@ class ReqProjectInitServiceImplTest
     }
 
     @Test
-    void marksChecklistIncompleteWhenRequiredKnowledgeIsMissing()
+    void marksChecklistIncompleteWhenBranchKnowledgeIsMissing()
     {
         ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
         ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
@@ -271,7 +337,7 @@ class ReqProjectInitServiceImplTest
         ReqProjectInitResponse response = service.selectProjectInit(10L);
 
         assertTrue(response.getInitChecklist().getProjectReady());
-        assertFalse(response.getInitChecklist().getRepositoryReady());
+        assertTrue(response.getInitChecklist().getRepositoryReady());
         assertFalse(response.getInitChecklist().getVariantReady());
         assertFalse(response.getInitChecklist().getModuleReady());
         assertFalse(response.getInitChecklist().getIndexReady());

@@ -44,21 +44,12 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         validateRequired(request);
         validateNoPersonalAbsolutePath(request);
 
-        ReqRepository repository = repositoryMapper.selectReqRepositoryByRepoId(request.getRepoId());
-        if (repository == null)
+        ReqVariant branchVariant = resolveRequestContext(request);
+        resolveRepository(request);
+        if (branchVariant == null)
         {
-            throw new ServiceException("仓库不存在");
+            branchVariant = resolveBranchVariant(request);
         }
-        if (!request.getProjectId().equals(repository.getProjectId()))
-        {
-            throw new ServiceException("仓库不属于当前项目");
-        }
-        if (StringUtils.isNotEmpty(repository.getRepoUrl()) && !repository.getRepoUrl().equals(request.getRemoteUrl()))
-        {
-            throw new ServiceException("仓库远端地址与平台登记不一致");
-        }
-
-        ReqVariant branchVariant = resolveBranchVariant(request);
         ReqRepositoryIndexBatch batch = buildBatch(request, sourceType, username);
         batchMapper.insertReqRepositoryIndexBatch(batch);
         Long batchId = batch.getBatchId();
@@ -131,11 +122,11 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         ReqVariant variant = variantMapper.selectReqVariantByVariantId(query.getVariantId());
         if (variant == null)
         {
-            throw new ServiceException("客户线不存在");
+            throw new ServiceException("项目分支不存在");
         }
         if (query.getProjectId() != null && !query.getProjectId().equals(variant.getProjectId()))
         {
-            throw new ServiceException("客户线不属于当前项目");
+            throw new ServiceException("项目分支不属于当前项目");
         }
         query.setBranchName(variant.getBaselineBranch());
     }
@@ -170,7 +161,19 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
 
     private void validateRequired(ReqRepositoryIndexImportRequest request)
     {
-        if (request == null || request.getProjectId() == null || request.getRepoId() == null)
+        if (request == null)
+        {
+            throw new ServiceException("项目和仓库不能为空");
+        }
+        if (StringUtils.isNotEmpty(request.getMcpKey()))
+        {
+            if (StringUtils.isEmpty(request.getRemoteUrl()) || StringUtils.isEmpty(request.getCommitHash()) || StringUtils.isEmpty(request.getIndexVersion()))
+            {
+                throw new ServiceException("MCP key、仓库远端、commit 和索引版本不能为空");
+            }
+            return;
+        }
+        if (request.getProjectId() == null || request.getRepoId() == null)
         {
             throw new ServiceException("项目和仓库不能为空");
         }
@@ -184,6 +187,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     private void validateNoPersonalAbsolutePath(ReqRepositoryIndexImportRequest request)
     {
         checkPath(request.getRemoteUrl());
+        checkPath(request.getMcpKey());
         checkPath(request.getBranchName());
         checkPath(request.getCommitHash());
         for (ReqIndexModulePayload module : safeList(request.getModules()))
@@ -297,12 +301,76 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
 
     private ReqVariant resolveBranchVariant(ReqRepositoryIndexImportRequest request)
     {
+        if (StringUtils.isNotEmpty(request.getMcpKey()))
+        {
+            return resolveBranchByMcpKey(request.getMcpKey());
+        }
         ReqVariant query = new ReqVariant();
         query.setProjectId(request.getProjectId());
         query.setBaselineBranch(request.getBranchName());
         query.setStatus("0");
         List<ReqVariant> variants = variantMapper.selectReqVariantList(query);
         return variants == null || variants.isEmpty() ? null : variants.get(0);
+    }
+
+    private ReqVariant resolveRequestContext(ReqRepositoryIndexImportRequest request)
+    {
+        if (StringUtils.isEmpty(request.getMcpKey()))
+        {
+            return null;
+        }
+        ReqVariant branch = resolveBranchByMcpKey(request.getMcpKey());
+        request.setProjectId(branch.getProjectId());
+        request.setBranchName(branch.getBaselineBranch());
+        return branch;
+    }
+
+    private ReqVariant resolveBranchByMcpKey(String mcpKey)
+    {
+        ReqVariant query = new ReqVariant();
+        query.setMcpKey(mcpKey);
+        query.setStatus("0");
+        List<ReqVariant> variants = variantMapper.selectReqVariantList(query);
+        if (variants == null || variants.isEmpty())
+        {
+            throw new ServiceException("MCP key 对应的项目分支不存在");
+        }
+        return variants.get(0);
+    }
+
+    private ReqRepository resolveRepository(ReqRepositoryIndexImportRequest request)
+    {
+        ReqRepository repository;
+        if (StringUtils.isNotEmpty(request.getMcpKey()))
+        {
+            ReqRepository query = new ReqRepository();
+            query.setProjectId(request.getProjectId());
+            query.setRepoUrl(request.getRemoteUrl());
+            List<ReqRepository> repositories = repositoryMapper.selectReqRepositoryList(query);
+            repository = repositories == null || repositories.isEmpty() ? null : repositories.get(0);
+            if (repository == null)
+            {
+                throw new ServiceException("MCP key 对应项目下不存在该仓库");
+            }
+            request.setRepoId(repository.getRepoId());
+            request.setRepoType(firstNotEmpty(request.getRepoType(), repository.getRepoType()));
+            return repository;
+        }
+        repository = repositoryMapper.selectReqRepositoryByRepoId(request.getRepoId());
+        if (repository == null)
+        {
+            throw new ServiceException("仓库不存在");
+        }
+        if (!request.getProjectId().equals(repository.getProjectId()))
+        {
+            throw new ServiceException("仓库不属于当前项目");
+        }
+        if (StringUtils.isNotEmpty(repository.getRepoUrl()) && !repository.getRepoUrl().equals(request.getRemoteUrl()))
+        {
+            throw new ServiceException("仓库远端地址与平台登记不一致");
+        }
+        request.setRepoType(firstNotEmpty(request.getRepoType(), repository.getRepoType()));
+        return repository;
     }
 
     private List<ReqIndexImpactPayload> collectImpacts(ReqRepositoryIndexImportRequest request)

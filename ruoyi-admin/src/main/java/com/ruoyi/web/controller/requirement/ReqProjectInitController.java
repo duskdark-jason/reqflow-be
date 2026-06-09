@@ -30,7 +30,7 @@ public class ReqProjectInitController extends BaseController
         return success(projectInitService.selectProjectInit(projectId));
     }
 
-    @PreAuthorize("@ss.hasPermi('req:project:add') and @ss.hasPermi('req:repo:add') and @ss.hasPermi('req:variant:add')")
+    @PreAuthorize("@ss.hasPermi('req:project:add')")
     @Log(title = "项目初始化", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody ReqProjectInitRequest request)
@@ -38,7 +38,7 @@ public class ReqProjectInitController extends BaseController
         return success(projectInitService.insertProjectInit(request, getUsername()));
     }
 
-    @PreAuthorize("@ss.hasPermi('req:project:edit') and @ss.hasPermi('req:repo:edit') and @ss.hasPermi('req:variant:edit')")
+    @PreAuthorize("@ss.hasPermi('req:project:edit')")
     @Log(title = "项目初始化", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody ReqProjectInitRequest request)

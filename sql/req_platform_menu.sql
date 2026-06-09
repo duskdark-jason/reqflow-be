@@ -23,62 +23,21 @@ INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame,
 SELECT '项目删除', @req_project_id, 4, '#', '', 1, 0, 'F', '0', '0', 'req:project:remove', '#', 'admin', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_project_id AND perms = 'req:project:remove');
 
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '仓库管理', @req_parent_id, 2, 'repository', 'requirement/repository/index', 1, 0, 'C', '0', '0', 'req:repo:list', 'code', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'repository');
+UPDATE sys_menu
+SET visible = '1', status = '1'
+WHERE parent_id = @req_parent_id
+  AND path IN ('repository', 'variant', 'module');
 
-SET @req_repo_id = (SELECT menu_id FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'repository' LIMIT 1);
-
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '仓库查询', @req_repo_id, 1, '#', '', 1, 0, 'F', '0', '0', 'req:repo:query', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_repo_id AND perms = 'req:repo:query');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '仓库新增', @req_repo_id, 2, '#', '', 1, 0, 'F', '0', '0', 'req:repo:add', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_repo_id AND perms = 'req:repo:add');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '仓库修改', @req_repo_id, 3, '#', '', 1, 0, 'F', '0', '0', 'req:repo:edit', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_repo_id AND perms = 'req:repo:edit');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '仓库删除', @req_repo_id, 4, '#', '', 1, 0, 'F', '0', '0', 'req:repo:remove', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_repo_id AND perms = 'req:repo:remove');
-
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '客户定制线', @req_parent_id, 3, 'variant', 'requirement/variant/index', 1, 0, 'C', '0', '0', 'req:variant:list', 'peoples', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'variant');
-
-SET @req_variant_id = (SELECT menu_id FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'variant' LIMIT 1);
-
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '定制线查询', @req_variant_id, 1, '#', '', 1, 0, 'F', '0', '0', 'req:variant:query', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_variant_id AND perms = 'req:variant:query');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '定制线新增', @req_variant_id, 2, '#', '', 1, 0, 'F', '0', '0', 'req:variant:add', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_variant_id AND perms = 'req:variant:add');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '定制线修改', @req_variant_id, 3, '#', '', 1, 0, 'F', '0', '0', 'req:variant:edit', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_variant_id AND perms = 'req:variant:edit');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '定制线删除', @req_variant_id, 4, '#', '', 1, 0, 'F', '0', '0', 'req:variant:remove', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_variant_id AND perms = 'req:variant:remove');
-
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '模块功能点', @req_parent_id, 4, 'module', 'requirement/module/index', 1, 0, 'C', '0', '0', 'req:module:list', 'tree-table', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'module');
-
-SET @req_module_id = (SELECT menu_id FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'module' LIMIT 1);
-
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '模块查询', @req_module_id, 1, '#', '', 1, 0, 'F', '0', '0', 'req:module:query', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_module_id AND perms = 'req:module:query');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '模块新增', @req_module_id, 2, '#', '', 1, 0, 'F', '0', '0', 'req:module:add', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_module_id AND perms = 'req:module:add');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '模块修改', @req_module_id, 3, '#', '', 1, 0, 'F', '0', '0', 'req:module:edit', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_module_id AND perms = 'req:module:edit');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '模块删除', @req_module_id, 4, '#', '', 1, 0, 'F', '0', '0', 'req:module:remove', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_module_id AND perms = 'req:module:remove');
+UPDATE sys_menu
+SET status = '1'
+WHERE parent_id IN (
+    SELECT menu_id FROM (
+        SELECT menu_id
+        FROM sys_menu
+        WHERE parent_id = @req_parent_id
+          AND path IN ('repository', 'variant', 'module')
+    ) hidden_requirement_menu
+);
 
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
 SELECT '索引查询', @req_project_id, 5, '#', '', 1, 0, 'F', '0', '0', 'req:index:list', '#', 'admin', NOW()
@@ -88,7 +47,7 @@ SELECT '索引导入', @req_project_id, 6, '#', '', 1, 0, 'F', '0', '0', 'req:in
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_project_id AND perms = 'req:index:import');
 
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '需求列表', @req_parent_id, 5, 'demand', 'requirement/demand/index', 1, 0, 'C', '0', '0', 'req:demand:list', 'form', 'admin', NOW()
+SELECT '需求列表', @req_parent_id, 2, 'demand', 'requirement/demand/index', 1, 0, 'C', '0', '0', 'req:demand:list', 'form', 'admin', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'demand');
 
 SET @req_demand_id = (SELECT menu_id FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'demand' LIMIT 1);
@@ -104,7 +63,7 @@ SELECT '需求修改', @req_demand_id, 3, '#', '', 1, 0, 'F', '0', '0', 'req:dem
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_demand_id AND perms = 'req:demand:edit');
 
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT '需求执行包', @req_parent_id, 6, 'package', 'requirement/package/index', 1, 0, 'C', '0', '0', 'req:package:list', 'clipboard', 'admin', NOW()
+SELECT '需求执行包', @req_parent_id, 3, 'package', 'requirement/package/index', 1, 0, 'C', '0', '0', 'req:package:list', 'clipboard', 'admin', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'package');
 
 SET @req_package_id = (SELECT menu_id FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'package' LIMIT 1);

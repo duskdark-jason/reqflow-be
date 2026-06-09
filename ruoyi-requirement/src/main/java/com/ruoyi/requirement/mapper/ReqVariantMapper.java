@@ -5,7 +5,7 @@ import org.apache.ibatis.annotations.Param;
 import com.ruoyi.requirement.domain.ReqVariant;
 
 /**
- * 需求平台客户定制线Mapper接口
+ * 需求平台项目分支Mapper接口
  */
 public interface ReqVariantMapper
 {

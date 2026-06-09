@@ -4,7 +4,7 @@ import java.util.List;
 import com.ruoyi.requirement.domain.ReqVariant;
 
 /**
- * 需求平台客户定制线Service接口
+ * 需求平台项目分支Service接口
  */
 public interface IReqVariantService
 {

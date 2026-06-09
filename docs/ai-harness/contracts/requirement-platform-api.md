@@ -19,28 +19,28 @@
 | 项目新增 | `/requirement/project` | POST | `req:project:add` | 一个项目 |
 | 项目修改 | `/requirement/project` | PUT | `req:project:edit` | 一个项目 |
 | 项目删除 | `/requirement/project/{projectIds}` | DELETE | `req:project:remove` | 一个或多个项目 |
-| 仓库 CRUD | `/requirement/repository/**` | GET/POST/PUT/DELETE | `req:repo:*` | 一个代码仓库 |
-| 客户线 CRUD | `/requirement/variant/**` | GET/POST/PUT/DELETE | `req:variant:*` | 一个客户定制线 |
-| 模块 CRUD | `/requirement/module/**` | GET/POST/PUT/DELETE | `req:module:*` | 一个模块或功能点 |
+| 项目仓库兼容接口 | `/requirement/repository/**` | GET/POST/PUT/DELETE | `req:repo:*` | 一个代码仓库，左侧菜单不再暴露 |
+| 项目分支兼容接口 | `/requirement/variant/**` | GET/POST/PUT/DELETE | `req:variant:*` | 一个项目分支，左侧菜单不再暴露 |
+| 人工模块兼容接口 | `/requirement/module/**` | GET/POST/PUT/DELETE | `req:module:*` | 一个模块或功能点，左侧菜单不再暴露 |
 
 ## 项目初始化接口
 
 | 路径 | 方法 | 权限 | 说明 |
 |---|---|---|---|
 | `/requirement/project/init/{projectId}` | GET | `req:project:query` | 查询一个项目的初始化上下文 |
-| `/requirement/project/init` | POST | `req:project:add`、`req:repo:add`、`req:variant:add` | 新增项目并同步保存前后端仓库和分支配置 |
-| `/requirement/project/init` | PUT | `req:project:edit`、`req:repo:edit`、`req:variant:edit` | 更新项目并同步保存仓库和分支配置 |
+| `/requirement/project/init` | POST | `req:project:add` | 新增项目并同步保存代码仓库和项目分支 |
+| `/requirement/project/init` | PUT | `req:project:edit` | 更新项目并同步保存代码仓库和项目分支 |
 
 初始化上下文响应 `data` 包含：
 
 - `project`：`req_project` 项目基础信息。
 - `repositories`：项目下团队共享仓库列表，一行代表一个 Git 远端仓库，接口返回时不回传个人本机路径。
-- `variants`：项目下分支配置列表，一行代表一个可供需求人员选择的项目分支。`branchLabel` 是需求人员可见中文标签，`baselineBranch` 是真实 Git 分支名；`variantName`、`variantCode`、`customerName`、`scopeType`、`branchPolicy` 继续作为 `req_variant` 兼容字段返回。
+- `variants`：项目下分支配置列表，一行代表一个可供需求人员选择的项目分支。`branchLabel` 是需求人员可见中文标签，`baselineBranch` 是真实 Git 分支名，`mcpKey` 是 MCP 识别项目分支的稳定 key；`variantName`、`variantCode`、`customerName`、`scopeType`、`branchPolicy` 继续作为 `req_variant` 兼容字段返回。
 - `moduleSummary`：`totalModules`、`indexedModules`、`manualModules`，分别表示模块总数、索引模块数和人工维护模块数。
 - `indexSummary`：`latestIndexedAt`、`latestCommit`、`indexedRepositoryCount`、`unindexedRepositoryCount`。
 - `initChecklist`：`projectReady`、`repositoryReady`、`variantReady`、`moduleReady`、`indexReady`。
 
-初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条 `FRONTEND` 和一条 `BACKEND`，且仓库名称、仓库类型、Git 远端和默认分支不能为空；`variants` 至少包含一条分支配置，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码。
+初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成。
 
 初始化保存必须在同一事务内完成。新增时先写 `req_project`，再写 `req_repository` 和 `req_variant`；更新时按传入 ID 更新已有仓库/分支配置、插入新增行，并删除本次维护弹窗中移除的仓库/分支配置。接口拒绝仓库地址、默认分支、真实分支名、项目说明或备注中的个人本机绝对路径。
 
@@ -50,14 +50,14 @@
 |---|---|---|---|
 | `/requirement/index/batch/list` | GET | `req:index:list` | 查询仓库索引批次 |
 | `/requirement/index/module/tree` | GET | `req:index:list` | 查询索引生成的模块知识列表 |
-| `/requirement/index/impact/suggest` | GET | `req:index:list` | 按项目、仓库、客户线和模块推荐影响面 |
+| `/requirement/index/impact/suggest` | GET | `req:index:list` | 按项目、仓库、项目分支和模块推荐影响面 |
 | `/requirement/index/import` | POST | `req:index:import` | 备用 JSON 导入入口 |
 
 索引导入只保存 Git 远端、仓库类型、分支、commit、相对路径和结构化影响面。上传内容如果包含个人本机绝对路径，服务端必须拒绝导入。
 
-索引导入时 `branchName` 必须是当前索引分支或客户基线分支。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按 `projectId + branchName + status=0` 反查客户线并沉淀到索引模块和影响面条目。
+索引导入优先支持 `mcpKey + remoteUrl`：服务端按 `mcpKey` 解析项目分支，并在同项目下按 `remoteUrl` 定位代码仓库；同时兼容旧的 `projectId + repoId + branchName`。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。
 
-影响面推荐请求可传 `projectId`、`repoId`、`variantId`、`moduleId`、`moduleCode`。当传入 `variantId` 时，服务端必须校验客户线属于当前项目，并使用该客户线 `baselineBranch` 过滤影响面；查询只返回目标仓库或每个仓库最新 `imported` 批次的数据。返回 `pages`、`apis`、`tables`、`permissions` 和 `documents` 五类列表，每一项来自 `req_impact_item`，同类资源按 `itemKey/apiPath/permissionKey/tableName/relativePath/itemName` 去重。
+影响面推荐请求可传 `projectId`、`repoId`、`variantId`、`moduleId`、`moduleCode`。当传入 `variantId` 时，服务端必须校验项目分支属于当前项目，并使用该项目分支 `baselineBranch` 过滤影响面；查询只返回目标仓库或每个仓库最新 `imported` 批次的数据。返回 `pages`、`apis`、`tables`、`permissions` 和 `documents` 五类列表，每一项来自 `req_impact_item`，同类资源按 `itemKey/apiPath/permissionKey/tableName/relativePath/itemName` 去重。
 
 ## 需求接口
 
@@ -154,6 +154,6 @@ MCP 安全边界：
 - 只能读取平台资源或写入平台表。
 - 不允许执行 Git、shell、clone、branch、文件系统写入或大模型调用。
 - `register_harness_init_result` 只更新 `req_repository` 的 harness 字段，必须校验 `req:package:save`。
-- `publish_repository_index` 必须校验 `req:index:import`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
+- `publish_repository_index` 必须校验 `req:index:import`，优先接收 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
 - 报告上传、计划保存和执行资料类工具必须校验 `req:package:save`，并且只追加 `req_package_version`。
 - `artifactType` 必须属于本文列出的支持类型。

@@ -11,6 +11,7 @@ public class ReqProjectInitVariantItem
     private String scopeType;
     private String baselineBranch;
     private String branchPolicy;
+    private String mcpKey;
     private String description;
     private String status;
     private String remark;
@@ -33,6 +34,8 @@ public class ReqProjectInitVariantItem
     public void setBaselineBranch(String baselineBranch) { this.baselineBranch = baselineBranch; }
     public String getBranchPolicy() { return branchPolicy; }
     public void setBranchPolicy(String branchPolicy) { this.branchPolicy = branchPolicy; }
+    public String getMcpKey() { return mcpKey; }
+    public void setMcpKey(String mcpKey) { this.mcpKey = mcpKey; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public String getStatus() { return status; }

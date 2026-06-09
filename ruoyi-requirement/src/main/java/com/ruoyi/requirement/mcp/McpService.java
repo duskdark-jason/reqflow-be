@@ -53,7 +53,7 @@ public class McpService
                 resource("requirement://REQ-20260609-001", "需求样例"),
                 resource("requirement://REQ-20260609-001/context-manifest", "需求上下文清单"),
                 resource("project://1/overview", "项目概览"),
-                resource("variant://1/branch-policy", "客户线分支策略"),
+                resource("variant://1/branch-policy", "项目分支策略"),
                 resource("workspace://1/agents", "工作空间AGENTS")));
     }
 
@@ -120,6 +120,7 @@ public class McpService
         ReqRepositoryIndexImportRequest request = new ReqRepositoryIndexImportRequest();
         request.setProjectId(longArg(arguments, "projectId"));
         request.setRepoId(longArg(arguments, "repoId"));
+        request.setMcpKey(stringArg(arguments, "mcpKey"));
         request.setRepoType(stringArg(arguments, "repoType"));
         request.setRemoteUrl(stringArg(arguments, "remoteUrl"));
         request.setBranchName(stringArg(arguments, "branchName"));

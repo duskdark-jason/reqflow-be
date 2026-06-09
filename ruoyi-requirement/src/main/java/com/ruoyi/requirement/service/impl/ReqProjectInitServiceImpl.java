@@ -2,7 +2,6 @@ package com.ruoyi.requirement.service.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -70,7 +69,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         Long projectId = project.getProjectId();
 
         List<ReqRepository> repositories = insertRepositories(projectId, request.getRepositories(), username);
-        List<ReqVariant> variants = insertVariants(projectId, request.getVariants(), username);
+        List<ReqVariant> variants = insertVariants(project, request.getVariants(), username);
         return buildResponse(project, repositories, variants, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
     }
 
@@ -86,7 +85,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         projectMapper.updateReqProject(project);
 
         List<ReqRepository> repositories = syncRepositories(projectId, request.getRepositories(), username);
-        List<ReqVariant> variants = syncVariants(projectId, request.getVariants(), username);
+        List<ReqVariant> variants = syncVariants(project, request.getVariants(), username);
         return buildResponse(project, repositories, variants, loadModules(projectId), loadIndexModules(projectId), loadBatches(projectId));
     }
 
@@ -96,7 +95,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         ReqProjectInitResponse response = new ReqProjectInitResponse();
         response.setProject(project);
         response.setRepositories(repositories.stream().map(this::toRepositoryItem).collect(Collectors.toList()));
-        response.setVariants(variants.stream().map(this::toVariantItem).collect(Collectors.toList()));
+        response.setVariants(variants.stream().map(variant -> toVariantItem(project, variant)).collect(Collectors.toList()));
 
         ReqProjectInitModuleSummary moduleSummary = buildModuleSummary(modules, indexModules);
         ReqProjectInitIndexSummary indexSummary = buildIndexSummary(repositories, batches);
@@ -149,7 +148,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
     {
         ReqProjectInitChecklist checklist = new ReqProjectInitChecklist();
         boolean projectReady = project != null && StringUtils.isNotEmpty(project.getProjectName()) && StringUtils.isNotEmpty(project.getProjectCode());
-        boolean repositoryReady = hasReadyRepositoryType(repositories, "FRONTEND") && hasReadyRepositoryType(repositories, "BACKEND");
+        boolean repositoryReady = safeList(repositories).stream().anyMatch(this::isReadyRepository);
         boolean variantReady = safeList(variants).stream().anyMatch(this::isReadyVariant);
         boolean moduleReady = moduleSummary.getTotalModules() != null && moduleSummary.getTotalModules() > 0;
         boolean indexReady = repositoryReady && indexSummary.getUnindexedRepositoryCount() != null && indexSummary.getUnindexedRepositoryCount() == 0;
@@ -174,12 +173,12 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         return repositories;
     }
 
-    private List<ReqVariant> insertVariants(Long projectId, List<ReqProjectInitVariantItem> items, String username)
+    private List<ReqVariant> insertVariants(ReqProject project, List<ReqProjectInitVariantItem> items, String username)
     {
         List<ReqVariant> variants = new ArrayList<>();
         for (ReqProjectInitVariantItem item : safeList(items))
         {
-            ReqVariant variant = toVariant(projectId, item);
+            ReqVariant variant = toVariant(project, item);
             variant.setCreateBy(username);
             variantMapper.insertReqVariant(variant);
             variants.add(variant);
@@ -219,13 +218,14 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         return repositories;
     }
 
-    private List<ReqVariant> syncVariants(Long projectId, List<ReqProjectInitVariantItem> items, String username)
+    private List<ReqVariant> syncVariants(ReqProject project, List<ReqProjectInitVariantItem> items, String username)
     {
+        Long projectId = project.getProjectId();
         List<ReqVariant> variants = new ArrayList<>();
         List<Long> keepIds = new ArrayList<>();
         for (ReqProjectInitVariantItem item : safeList(items))
         {
-            ReqVariant variant = toVariant(projectId, item);
+            ReqVariant variant = toVariant(project, item);
             if (variant.getVariantId() == null)
             {
                 variant.setCreateBy(username);
@@ -315,17 +315,19 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         return repository;
     }
 
-    private ReqVariant toVariant(Long projectId, ReqProjectInitVariantItem item)
+    private ReqVariant toVariant(ReqProject project, ReqProjectInitVariantItem item)
     {
+        String variantCode = firstNotEmpty(item.getVariantCode(), buildVariantCode(item.getBaselineBranch()));
         ReqVariant variant = new ReqVariant();
         variant.setVariantId(item.getVariantId());
-        variant.setProjectId(projectId);
+        variant.setProjectId(project.getProjectId());
         variant.setVariantName(firstNotEmpty(item.getBranchLabel(), item.getVariantName()));
-        variant.setVariantCode(firstNotEmpty(item.getVariantCode(), buildVariantCode(item.getBaselineBranch())));
+        variant.setVariantCode(variantCode);
         variant.setCustomerName(firstNotEmpty(item.getCustomerName(), item.getBranchLabel(), item.getVariantName()));
-        variant.setScopeType(firstNotEmpty(item.getScopeType(), "MAINLINE"));
+        variant.setScopeType(firstNotEmpty(item.getScopeType(), "BRANCH"));
         variant.setBaselineBranch(item.getBaselineBranch());
-        variant.setBranchPolicy(firstNotEmpty(item.getBranchPolicy(), "shared_baseline"));
+        variant.setBranchPolicy(firstNotEmpty(item.getBranchPolicy(), "project_branch"));
+        variant.setMcpKey(firstNotEmpty(item.getMcpKey(), buildMcpKey(project.getProjectCode(), variantCode)));
         variant.setDescription(item.getDescription());
         variant.setStatus(firstNotEmpty(item.getStatus(), "0"));
         variant.setRemark(item.getRemark());
@@ -350,7 +352,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         return item;
     }
 
-    private ReqProjectInitVariantItem toVariantItem(ReqVariant variant)
+    private ReqProjectInitVariantItem toVariantItem(ReqProject project, ReqVariant variant)
     {
         ReqProjectInitVariantItem item = new ReqProjectInitVariantItem();
         item.setVariantId(variant.getVariantId());
@@ -362,6 +364,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         item.setScopeType(variant.getScopeType());
         item.setBaselineBranch(variant.getBaselineBranch());
         item.setBranchPolicy(variant.getBranchPolicy());
+        item.setMcpKey(firstNotEmpty(variant.getMcpKey(), buildMcpKey(project.getProjectCode(), variant.getVariantCode())));
         item.setDescription(variant.getDescription());
         item.setStatus(variant.getStatus());
         item.setRemark(variant.getRemark());
@@ -394,9 +397,8 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
     {
         if (safeList(repositories).isEmpty())
         {
-            throw new ServiceException("前端仓库和后端仓库不能为空");
+            throw new ServiceException("代码仓库不能为空");
         }
-        Set<String> repoTypes = new HashSet<>();
         for (ReqProjectInitRepositoryItem repository : safeList(repositories))
         {
             if (StringUtils.isEmpty(repository.getRepoName()) || StringUtils.isEmpty(repository.getRepoType())
@@ -404,14 +406,9 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
             {
                 throw new ServiceException("仓库名称、类型、Git远端和默认分支不能为空");
             }
-            repoTypes.add(repository.getRepoType().toUpperCase());
             validateText(repository.getRepoUrl());
             validateText(repository.getDefaultBranch());
             validateText(repository.getRemark());
-        }
-        if (!repoTypes.contains("FRONTEND") || !repoTypes.contains("BACKEND"))
-        {
-            throw new ServiceException("项目初始化至少需要前端仓库和后端仓库");
         }
     }
 
@@ -419,7 +416,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
     {
         if (safeList(variants).isEmpty())
         {
-            throw new ServiceException("客户基线不能为空");
+            throw new ServiceException("项目分支不能为空");
         }
         for (ReqProjectInitVariantItem variant : safeList(variants))
         {
@@ -448,18 +445,13 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         }
     }
 
-    private boolean hasReadyRepositoryType(List<ReqRepository> repositories, String repoType)
+    private boolean isReadyRepository(ReqRepository repository)
     {
-        for (ReqRepository repository : safeList(repositories))
-        {
-            if (repoType.equalsIgnoreCase(repository.getRepoType())
-                    && StringUtils.isNotEmpty(repository.getRepoUrl())
-                    && StringUtils.isNotEmpty(repository.getDefaultBranch()))
-            {
-                return true;
-            }
-        }
-        return false;
+        return repository != null
+                && StringUtils.isNotEmpty(repository.getRepoType())
+                && StringUtils.isNotEmpty(repository.getRepoUrl())
+                && StringUtils.isNotEmpty(repository.getDefaultBranch())
+                && !"1".equals(repository.getStatus());
     }
 
     private boolean isReadyVariant(ReqVariant variant)
@@ -506,6 +498,21 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         }
         String code = branchName.trim().replaceAll("[^A-Za-z0-9]+", "_").replaceAll("^_+|_+$", "").toUpperCase();
         return StringUtils.isEmpty(code) ? "BRANCH_" + Integer.toHexString(branchName.hashCode()).toUpperCase() : code;
+    }
+
+    private String buildMcpKey(String projectCode, String variantCode)
+    {
+        return normalizeKeyPart(projectCode, "PROJECT") + ":" + normalizeKeyPart(variantCode, "BRANCH");
+    }
+
+    private String normalizeKeyPart(String value, String fallbackPrefix)
+    {
+        if (StringUtils.isEmpty(value))
+        {
+            return fallbackPrefix;
+        }
+        String code = value.trim().replaceAll("[^A-Za-z0-9]+", "_").replaceAll("^_+|_+$", "").toUpperCase();
+        return StringUtils.isEmpty(code) ? fallbackPrefix + "_" + Integer.toHexString(value.hashCode()).toUpperCase() : code;
     }
 
     private <T> List<T> safeList(List<T> source)

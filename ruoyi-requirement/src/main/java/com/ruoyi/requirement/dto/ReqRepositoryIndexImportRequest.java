@@ -7,6 +7,7 @@ public class ReqRepositoryIndexImportRequest
 {
     private Long projectId;
     private Long repoId;
+    private String mcpKey;
     private String repoType;
     private String remoteUrl;
     private String branchName;
@@ -23,6 +24,8 @@ public class ReqRepositoryIndexImportRequest
     public void setProjectId(Long projectId) { this.projectId = projectId; }
     public Long getRepoId() { return repoId; }
     public void setRepoId(Long repoId) { this.repoId = repoId; }
+    public String getMcpKey() { return mcpKey; }
+    public void setMcpKey(String mcpKey) { this.mcpKey = mcpKey; }
     public String getRepoType() { return repoType; }
     public void setRepoType(String repoType) { this.repoType = repoType; }
     public String getRemoteUrl() { return remoteUrl; }
