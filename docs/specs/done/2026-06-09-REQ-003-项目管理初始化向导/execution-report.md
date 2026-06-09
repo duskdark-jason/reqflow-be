@@ -33,7 +33,7 @@
 | L2 | AC-BE-001, AC-BE-002, AC-BE-003, AC-BE-004 | `mvn -pl ruoyi-requirement -am test` | 通过，21 个测试通过 |
 | L1 | AC-BE-001, AC-BE-002, AC-BE-005 | `mvn -pl ruoyi-admin -am -DskipTests package` | 通过，Controller、权限注解和 admin 打包可编译 |
 | L0 | AC-BE-006 | `sh scripts/check-docs.sh` | 通过 |
-| L0 | AC-BE-006 | `sh scripts/check-harness.sh review --spec docs/specs/active/2026-06-09-REQ-003-项目管理初始化向导` | 通过 |
+| L0 | AC-BE-006 | `sh scripts/check-harness.sh review --spec docs/specs/done/2026-06-09-REQ-003-项目管理初始化向导` | 通过 |
 | L3 | AC-BE-001, AC-BE-002, AC-BE-005 | 登录态 REST 冒烟：查询初始化上下文、新增初始化、编辑回显 | 未执行；当前执行 agent 未持有可使用的测试账号或 token |
 | L4 | AC-BE-001, AC-BE-002, AC-BE-004, AC-BE-005 | 与前端初始化向导联调新增、编辑、列表状态刷新 | 未执行；需要前后端登录态和测试数据同时具备后补验 |
 

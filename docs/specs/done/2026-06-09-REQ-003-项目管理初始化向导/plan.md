@@ -5,7 +5,7 @@
 - 需求说明：`requirement.md`
 - 相关契约：`docs/ai-harness/contracts/requirement-platform-api.md`
 - 相关模块文档：`docs/db/relationship.md`、`docs/domains/requirement-platform/README.md`
-- Companion：`../../../../reqflow-ui/docs/specs/active/2026-06-09-REQ-003-项目管理初始化向导`
+- Companion：`../../../../reqflow-ui/docs/specs/done/2026-06-09-REQ-003-项目管理初始化向导`
 - 目标客户与基线分支：通用 / main
 
 ## 实施步骤
