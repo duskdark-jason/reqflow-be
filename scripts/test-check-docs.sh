@@ -46,6 +46,21 @@ fi
 
 rm "$TMP_DIR/docs/.DS_Store"
 
+printf '%s\n' '# English Only' 'This heading should be rejected.' > "$TMP_DIR/docs/process/english.md"
+
+if sh "$CHECK_SCRIPT" "$TMP_DIR" >"$OUT_FILE" 2>&1; then
+  echo "expected English-only heading check to fail"
+  exit 1
+fi
+
+if ! grep -q "英文标题" "$OUT_FILE"; then
+  echo "expected failure output to mention English-only headings"
+  cat "$OUT_FILE"
+  exit 1
+fi
+
+rm "$TMP_DIR/docs/process/english.md"
+
 printf '%s\n' '# 文档' '这里包含 /Users/example/project，应被识别。' > "$TMP_DIR/docs/process/bad.md"
 
 if sh "$CHECK_SCRIPT" "$TMP_DIR" >"$OUT_FILE" 2>&1; then

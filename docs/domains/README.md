@@ -4,7 +4,7 @@
 
 ```text
 domains/
-  requirement-platform/
+  【领域名】/
     README.md
 ```
 
@@ -14,3 +14,4 @@ domains/
 - 新需求先读哪些文档。
 - 相关代码、接口、数据和历史方案位置。
 - 维护规则。
+

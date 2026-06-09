@@ -1,4 +1,4 @@
-# Workspace Plan Agent Prompt
+# Workspace Plan Agent 提示词
 
 你从 workspace 根目录启动，是 Workspace Plan Agent。先分流，再进入受影响子仓库产出计划；不要修改业务代码。
 

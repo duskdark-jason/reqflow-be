@@ -62,6 +62,49 @@ check_for_dstore() {
   fi
 }
 
+check_chinese_markdown_headings() {
+  root=$1
+
+  output=$(
+    list_files "$root" | while IFS= read -r file; do
+      if ! printf '%s\n' "$file" | grep -E '\.md$' >/dev/null 2>&1; then
+        continue
+      fi
+
+      in_fence=0
+      line_no=0
+      while IFS= read -r line || [ -n "$line" ]; do
+        line_no=$((line_no + 1))
+
+        if printf '%s\n' "$line" | grep -E '^(```|~~~)' >/dev/null 2>&1; then
+          if [ "$in_fence" -eq 0 ]; then
+            in_fence=1
+          else
+            in_fence=0
+          fi
+          continue
+        fi
+
+        [ "$in_fence" -eq 0 ] || continue
+
+        if printf '%s\n' "$line" | grep -E '^#{1,6}[[:space:]]+' >/dev/null 2>&1; then
+          title=$(printf '%s\n' "$line" | sed -E 's/^#{1,6}[[:space:]]+//')
+          if printf '%s\n' "$title" | grep -E '[A-Za-z]' >/dev/null 2>&1 &&
+             ! printf '%s\n' "$title" | grep -E '[一-龥]' >/dev/null 2>&1; then
+            printf '%s:%s:%s\n' "$file" "$line_no" "$line"
+          fi
+        fi
+      done < "$file"
+    done
+  )
+
+  if [ -n "$output" ]; then
+    printf '%s\n' "检查失败：Markdown 文档存在纯英文标题，请使用中文描述"
+    printf '%s\n' "$output"
+    FAILED=1
+  fi
+}
+
 check_root() {
   root=$1
 
@@ -72,6 +115,7 @@ check_root() {
   fi
 
   check_for_dstore "$root"
+  check_chinese_markdown_headings "$root"
   scan_pattern "$root" "本机绝对路径" '(/Users/|/home/[^/[:space:]]+|[A-Za-z]:\\Users\\)' "no"
   scan_pattern "$root" "非模板文档残留占位符" '【[^】]*(字段名|接口路径|接口方法名|需求名称|模块名称|页面/组件名称|填写|说明|目标|参数|类型|是/否|路径|命令|YYYY|占位)[^】]*】' "yes"
   scan_pattern "$root" "非模板文档残留 TODO/TBD" '(TODO|TBD)' "yes"

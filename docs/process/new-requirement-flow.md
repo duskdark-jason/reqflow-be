@@ -51,7 +51,7 @@ docs/specs/active/YYYY-MM-DD-需求名称/
 | 影响范围 | 必读文档 |
 |---|---|
 | 任意修改 | `../ai-harness/README.md`、`../ai-harness/change-checklist.md` |
-| 业务领域 | `../domains/requirement-platform/README.md`，如果已沉淀 |
+| 业务领域 | `../domains/【领域名】/README.md` |
 | 接口字段 | `../ai-harness/contracts/` |
 | 页面或交互 | `../ai-harness/modules/`、`../ai-harness/contracts/` |
 | 数据库或统计 | `../db/`，如果项目存在 |

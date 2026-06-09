@@ -1,6 +1,8 @@
-# AI Harness
+# AI Harness 说明
 
 本目录是给 agentic coding / vibecoding 工具使用的共享上下文。它应该随代码一起提交，让后续模型和同事在修改前理解业务边界、接口契约和验证方式。
+
+各类落地文档必须使用中文描述；必要英文术语、命令、接口名和工具名可以保留，但标题和说明必须给出中文语义。
 
 ## 使用方式
 
@@ -17,8 +19,8 @@
 | 任务类型 | 必读文件 |
 |---|---|
 | 任意修改 | `harness-index.json`、`change-checklist.md`、`verification.md` |
-| 业务模块 | `modules/*.md`，如果项目已沉淀对应模块 |
-| 接口、结果结构、UI 状态 | `contracts/*.md`，如果项目已沉淀对应契约 |
+| 业务模块 | `modules/【模块名】.md` |
+| 接口、结果结构、UI 状态 | `contracts/【契约名】.md` |
 | 数据库、SQL、统计口径 | `../db/`，如果项目存在 |
 | 重要业务或技术决策 | `decisions/*.md` |
 

@@ -7,13 +7,13 @@
 - 影响表：【表名列表】
 - 影响数据访问层：【Mapper/Repository/DAO】
 
-## Forward SQL
+## 正向 SQL（Forward SQL）
 
 ```sql
 -- 填写正向 SQL
 ```
 
-## Rollback SQL
+## 回滚 SQL（Rollback SQL）
 
 ```sql
 -- 填写回退 SQL

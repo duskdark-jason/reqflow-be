@@ -15,10 +15,10 @@
 | 层级 | 目标 | 适用场景 | 示例 |
 |---|---|---|---|
 | L0 文档/规范 | 文档没有个人路径、占位符和旧路径 | 修改 `docs/`、`AGENTS.md`、harness | `sh scripts/check-docs.sh` |
-| L1 编译/构建 | 代码能通过静态编译或打包 | 大多数代码修改 | `mvn -pl ruoyi-admin -am package -DskipTests` |
-| L2 单元/契约 | 核心逻辑、接口契约、组件契约可验证 | Service、utils、DTO/VO、Mapper | `mvn -pl ruoyi-admin -am test` |
-| L3 运行态冒烟 | 应用能启动，接口能真实运行 | Controller、权限、配置 | `mvn -pl ruoyi-admin -am spring-boot:run -Dspring-boot.run.profiles=druid,test` 后用 `curl` 检查目标接口 |
-| L4 端到端/跨端 | 真实用户流程可用 | 保存、导出、异步任务、跨端联调 | 与 `reqflow-ui` 联调后执行对应用户流程并记录接口与页面结果 |
+| L1 编译/构建 | 代码能通过静态编译或打包 | 大多数代码修改 | `mvn -pl ruoyi-admin -am -DskipTests package` |
+| L2 单元/契约 | 核心逻辑、接口契约、组件契约可验证 | Service、utils、DTO/VO、组件状态 | `mvn -pl ruoyi-requirement -am test` |
+| L3 运行态冒烟 | 应用能启动，接口/页面能真实运行 | Controller、页面、权限、配置 | `SPRING_PROFILES_ACTIVE=druid,test mvn -pl ruoyi-admin spring-boot:run` |
+| L4 端到端/跨端 | 真实用户流程可用 | 保存、导出、异步任务、跨服务联调 | `curl -s http://localhost:8080/system/config/configKey/sys.index.skinName` |
 
 只改纯文档时通常跑 L0。改代码至少跑 L1。改业务逻辑或契约应补 L2。改接口、配置、权限或用户可见页面应补 L3。影响跨端、导出、保存、异步任务或核心流程时应补 L4。
 
@@ -42,18 +42,18 @@ Windows 原生命令行可通过 `scripts\check-docs.cmd` 与 `scripts\check-har
 
 ## L1 编译或构建
 
-按项目技术栈替换为真实命令：
+后端编译或打包命令：
 
 ```bash
-mvn -pl ruoyi-admin -am package -DskipTests
+mvn -pl ruoyi-admin -am -DskipTests package
 ```
 
 ## L2 单元或契约测试
 
-按项目技术栈替换为真实命令：
+后端单元或契约测试命令：
 
 ```bash
-mvn -pl ruoyi-admin -am test
+mvn -pl ruoyi-requirement -am test
 ```
 
 ## L3 运行态冒烟
@@ -69,7 +69,7 @@ mvn -pl ruoyi-admin -am test
 前端或浏览器场景可使用 Playwright CLI 做低 token 冒烟：
 
 ```bash
-playwright-cli open http://localhost
+playwright-cli open http://localhost:8080
 playwright-cli snapshot
 playwright-cli console
 playwright-cli requests

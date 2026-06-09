@@ -19,14 +19,14 @@ docs/specs/active/YYYY-MM-DD-需求简称/
 
 ## 角色职责
 
-### Plan Agent
+### 计划阶段（Plan Agent）
 
 - 负责澄清业务目标、影响范围、接口契约、数据口径、验证路径和风险。
 - 输出 `requirement.md` 和 `plan.md`。
 - `plan.md` 必须足够明确，执行 agent 不需要再决定需求范围、接口字段、数据口径或验收标准。
 - 如果存在不确定项，必须在计划阶段标记为阻断或假设，不能让执行阶段自行猜测。
 
-### Execution Agent
+### 执行阶段（Execution Agent）
 
 - 负责按 `plan.md` 实现、补测试、运行验证和更新长期 harness。
 - 不自行扩展需求范围，不新增计划外接口、字段、依赖或架构。
@@ -35,7 +35,7 @@ docs/specs/active/YYYY-MM-DD-需求简称/
 - L3/L4 失败或跳过时，必须记录启动命令、执行目录、profile/env 或 mode、检查命令、错误摘要和补验环境；不得把当前 agent 环境问题写成用户环境问题。
 - Review Agent 产生 `RF-001` 形式的返修项后，执行 agent 必须按相同修复 ID 在 `execution-report.md` 的 `Review 返修记录` 中回填处理结果、修改文件和验证命令。
 
-### Review Agent
+### 审查阶段（Review Agent）
 
 - 只做审查，不直接修改代码。
 - 审查输入包括 `requirement.md`、`plan.md`、`execution-report.md`、代码 diff、测试结果和相关 harness 文档。

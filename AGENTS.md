@@ -1,4 +1,4 @@
-# AGENTS.md
+# AGENTS.md 项目入口
 
 ## 项目说明
 
@@ -25,9 +25,11 @@
 - 页面、组件或交互：`docs/ai-harness/modules/` 和 `docs/ai-harness/contracts/`
 - 权限、菜单或安全：权限相关代码、路由/菜单配置和对应 harness 文档
 
-## AI Harness
+## AI Harness 维护
 
 `docs/ai-harness` 是给 vibecoding / agentic coding 工具长期理解项目的共享上下文。修改代码前先读 `docs/ai-harness/README.md`，再按任务类型阅读对应模块、契约或决策文档。
+
+各类落地文档必须使用中文描述；必要英文术语、命令、接口名和工具名可以保留，但标题和说明必须给出中文语义。
 
 新需求、接口变更、数据库变更或跨端联调开始前，必须先按 `docs/process/new-requirement-flow.md` 判断影响范围、补充需求说明和确认文档联动。
 
