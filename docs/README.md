@@ -14,6 +14,8 @@
 | `../scripts/check-docs.sh` | 文档自检脚本 | 文档或 harness 变更后运行 |
 | `../scripts/check-harness.sh` | harness 初始化、spec 和多 agent 交接门禁 | 初始化、需求交接、Review、返修或完成前运行 |
 
+涉及需求平台 Key、需求编排、需求开发或 MCP 回写时，先读 `process/platform-key-workflow.md`。
+
 涉及多 agent 协作时，先读 `process/agent-workflow.md`。
 
 涉及分支、worktree、commit、merge 或 rebase 时，先读 `process/git-workflow.md`。
@@ -23,9 +25,10 @@
 ## 新需求默认流程
 
 1. `process/new-requirement-flow.md`
-2. `process/agent-workflow.md`，如果计划、执行和 review 由不同 agent 或工具完成
-3. `ai-harness/README.md`
-4. 与任务相关的 `ai-harness/modules/`、`ai-harness/contracts/`、`domains/` 文档
+2. `process/platform-key-workflow.md`，如果任务来自需求平台 Key 或需要 MCP 回写
+3. `process/agent-workflow.md`，如果计划、执行和 review 由不同 agent 或工具完成
+4. `ai-harness/README.md`
+5. 与任务相关的 `ai-harness/modules/`、`ai-harness/contracts/`、`domains/` 文档
 
 ## 文档维护原则
 

@@ -21,6 +21,7 @@
 | 任务类型 | 必读文件 |
 |---|---|
 | 任意修改 | `harness-index.json`、`change-checklist.md`、`verification.md` |
+| 需求平台 Key、项目接入初始化或 MCP 回写 | `../process/platform-key-workflow.md` |
 | 业务模块 | `modules/【模块名】.md` |
 | 接口、结果结构、UI 状态 | `contracts/【契约名】.md` |
 | 数据库、SQL、统计口径 | `../db/`，如果项目存在 |

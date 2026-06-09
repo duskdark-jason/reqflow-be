@@ -156,6 +156,13 @@ check_spec_meta() {
   check_file "$meta_file"
   check_pattern "$meta_file" '状态[：:][[:space:]]*(planning|executing|review|repairing|complete)' "需求元信息缺少有效状态"
   check_pattern "$meta_file" '当前角色[：:][[:space:]]*(Plan Agent|Execution Agent|Review Agent|用户|人工)' "需求元信息缺少当前角色"
+  check_pattern "$meta_file" '流程模式[：:][[:space:]]*(需求平台编排模式|需求平台开发模式|项目接入初始化模式|平台自身建设模式)' "需求元信息缺少有效流程模式"
+  check_pattern "$meta_file" '需求 Key[：:]' "需求元信息缺少需求 Key"
+  check_pattern "$meta_file" '平台关联远端[：:]' "需求元信息缺少平台关联远端"
+  check_pattern "$meta_file" '平台目标分支[：:]' "需求元信息缺少平台目标分支"
+  check_pattern "$meta_file" '执行授权[：:][[:space:]]*(未授权|已授权|不适用)' "需求元信息缺少有效执行授权"
+  check_pattern "$meta_file" 'Review 授权[：:][[:space:]]*(未授权|已授权|不适用)' "需求元信息缺少有效 Review 授权"
+  check_pattern "$meta_file" '主分支修改授权[：:][[:space:]]*(不适用|未授权|已授权)' "需求元信息缺少有效主分支修改授权"
   check_pattern "$meta_file" '当前分支[：:]' "需求元信息缺少当前分支"
   check_pattern "$meta_file" 'companion 仓库[：:]' "需求元信息缺少 companion 仓库"
 }
@@ -174,6 +181,14 @@ extract_spec_role() {
     sed 's/.*当前角色[：:]//; s/^[[:space:]]*//; s/[[:space:]]*$//'
 }
 
+extract_meta_field() {
+  meta_file=$1
+  field=$2
+  grep -E "$field[：:]" "$meta_file" 2>/dev/null |
+    head -n 1 |
+    sed "s/.*$field[：:]//; s/^[[:space:]]*//; s/[[:space:]]*$//"
+}
+
 check_spec_state() {
   spec_dir=$1
   meta_file="$spec_dir/meta.md"
@@ -184,6 +199,10 @@ check_spec_state() {
 
   status=$(extract_spec_status "$meta_file")
   role=$(extract_spec_role "$meta_file")
+  branch=$(extract_meta_field "$meta_file" "当前分支")
+  execution_auth=$(extract_meta_field "$meta_file" "执行授权")
+  review_auth=$(extract_meta_field "$meta_file" "Review 授权")
+  main_auth=$(extract_meta_field "$meta_file" "主分支修改授权")
 
   case "$status:$role" in
     "planning:Plan Agent"|"planning:用户"|"planning:人工"|"executing:Execution Agent"|"executing:用户"|"executing:人工"|"review:Review Agent"|"review:用户"|"review:人工"|"repairing:Execution Agent"|"repairing:用户"|"repairing:人工"|"complete:Execution Agent"|"complete:Review Agent"|"complete:用户"|"complete:人工")
@@ -219,6 +238,31 @@ check_spec_state() {
     repairing|complete)
       check_file "$execution_file"
       check_file "$review_file"
+      ;;
+  esac
+
+  case "$status" in
+    executing|repairing|complete)
+      if [ "$execution_auth" != "已授权" ]; then
+        fail "meta 状态为 $status 时必须记录执行授权：已授权：$meta_file"
+      fi
+      ;;
+  esac
+
+  case "$status" in
+    review|complete)
+      if [ "$review_auth" != "已授权" ]; then
+        fail "meta 状态为 $status 时必须记录 Review 授权：已授权：$meta_file"
+      fi
+      ;;
+  esac
+
+  case "$status" in
+    executing|repairing|complete)
+      if printf '%s\n' "$branch" | grep -E '^(main|master)$' >/dev/null 2>&1 &&
+         [ "$main_auth" != "已授权" ]; then
+        fail "当前分支为 $branch 且进入 $status 时必须记录主分支修改授权：已授权：$meta_file"
+      fi
       ;;
   esac
 
@@ -419,6 +463,7 @@ check_required_docs() {
   check_file "$REPO_ROOT/docs/ai-harness/verification.md"
   check_file "$index_file"
   check_file "$REPO_ROOT/docs/process/agent-workflow.md"
+  check_file "$REPO_ROOT/docs/process/platform-key-workflow.md"
   check_dir "$REPO_ROOT/docs/ai-harness/contracts"
   check_dir "$REPO_ROOT/docs/ai-harness/decisions"
   check_dir "$REPO_ROOT/docs/ai-harness/modules"
@@ -427,6 +472,7 @@ check_required_docs() {
   check_pattern "$index_file" '"initialized"[[:space:]]*:' "harness 索引缺少 initialized"
   check_pattern "$index_file" '"repository"[[:space:]]*:' "harness 索引缺少 repository"
   check_pattern "$index_file" '"entrypoints"[[:space:]]*:' "harness 索引缺少 entrypoints"
+  check_pattern "$index_file" '"platformKeyWorkflow"[[:space:]]*:' "harness 索引缺少 platformKeyWorkflow"
   check_pattern "$index_file" '"commands"[[:space:]]*:' "harness 索引缺少 commands"
   check_pattern "$index_file" '"customization"[[:space:]]*:' "harness 索引缺少 customization"
   check_pattern "$index_file" '"customerBranches"[[:space:]]*:' "harness 索引缺少 customerBranches"
@@ -436,6 +482,7 @@ check_required_docs() {
   check_pattern "$index_file" '"localRunDetected"[[:space:]]*:' "harness 索引缺少 localRunDetected"
   check_pattern "$index_file" '"localRunConfirmed"[[:space:]]*:' "harness 索引缺少 localRunConfirmed"
   check_index_file_target "$index_file" "localRun"
+  check_index_file_target "$index_file" "platformKeyWorkflow"
 
   if grep -E '"template"[[:space:]]*:[[:space:]]*true' "$index_file" >/dev/null 2>&1; then
     if [ "$repo_name" != "harness-template" ]; then

@@ -11,6 +11,7 @@
   },
   "entrypoints": {
     "workflow": "docs/process/agent-workflow.md",
+    "platformKeyWorkflow": "docs/process/platform-key-workflow.md",
     "verification": "docs/ai-harness/verification.md",
     "localRun": "docs/runbooks/local-run.detected.md",
     "localRunTemplate": "docs/runbooks/local-run-template.md",

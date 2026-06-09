@@ -30,6 +30,8 @@
 | `/requirement/project/init/{projectId}` | GET | `req:project:query` | 查询一个项目的初始化上下文 |
 | `/requirement/project/init` | POST | `req:project:add` | 新增项目并同步保存代码仓库和项目分支 |
 | `/requirement/project/init` | PUT | `req:project:edit` | 更新项目并同步保存代码仓库和项目分支 |
+| `/requirement/project/{projectId}/harness-template` | GET | `req:project:query` | 查询项目接入所需 harness 初始化模板包 |
+| `/requirement/project/{projectId}/harness-init-result` | POST | `req:package:save` | 登记 Codex 在目标 workspace 的 harness 初始化结果 |
 
 初始化上下文响应 `data` 包含：
 
@@ -43,6 +45,22 @@
 初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成。
 
 初始化保存必须在同一事务内完成。新增时先写 `req_project`，再写 `req_repository` 和 `req_variant`；更新时按传入 ID 更新已有仓库/分支配置、插入新增行，并删除本次维护弹窗中移除的仓库/分支配置。接口拒绝仓库地址、默认分支、真实分支名、项目说明或备注中的个人本机绝对路径。
+
+## Harness 模板与初始化下发
+
+需求平台内置保存一份团队统一的需求平台驱动 harness 模板，作为项目接入时的初始化资产。模板包至少包含：
+
+- 子仓库 `AGENTS.md` 模板。
+- workspace 根目录 `AGENTS.md` 模板。
+- `docs/process/platform-key-workflow.md`、`new-requirement-flow.md`、`agent-workflow.md` 和 `git-workflow.md`。
+- `docs/ai-harness/**` 基础索引、验证说明、契约/模块/决策模板。
+- `docs/specs/**`、`docs/templates/**`、`docs/runbooks/**` 和 `scripts/check-*.sh|cmd`。
+
+项目接入初始化时，平台根据项目仓库、companion 仓库、默认基线分支、任务分支前缀和客户分支配置生成 harness 初始化模板包。Codex 在目标 workspace 中通过需求平台 MCP 或接口获取模板包，并在校验远端仓库一致后写入目标仓库；服务端只负责存储和下发模板，不直接执行 Git、shell 或文件系统写入。
+
+多仓 workspace 初始化必须同时下发 workspace 根目录 `AGENTS.md` 和各子仓库 `AGENTS.md`。workspace 入口只做分流和通用护栏；业务规则、验证命令和契约仍落到对应子仓库 `docs/ai-harness`、`docs/process` 和 `docs/specs`。
+
+Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requirement/project/{projectId}/harness-init-result` 回写结果，内容包括仓库远端、当前分支、写入文件清单、校验命令、校验结果、失败原因和是否需要人工确认。
 
 ## 项目索引接口
 
@@ -111,6 +129,8 @@ execution_prompt
 review_prompt
 execution_report
 review_report
+harness_template
+harness_init_result
 ```
 
 ## 统计接口
@@ -146,6 +166,7 @@ save_development_plan
 upload_execution_report
 upload_review_report
 register_harness_init_result
+get_harness_template
 publish_repository_index
 ```
 
@@ -153,6 +174,7 @@ MCP 安全边界：
 
 - 只能读取平台资源或写入平台表。
 - 不允许执行 Git、shell、clone、branch、文件系统写入或大模型调用。
+- `get_harness_template` 只返回平台内置 harness 模板包和项目初始化变量，必须校验 `req:project:query`。
 - `register_harness_init_result` 只更新 `req_repository` 的 harness 字段，必须校验 `req:package:save`。
 - `publish_repository_index` 必须校验 `req:index:import`，优先接收 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
 - 报告上传、计划保存和执行资料类工具必须校验 `req:package:save`，并且只追加 `req_package_version`。

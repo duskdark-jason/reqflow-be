@@ -28,7 +28,7 @@ active/YYYY-MM-DD-REQ-001-中文需求标题/
 
 | 文件 | 维护者 | 用途 |
 |---|---|---|
-| `meta.md` | 当前阶段负责人 | 状态、当前角色、分支、companion 仓库和关联 spec |
+| `meta.md` | 当前阶段负责人 | 状态、流程模式、需求 Key、平台远端、目标分支、当前分支、授权状态、companion 仓库和关联 spec |
 | `requirement.md` | Plan Agent | 业务目标、范围、影响面、验收标准 |
 | `plan.md` | Plan Agent | 可执行开发计划、验证路径、风险假设 |
 | `execution-report.md` | Execution Agent | 实现摘要、验证结果、偏差和阻断 |
@@ -45,18 +45,20 @@ YYYY-MM-DD-REQ-001-中文需求标题.md
 ## 使用流程
 
 1. 新需求开始前，在 `active/` 下创建需求目录，并复制 `meta.md`。
-2. Plan Agent 复制模板并填写 `requirement.md` 和 `plan.md`。
-3. Execution Agent 按 `plan.md` 实现，并填写 `execution-report.md`。
-4. Review Agent 只读审查，并填写 `review-report.md`；需要返修时使用 `RF-001` 形式编号。
-5. Execution Agent 修复 Review 问题后，在 `execution-report.md` 的 `Review 返修记录` 中用同一批 `RF-*` 编号回填处理结果。
-6. Review Agent 复审后，在 `review-report.md` 的 `复审记录` 中更新每个 `RF-*` 的复审结论。
-7. 完成后，将长期有效内容沉淀到 `ai-harness/` 或 `domains/`。
-8. 需求完成且仍有参考价值时，将目录移动到 `done/`。
-9. `review-report.md` 结论为 `通过` 或用户接受的 `有条件通过` 后，才能从 `active/` 移入 `done/`。
+2. 如果任务来自需求平台 Key，先按 `../process/platform-key-workflow.md` 校验模式；编排模式不得在本地创建 spec，开发模式必须先创建任务分支后再落地 spec。
+3. Plan Agent 复制模板并填写 `requirement.md` 和 `plan.md`。
+4. Execution Agent 按 `plan.md` 实现，并填写 `execution-report.md`。
+5. Review Agent 只读审查，并填写 `review-report.md`；需要返修时使用 `RF-001` 形式编号。
+6. Execution Agent 修复 Review 问题后，在 `execution-report.md` 的 `Review 返修记录` 中用同一批 `RF-*` 编号回填处理结果。
+7. Review Agent 复审后，在 `review-report.md` 的 `复审记录` 中更新每个 `RF-*` 的复审结论。
+8. 完成后，将长期有效内容沉淀到 `ai-harness/` 或 `domains/`。
+9. 需求完成且仍有参考价值时，将目录移动到 `done/`。
+10. `review-report.md` 结论为 `通过` 或用户接受的 `有条件通过` 后，才能从 `active/` 移入 `done/`。
 
 ## 检查命令
 
 - `meta.md` 的状态必须是 `planning`、`executing`、`review`、`repairing` 或 `complete`。
+- `meta.md` 必须记录流程模式、需求 Key、平台关联远端、平台目标分支、执行授权、Review 授权和主分支修改授权。
 - `meta.md` 状态必须和文件阶段匹配；准备关闭指定需求时，先把状态更新为 `complete`。
 - `meta.md` 当前角色必须和状态匹配：Plan Agent 只负责 `planning`，Execution Agent 负责 `executing` / `repairing`，Review Agent 负责 `review`；人工接管时写 `人工` 或 `用户`。
 - `requirement.md` 中的每个 `AC-*` 验收 ID 必须在 `plan.md` 中出现；当 `execution-report.md` 或 `review-report.md` 存在时，也必须覆盖同一批验收 ID。

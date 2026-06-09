@@ -10,6 +10,7 @@
 
 - `docs/README.md`
 - `docs/process/new-requirement-flow.md`
+- `docs/process/platform-key-workflow.md`，如果任务包含需求平台 Key、需求编排、需求开发、项目接入初始化或 MCP 回写
 - `docs/process/agent-workflow.md`
 - `docs/process/code-guidelines.md`，如果涉及代码实现
 - `docs/process/git-workflow.md`，如果涉及分支、worktree、commit、merge 或 rebase
@@ -36,6 +37,10 @@
 新需求、接口变更、数据库变更或跨端联调开始前，必须先按 `docs/process/new-requirement-flow.md` 判断影响范围、补充需求说明和确认文档联动。
 
 如果任务由多个 agent 或工具协作完成，必须按 `docs/process/agent-workflow.md` 使用文件交接：计划 agent 写清 `requirement.md` 和 `plan.md`，执行 agent 只按计划实现并写 `execution-report.md`，review agent 只审查并写 `review-report.md`。
+
+阶段授权必须明确记录：用户选择方案、确认方向或同意建议，只代表进入计划阶段；不得据此自动创建分支、改业务代码、写 `execution-report.md` 或写 `review-report.md`。开始实现必须得到明确的执行授权，例如“开始执行”“按计划实现”“允许改代码”或“创建分支/worktree 执行”。当前分支为 `main` 或 `master` 时，除只读分析和明确的小文档修正外，不得开始功能实现；确需在主分支修改时，必须获得明确的主分支修改授权并写入 `meta.md`。Execution Agent 不得自我 Review；Review Agent 只读审查，除非用户明确授权切换为 Execution Agent。
+
+需求平台 Key 流程必须按 `docs/process/platform-key-workflow.md` 执行：编排模式只通过 MCP 获取/回写设计文档，不在本地仓库落地或提交；开发模式必须校验需求平台关联远端和目标分支，基于开发基线创建任务分支后再落地 spec、开发和自动 Review；项目接入初始化模式由平台下发 harness 模板和 workspace `AGENTS.md` 给 Codex 落地。当前需求平台自身建设阶段可使用平台自身建设模式，不强制 MCP 回写，按阶段写本地 `docs/specs`。
 
 新增或修改以下内容时，必须同步更新 `docs/ai-harness`；如果不需要更新，请在完成说明中写明原因：
 

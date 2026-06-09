@@ -23,20 +23,25 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 
 - 负责澄清业务目标、影响范围、接口契约、数据口径、验证路径和风险。
 - 输出 `requirement.md` 和 `plan.md`。
+- 用户选择方案、确认方向或同意建议时，只代表允许进入计划阶段；不得自动切换到执行阶段。
 - `plan.md` 必须足够明确，执行 agent 不需要再决定需求范围、接口字段、数据口径或验收标准。
 - 如果存在不确定项，必须在计划阶段标记为阻断或假设，不能让执行阶段自行猜测。
+- Plan Agent 写完 `requirement.md` 和 `plan.md` 后必须停止，等待明确执行授权；不得修改业务代码、写 `execution-report.md` 或写 `review-report.md`。
 
 ### 执行阶段（Execution Agent）
 
 - 负责按 `plan.md` 实现、补测试、运行验证和更新长期 harness。
+- 开始改代码前必须确认 `meta.md` 已记录 `执行授权：已授权`，并确认当前分支不是未授权的 `main` 或 `master`。
 - 不自行扩展需求范围，不新增计划外接口、字段、依赖或架构。
 - 如果发现计划缺失、冲突或无法执行，停止并在 `execution-report.md` 写明阻断点。
 - 完成后写 `execution-report.md`，包含修改文件、验证命令、结果、未验证风险和与计划的偏差。
 - L3 失败或跳过，或已选择 L4 但失败/跳过时，必须记录启动命令、执行目录、profile/env 或 mode、检查命令、错误摘要和补验环境；不得把当前 agent 环境问题写成用户环境问题。
 - Review Agent 产生 `RF-001` 形式的返修项后，执行 agent 必须按相同修复 ID 在 `execution-report.md` 的 `Review 返修记录` 中回填处理结果、修改文件和验证命令。
+- Execution Agent 不得把自己的实现直接写成 Review 完成，不得代替 Review Agent 输出 `review-report.md`。
 
 ### 审查阶段（Review Agent）
 
+- 必须基于明确 Review 授权或独立 Review 请求开始；不要把执行后的自检当成 Review 阶段。
 - 只做审查，不直接修改代码。
 - 审查输入包括 `requirement.md`、`plan.md`、`execution-report.md`、代码 diff、测试结果和相关 harness 文档。
 - 输出 `review-report.md`，结论只能是：`通过`、`有条件通过`、`阻断`。
@@ -58,14 +63,16 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 ## 状态流转
 
 ```text
-draft requirement -> approved plan -> executing -> ready for review -> reviewed -> repairing -> re-review -> done
+draft requirement -> selected option -> approved plan -> execution authorized -> executing -> review authorized -> ready for review -> reviewed -> repairing -> re-review -> done
 ```
 
 - `requirement.md` 未清楚前，不进入实现。
 - `plan.md` 未包含验收和验证前，不进入实现。
-- `meta.md` 必须记录当前状态、当前角色、当前分支和 companion 仓库；阶段变化时同步更新。
+- `meta.md` 必须记录当前状态、当前角色、执行模式、当前分支、执行授权、Review 授权、主分支修改授权和 companion 仓库；阶段变化时同步更新。
 - `meta.md` 状态必须和文件阶段匹配：`planning` 不应已有执行或 Review 报告，`review` / `repairing` / `complete` 必须已有执行和 Review 报告。
 - `meta.md` 当前角色必须和状态匹配：`planning` 对应 Plan Agent，`executing` / `repairing` 对应 Execution Agent，`review` 对应 Review Agent；人工或用户接管时可写 `人工` / `用户`。
+- `executing` / `repairing` / `complete` 必须有 `执行授权：已授权`；`review` / `complete` 必须有 `Review 授权：已授权`。
+- 当前分支为 `main` 或 `master` 且状态进入 `executing` / `repairing` / `complete` 时，必须有 `主分支修改授权：已授权`；否则应先创建任务分支或 worktree。
 - `execution-report.md` 未列出验证证据前，不进入 review。
 - `requirement.md` 中每个 `AC-*` 必须在 `plan.md`、`execution-report.md` 和 `review-report.md` 中形成闭环。
 - `review-report.md` 为 `阻断` 时，必须通过 `返修交接清单` 指向计划或执行阶段。
@@ -92,6 +99,8 @@ sh scripts/check-harness.sh           # 等同 complete
 ## Git 配合
 
 - 普通模式下不自动提交。
+- 普通模式不等于允许在主分支实现；当前分支为 `main` 或 `master` 时，除只读分析和明确的小文档修正外，不得开始功能开发。
+- “选这个方案”“可以”“按这个方向”不等于创建分支、改代码、commit 或 Review 授权。
 - 用户明确要求创建分支或 worktree 执行任务时，执行 agent 必须在隔离分支内按计划阶段提交。
 - merge、push、rebase、删除 worktree 或删除远端分支仍需用户明确确认。
 - 多仓联调时，相关仓库应使用相同中文 spec 目录名，并使用相同 ASCII 任务分支名，便于追踪。

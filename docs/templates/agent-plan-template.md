@@ -36,7 +36,10 @@
 
 ## 执行约束
 
+- 本计划获认可后仍只代表计划阶段完成；开始实现必须另有明确执行授权。
+- 当前分支为 `main` 或 `master` 时，Execution Agent 必须先获得任务分支/worktree 授权，或获得明确主分支修改授权并写入 `meta.md`。
 - Execution Agent 必须按本计划执行，不得自行扩大范围。
 - 创建任务分支前必须确认基线分支；客户定制需求不得默认从主线创建分支。
 - 如发现计划缺失、契约冲突或验证无法执行，停止实现并更新 `execution-report.md`。
 - 隔离开发模式下必须按计划阶段 commit，并在 `execution-report.md` 记录 commit、验证命令和结果；merge、push、rebase 和删除 worktree 仍需用户确认。
+- Execution Agent 不得自我 Review；进入 Review 必须有明确 Review 授权或独立 Review 请求。
