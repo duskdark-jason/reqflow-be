@@ -1,0 +1,65 @@
+# 需求文档目录
+
+本目录用于存放单次需求的过程文档。长期有效的业务规则、接口契约和技术决策，应在需求完成后沉淀到 `../ai-harness/` 或 `../domains/`。
+
+## 目录说明
+
+| 目录 | 用途 |
+|---|---|
+| `active/` | 正在开发、待开发或尚未验收的需求 |
+| `done/` | 已完成且仍有参考价值的需求方案 |
+
+## 命名规范
+
+新需求优先使用目录式结构：
+
+```text
+active/YYYY-MM-DD-需求名称/
+  meta.md
+  requirement.md
+  plan.md
+  execution-report.md
+  review-report.md
+```
+
+目录内文件职责：
+
+| 文件 | 维护者 | 用途 |
+|---|---|---|
+| `meta.md` | 当前阶段负责人 | 状态、当前角色、分支、companion 仓库和关联 spec |
+| `requirement.md` | Plan Agent | 业务目标、范围、影响面、验收标准 |
+| `plan.md` | Plan Agent | 可执行开发计划、验证路径、风险假设 |
+| `execution-report.md` | Execution Agent | 实现摘要、验证结果、偏差和阻断 |
+| `review-report.md` | Review Agent | 只读审查结论、验收覆盖矩阵和返修交接清单 |
+
+目录内必须记录 companion 仓库或关联 spec；单仓需求也要写明“无 companion”。跨仓需求完成时，相关仓库的 `execution-report.md` 应互相记录对方分支和 commit。
+
+历史单文件需求仍可保留：
+
+```text
+YYYY-MM-DD-需求名称.md
+```
+
+## 使用流程
+
+1. 新需求开始前，在 `active/` 下创建需求目录，并复制 `meta.md`。
+2. Plan Agent 复制模板并填写 `requirement.md` 和 `plan.md`。
+3. Execution Agent 按 `plan.md` 实现，并填写 `execution-report.md`。
+4. Review Agent 只读审查，并填写 `review-report.md`；需要返修时使用 `RF-001` 形式编号。
+5. Execution Agent 修复 Review 问题后，在 `execution-report.md` 的 `Review 返修记录` 中用同一批 `RF-*` 编号回填处理结果。
+6. Review Agent 复审后，在 `review-report.md` 的 `复审记录` 中更新每个 `RF-*` 的复审结论。
+7. 完成后，将长期有效内容沉淀到 `ai-harness/` 或 `domains/`。
+8. 需求完成且仍有参考价值时，将目录移动到 `done/`。
+9. `review-report.md` 结论为 `通过` 或用户接受的 `有条件通过` 后，才能从 `active/` 移入 `done/`。
+
+## 检查命令
+
+- `meta.md` 的状态必须是 `planning`、`executing`、`review`、`repairing` 或 `complete`。
+- `meta.md` 状态必须和文件阶段匹配；准备关闭指定需求时，先把状态更新为 `complete`。
+- `meta.md` 当前角色必须和状态匹配：Plan Agent 只负责 `planning`，Execution Agent 负责 `executing` / `repairing`，Review Agent 负责 `review`；人工接管时写 `人工` 或 `用户`。
+- `requirement.md` 中的每个 `AC-*` 验收 ID 必须在 `plan.md` 中出现；当 `execution-report.md` 或 `review-report.md` 存在时，也必须覆盖同一批验收 ID。
+- Review Agent 完成审查后运行：`sh scripts/check-harness.sh review`。该模式允许 `阻断` 结论和未回填的 `RF-*`，用于验证 review 交接文件本身是否合格。
+- Execution Agent 完成返修并回填后运行：`sh scripts/check-harness.sh` 或 `sh scripts/check-harness.sh complete`。该模式要求阻断已关闭、`RF-*` 已在 `execution-report.md` 回填。
+- 关闭单个需求前可运行：`sh scripts/check-harness.sh complete --spec docs/specs/active/YYYY-MM-DD-需求名称`。
+- `review-report.md` 的 `Review 结论` 必须是 `通过`、`有条件通过` 或 `阻断`。
+- Review Agent 产生 `RF-*` 后应停止交接，不直接修代码，也不回填 `execution-report.md`，除非用户明确授权切换角色。
