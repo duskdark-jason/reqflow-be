@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.requirement.mapper.ReqDemandMapper">
+    <resultMap id="ReqDemandResult" type="ReqDemand">
+        <id property="demandId" column="demand_id"/>
+        <result property="demandNo" column="demand_no"/>
+        <result property="title" column="title"/>
+        <result property="demandType" column="demand_type"/>
+        <result property="projectId" column="project_id"/>
+        <result property="variantId" column="variant_id"/>
+        <result property="moduleId" column="module_id"/>
+        <result property="featureId" column="feature_id"/>
+        <result property="businessBackground" column="business_background"/>
+        <result property="expectedResult" column="expected_result"/>
+        <result property="impactPage" column="impact_page"/>
+        <result property="impactApi" column="impact_api"/>
+        <result property="impactData" column="impact_data"/>
+        <result property="impactPermission" column="impact_permission"/>
+        <result property="impactExportOrAsync" column="impact_export_or_async"/>
+        <result property="acceptanceText" column="acceptance_text"/>
+        <result property="status" column="status"/>
+        <result property="creatorId" column="creator_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectReqDemandVo">
+        select demand_id, demand_no, title, demand_type, project_id, variant_id, module_id, feature_id,
+               business_background, expected_result, impact_page, impact_api, impact_data,
+               impact_permission, impact_export_or_async, acceptance_text, status, creator_id,
+               create_by, create_time, update_by, update_time, remark
+        from req_demand
+    </sql>
+
+    <select id="selectReqDemandList" parameterType="ReqDemand" resultMap="ReqDemandResult">
+        <include refid="selectReqDemandVo"/>
+        <where>
+            <if test="demandNo != null and demandNo != ''">and demand_no = #{demandNo}</if>
+            <if test="title != null and title != ''">and title like concat('%', #{title}, '%')</if>
+            <if test="projectId != null">and project_id = #{projectId}</if>
+            <if test="variantId != null">and variant_id = #{variantId}</if>
+            <if test="moduleId != null">and module_id = #{moduleId}</if>
+            <if test="demandType != null and demandType != ''">and demand_type = #{demandType}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+            <if test="creatorId != null">and creator_id = #{creatorId}</if>
+        </where>
+        order by demand_id desc
+    </select>
+
+    <select id="selectReqDemandByDemandId" parameterType="Long" resultMap="ReqDemandResult">
+        <include refid="selectReqDemandVo"/>
+        where demand_id = #{demandId}
+    </select>
+
+    <select id="selectReqDemandByDemandNo" parameterType="String" resultMap="ReqDemandResult">
+        <include refid="selectReqDemandVo"/>
+        where demand_no = #{demandNo}
+    </select>
+
+    <insert id="insertReqDemand" parameterType="ReqDemand" useGeneratedKeys="true" keyProperty="demandId">
+        insert into req_demand(demand_no, title, demand_type, project_id, variant_id, module_id, feature_id,
+                               business_background, expected_result, impact_page, impact_api, impact_data,
+                               impact_permission, impact_export_or_async, acceptance_text, status, creator_id,
+                               create_by, create_time, remark)
+        values(#{demandNo}, #{title}, #{demandType}, #{projectId}, #{variantId}, #{moduleId}, #{featureId},
+               #{businessBackground}, #{expectedResult}, #{impactPage}, #{impactApi}, #{impactData},
+               #{impactPermission}, #{impactExportOrAsync}, #{acceptanceText}, #{status}, #{creatorId},
+               #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="updateReqDemand" parameterType="ReqDemand">
+        update req_demand
+        <set>
+            <if test="title != null and title != ''">title = #{title},</if>
+            <if test="demandType != null and demandType != ''">demand_type = #{demandType},</if>
+            <if test="projectId != null">project_id = #{projectId},</if>
+            <if test="variantId != null">variant_id = #{variantId},</if>
+            <if test="moduleId != null">module_id = #{moduleId},</if>
+            <if test="featureId != null">feature_id = #{featureId},</if>
+            <if test="businessBackground != null">business_background = #{businessBackground},</if>
+            <if test="expectedResult != null">expected_result = #{expectedResult},</if>
+            <if test="impactPage != null">impact_page = #{impactPage},</if>
+            <if test="impactApi != null">impact_api = #{impactApi},</if>
+            <if test="impactData != null">impact_data = #{impactData},</if>
+            <if test="impactPermission != null">impact_permission = #{impactPermission},</if>
+            <if test="impactExportOrAsync != null">impact_export_or_async = #{impactExportOrAsync},</if>
+            <if test="acceptanceText != null">acceptance_text = #{acceptanceText},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where demand_id = #{demandId}
+    </update>
+
+    <update id="updateReqDemandStatus">
+        update req_demand set status = #{status}, update_by = #{updateBy}, update_time = sysdate()
+        where demand_id = #{demandId}
+    </update>
+
+    <select id="selectTodayDemandCount" resultType="int">
+        select count(1) from req_demand
+        where date_format(create_time, '%Y%m%d') = date_format(sysdate(), '%Y%m%d')
+    </select>
+
+    <select id="selectDemandCount" resultType="long">select count(1) from req_demand</select>
+
+    <select id="selectProjectRank" resultType="java.util.Map">
+        select p.project_name as projectName,
+               count(distinct d.demand_id) as demandCount,
+               round(count(distinct case when req_pkg.package_id is not null then d.demand_id end) / greatest(count(distinct d.demand_id), 1) * 100, 2) as packageRate,
+               round(count(distinct case when plan_pkg.package_id is not null then d.demand_id end) / greatest(count(distinct d.demand_id), 1) * 100, 2) as planRate,
+               round(count(distinct case when exec_pkg.package_id is not null then d.demand_id end) / greatest(count(distinct d.demand_id), 1) * 100, 2) as executionReportRate,
+               round(count(distinct case when review_pkg.package_id is not null then d.demand_id end) / greatest(count(distinct d.demand_id), 1) * 100, 2) as reviewReportRate,
+               round(count(distinct case when r.harness_status = 'initialized' then r.repo_id end) / greatest(count(distinct r.repo_id), 1) * 100, 2) as harnessCoverageRate
+        from req_project p
+        left join req_demand d on d.project_id = p.project_id
+        left join req_repository r on r.project_id = p.project_id
+        left join req_package_version req_pkg on req_pkg.demand_id = d.demand_id and req_pkg.artifact_type = 'requirement'
+        left join req_package_version plan_pkg on plan_pkg.demand_id = d.demand_id and plan_pkg.artifact_type = 'plan'
+        left join req_package_version exec_pkg on exec_pkg.demand_id = d.demand_id and exec_pkg.artifact_type = 'execution_report'
+        left join req_package_version review_pkg on review_pkg.demand_id = d.demand_id and review_pkg.artifact_type = 'review_report'
+        group by p.project_id, p.project_name
+        order by demandCount desc, p.project_id desc
+    </select>
+</mapper>

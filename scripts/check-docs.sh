@@ -54,7 +54,13 @@ scan_pattern() {
 check_for_dstore() {
   root=$1
 
-  output=$(find "$root" -name '.DS_Store' -type f 2>/dev/null || true)
+  output=$(find "$root" \( \
+      -path "$root/.git" -o \
+      -path "$root/.idea" -o \
+      -path "$root/node_modules" -o \
+      -path "$root/dist" -o \
+      -path "$root/target" \
+    \) -prune -o -name '.DS_Store' -type f -print 2>/dev/null || true)
   if [ -n "$output" ]; then
     printf '%s\n' "检查失败：发现 macOS 元数据文件 .DS_Store"
     printf '%s\n' "$output"

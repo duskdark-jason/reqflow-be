@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.requirement.mapper.ReqVariantMapper">
+    <resultMap id="ReqVariantResult" type="ReqVariant">
+        <id property="variantId" column="variant_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="variantName" column="variant_name"/>
+        <result property="variantCode" column="variant_code"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="scopeType" column="scope_type"/>
+        <result property="baselineBranch" column="baseline_branch"/>
+        <result property="branchPolicy" column="branch_policy"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectReqVariantVo">
+        select variant_id, project_id, variant_name, variant_code, customer_name, scope_type, baseline_branch, branch_policy, description, status, create_by, create_time, update_by, update_time, remark
+        from req_variant
+    </sql>
+
+    <select id="selectReqVariantList" parameterType="ReqVariant" resultMap="ReqVariantResult">
+        <include refid="selectReqVariantVo"/>
+        <where>
+            <if test="projectId != null">and project_id = #{projectId}</if>
+            <if test="variantName != null and variantName != ''">and variant_name like concat('%', #{variantName}, '%')</if>
+            <if test="variantCode != null and variantCode != ''">and variant_code = #{variantCode}</if>
+            <if test="customerName != null and customerName != ''">and customer_name like concat('%', #{customerName}, '%')</if>
+            <if test="scopeType != null and scopeType != ''">and scope_type = #{scopeType}</if>
+            <if test="baselineBranch != null and baselineBranch != ''">and baseline_branch = #{baselineBranch}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by variant_id desc
+    </select>
+
+    <select id="selectReqVariantByVariantId" parameterType="Long" resultMap="ReqVariantResult">
+        <include refid="selectReqVariantVo"/>
+        where variant_id = #{variantId}
+    </select>
+
+    <insert id="insertReqVariant" parameterType="ReqVariant" useGeneratedKeys="true" keyProperty="variantId">
+        insert into req_variant
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="projectId != null">project_id,</if>
+            <if test="variantName != null and variantName != ''">variant_name,</if>
+            <if test="variantCode != null and variantCode != ''">variant_code,</if>
+            <if test="customerName != null and customerName != ''">customer_name,</if>
+            <if test="scopeType != null and scopeType != ''">scope_type,</if>
+            <if test="baselineBranch != null and baselineBranch != ''">baseline_branch,</if>
+            <if test="branchPolicy != null and branchPolicy != ''">branch_policy,</if>
+            <if test="description != null and description != ''">description,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="projectId != null">#{projectId},</if>
+            <if test="variantName != null and variantName != ''">#{variantName},</if>
+            <if test="variantCode != null and variantCode != ''">#{variantCode},</if>
+            <if test="customerName != null and customerName != ''">#{customerName},</if>
+            <if test="scopeType != null and scopeType != ''">#{scopeType},</if>
+            <if test="baselineBranch != null and baselineBranch != ''">#{baselineBranch},</if>
+            <if test="branchPolicy != null and branchPolicy != ''">#{branchPolicy},</if>
+            <if test="description != null and description != ''">#{description},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateReqVariant" parameterType="ReqVariant">
+        update req_variant
+        <set>
+            <if test="projectId != null">project_id = #{projectId},</if>
+            <if test="variantName != null and variantName != ''">variant_name = #{variantName},</if>
+            <if test="customerName != null and customerName != ''">customer_name = #{customerName},</if>
+            <if test="scopeType != null and scopeType != ''">scope_type = #{scopeType},</if>
+            <if test="baselineBranch != null and baselineBranch != ''">baseline_branch = #{baselineBranch},</if>
+            <if test="branchPolicy != null and branchPolicy != ''">branch_policy = #{branchPolicy},</if>
+            <if test="description != null and description != ''">description = #{description},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="remark != null and remark != ''">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where variant_id = #{variantId}
+    </update>
+
+    <delete id="deleteReqVariantByVariantId" parameterType="Long">
+        delete from req_variant where variant_id = #{variantId}
+    </delete>
+
+    <delete id="deleteReqVariantByVariantIds" parameterType="Long">
+        delete from req_variant where variant_id in
+        <foreach item="variantId" collection="array" open="(" separator="," close=")">
+            #{variantId}
+        </foreach>
+    </delete>
+</mapper>

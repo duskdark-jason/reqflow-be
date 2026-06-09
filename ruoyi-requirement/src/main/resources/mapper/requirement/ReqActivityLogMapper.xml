@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.requirement.mapper.ReqActivityLogMapper">
+    <insert id="insertReqActivityLog" parameterType="ReqActivityLog" useGeneratedKeys="true" keyProperty="id">
+        insert into req_activity_log(user_id, project_id, demand_id, event_type, client_type, summary, metadata_json, event_time)
+        values(#{userId}, #{projectId}, #{demandId}, #{eventType}, #{clientType}, #{summary}, #{metadataJson}, #{eventTime})
+    </insert>
+    <select id="selectActiveUserCount" resultType="long">
+        select count(distinct user_id) from req_activity_log
+        where user_id is not null and event_time >= date_sub(sysdate(), interval 30 day)
+    </select>
+    <select id="selectUserUsage" resultType="java.util.Map">
+        select ifnull(u.user_name, concat('用户', agg.user_id)) as userName,
+               ifnull(role_names.roleName, '-') as roleName,
+               agg.demandSubmitCount,
+               agg.packageGenerateCount,
+               agg.planSaveCount,
+               agg.executionReportUploadCount,
+               agg.reviewReportUploadCount,
+               agg.lastActiveTime
+        from (
+            select user_id,
+                   sum(case when event_type in ('demand_created','demand_submitted') then 1 else 0 end) as demandSubmitCount,
+                   sum(case when event_type = 'package_generated' then 1 else 0 end) as packageGenerateCount,
+                   sum(case when event_type = 'plan_saved' then 1 else 0 end) as planSaveCount,
+                   sum(case when event_type = 'execution_report_uploaded' then 1 else 0 end) as executionReportUploadCount,
+                   sum(case when event_type = 'review_report_uploaded' then 1 else 0 end) as reviewReportUploadCount,
+                   max(event_time) as lastActiveTime
+            from req_activity_log
+            where user_id is not null
+            group by user_id
+        ) agg
+        left join sys_user u on u.user_id = agg.user_id
+        left join (
+            select ur.user_id, group_concat(distinct r.role_name order by r.role_name separator ',') as roleName
+            from sys_user_role ur
+            left join sys_role r on r.role_id = ur.role_id
+            group by ur.user_id
+        ) role_names on role_names.user_id = agg.user_id
+        order by agg.lastActiveTime desc
+    </select>
+</mapper>

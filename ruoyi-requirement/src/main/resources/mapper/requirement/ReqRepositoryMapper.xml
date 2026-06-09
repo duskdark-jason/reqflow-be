@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.requirement.mapper.ReqRepositoryMapper">
+    <resultMap id="ReqRepositoryResult" type="ReqRepository">
+        <id property="repoId" column="repo_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="repoName" column="repo_name"/>
+        <result property="repoType" column="repo_type"/>
+        <result property="repoUrl" column="repo_url"/>
+        <result property="localPathHint" column="local_path_hint"/>
+        <result property="defaultBranch" column="default_branch"/>
+        <result property="harnessStatus" column="harness_status"/>
+        <result property="harnessCommit" column="harness_commit"/>
+        <result property="lastIndexedAt" column="last_indexed_at"/>
+        <result property="status" column="status"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectReqRepositoryVo">
+        select repo_id, project_id, repo_name, repo_type, repo_url, local_path_hint, default_branch, harness_status, harness_commit, last_indexed_at, status, create_by, create_time, update_by, update_time, remark
+        from req_repository
+    </sql>
+
+    <select id="selectReqRepositoryList" parameterType="ReqRepository" resultMap="ReqRepositoryResult">
+        <include refid="selectReqRepositoryVo"/>
+        <where>
+            <if test="projectId != null">and project_id = #{projectId}</if>
+            <if test="repoName != null and repoName != ''">and repo_name like concat('%', #{repoName}, '%')</if>
+            <if test="repoType != null and repoType != ''">and repo_type = #{repoType}</if>
+            <if test="repoUrl != null and repoUrl != ''">and repo_url = #{repoUrl}</if>
+            <if test="localPathHint != null and localPathHint != ''">and local_path_hint = #{localPathHint}</if>
+            <if test="defaultBranch != null and defaultBranch != ''">and default_branch = #{defaultBranch}</if>
+            <if test="harnessStatus != null and harnessStatus != ''">and harness_status = #{harnessStatus}</if>
+            <if test="harnessCommit != null and harnessCommit != ''">and harness_commit = #{harnessCommit}</if>
+            <if test="lastIndexedAt != null">and last_indexed_at = #{lastIndexedAt}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by repo_id desc
+    </select>
+
+    <select id="selectReqRepositoryByRepoId" parameterType="Long" resultMap="ReqRepositoryResult">
+        <include refid="selectReqRepositoryVo"/>
+        where repo_id = #{repoId}
+    </select>
+
+    <insert id="insertReqRepository" parameterType="ReqRepository" useGeneratedKeys="true" keyProperty="repoId">
+        insert into req_repository
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="projectId != null">project_id,</if>
+            <if test="repoName != null and repoName != ''">repo_name,</if>
+            <if test="repoType != null and repoType != ''">repo_type,</if>
+            <if test="repoUrl != null and repoUrl != ''">repo_url,</if>
+            <if test="localPathHint != null and localPathHint != ''">local_path_hint,</if>
+            <if test="defaultBranch != null and defaultBranch != ''">default_branch,</if>
+            <if test="harnessStatus != null and harnessStatus != ''">harness_status,</if>
+            <if test="harnessCommit != null and harnessCommit != ''">harness_commit,</if>
+            <if test="lastIndexedAt != null">last_indexed_at,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="projectId != null">#{projectId},</if>
+            <if test="repoName != null and repoName != ''">#{repoName},</if>
+            <if test="repoType != null and repoType != ''">#{repoType},</if>
+            <if test="repoUrl != null and repoUrl != ''">#{repoUrl},</if>
+            <if test="localPathHint != null and localPathHint != ''">#{localPathHint},</if>
+            <if test="defaultBranch != null and defaultBranch != ''">#{defaultBranch},</if>
+            <if test="harnessStatus != null and harnessStatus != ''">#{harnessStatus},</if>
+            <if test="harnessCommit != null and harnessCommit != ''">#{harnessCommit},</if>
+            <if test="lastIndexedAt != null">#{lastIndexedAt},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateReqRepository" parameterType="ReqRepository">
+        update req_repository
+        <set>
+            <if test="projectId != null">project_id = #{projectId},</if>
+            <if test="repoName != null and repoName != ''">repo_name = #{repoName},</if>
+            <if test="repoType != null and repoType != ''">repo_type = #{repoType},</if>
+            <if test="repoUrl != null and repoUrl != ''">repo_url = #{repoUrl},</if>
+            <if test="localPathHint != null and localPathHint != ''">local_path_hint = #{localPathHint},</if>
+            <if test="defaultBranch != null and defaultBranch != ''">default_branch = #{defaultBranch},</if>
+            <if test="harnessStatus != null and harnessStatus != ''">harness_status = #{harnessStatus},</if>
+            <if test="harnessCommit != null and harnessCommit != ''">harness_commit = #{harnessCommit},</if>
+            <if test="lastIndexedAt != null">last_indexed_at = #{lastIndexedAt},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            <if test="remark != null and remark != ''">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where repo_id = #{repoId}
+    </update>
+
+    <delete id="deleteReqRepositoryByRepoId" parameterType="Long">
+        delete from req_repository where repo_id = #{repoId}
+    </delete>
+
+    <delete id="deleteReqRepositoryByRepoIds" parameterType="Long">
+        delete from req_repository where repo_id in
+        <foreach item="repoId" collection="array" open="(" separator="," close=")">
+            #{repoId}
+        </foreach>
+    </delete>
+
+    <update id="updateHarnessInitResult" parameterType="ReqRepository">
+        update req_repository
+        <set>
+            <if test="harnessStatus != null and harnessStatus != ''">harness_status = #{harnessStatus},</if>
+            <if test="harnessCommit != null and harnessCommit != ''">harness_commit = #{harnessCommit},</if>
+            last_indexed_at = sysdate(),
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where repo_id = #{repoId}
+    </update>
+</mapper>

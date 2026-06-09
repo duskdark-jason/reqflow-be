@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.requirement.mapper.ReqMemoryIndexMapper">
+    <resultMap id="ReqMemoryIndexResult" type="ReqMemoryIndex">
+        <id property="memoryId" column="memory_id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="repoId" column="repo_id"/>
+        <result property="variantId" column="variant_id"/>
+        <result property="docType" column="doc_type"/>
+        <result property="docPath" column="doc_path"/>
+        <result property="docTitle" column="doc_title"/>
+        <result property="branchName" column="branch_name"/>
+        <result property="commitHash" column="commit_hash"/>
+        <result property="checksum" column="checksum"/>
+        <result property="tags" column="tags"/>
+        <result property="summary" column="summary"/>
+        <result property="indexedAt" column="indexed_at"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+    <select id="selectReqMemoryIndexList" parameterType="ReqMemoryIndex" resultMap="ReqMemoryIndexResult">
+        select memory_id, project_id, repo_id, variant_id, doc_type, doc_path, doc_title, branch_name,
+               commit_hash, checksum, tags, summary, indexed_at, create_by, create_time, update_by, update_time
+        from req_memory_index
+        <where>
+            <if test="projectId != null">and project_id = #{projectId}</if>
+            <if test="repoId != null">and repo_id = #{repoId}</if>
+            <if test="variantId != null">and variant_id = #{variantId}</if>
+            <if test="docType != null and docType != ''">and doc_type = #{docType}</if>
+        </where>
+        order by indexed_at desc, memory_id desc
+    </select>
+</mapper>

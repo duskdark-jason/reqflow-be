@@ -1,0 +1,15 @@
+{
+  "demandNo": "${demandNo}",
+  "demandTitle": "${demandTitle}",
+  "projectName": "${projectName}",
+  "variantName": "${variantName}",
+  "baselineBranch": "${baselineBranch}",
+  "taskBranch": "${taskBranch}",
+  "moduleName": "${moduleName}",
+  "acceptanceText": "${acceptanceText}",
+  "agentRules": {
+    "allowAgentCreateTaskBranch": true,
+    "taskBranchMustBeAscii": true,
+    "specDirectoryMayContainChinese": true
+  }
+}

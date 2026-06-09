@@ -1,0 +1,162 @@
+CREATE TABLE IF NOT EXISTS req_project (
+  project_id BIGINT NOT NULL AUTO_INCREMENT,
+  project_name VARCHAR(100) NOT NULL,
+  project_code VARCHAR(64) NOT NULL,
+  description VARCHAR(500) DEFAULT NULL,
+  owner_user_id BIGINT DEFAULT NULL,
+  workspace_agents_template_version VARCHAR(32) DEFAULT 'v1',
+  status CHAR(1) NOT NULL DEFAULT '0',
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  update_by VARCHAR(64) DEFAULT '',
+  update_time DATETIME DEFAULT NULL,
+  remark VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (project_id),
+  UNIQUE KEY uk_req_project_code (project_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台项目';
+
+CREATE TABLE IF NOT EXISTS req_repository (
+  repo_id BIGINT NOT NULL AUTO_INCREMENT,
+  project_id BIGINT NOT NULL,
+  repo_name VARCHAR(100) NOT NULL,
+  repo_type VARCHAR(20) NOT NULL,
+  repo_url VARCHAR(500) NOT NULL,
+  local_path_hint VARCHAR(300) DEFAULT NULL,
+  default_branch VARCHAR(100) NOT NULL DEFAULT 'main',
+  harness_status VARCHAR(32) NOT NULL DEFAULT 'uninitialized',
+  harness_commit VARCHAR(100) DEFAULT NULL,
+  last_indexed_at DATETIME DEFAULT NULL,
+  status CHAR(1) NOT NULL DEFAULT '0',
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  update_by VARCHAR(64) DEFAULT '',
+  update_time DATETIME DEFAULT NULL,
+  remark VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (repo_id),
+  KEY idx_req_repo_project (project_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台代码仓库';
+
+CREATE TABLE IF NOT EXISTS req_variant (
+  variant_id BIGINT NOT NULL AUTO_INCREMENT,
+  project_id BIGINT NOT NULL,
+  variant_name VARCHAR(100) NOT NULL,
+  variant_code VARCHAR(64) NOT NULL,
+  customer_name VARCHAR(100) DEFAULT NULL,
+  scope_type VARCHAR(32) NOT NULL DEFAULT 'mainline',
+  baseline_branch VARCHAR(100) NOT NULL DEFAULT 'main',
+  branch_policy VARCHAR(1000) DEFAULT NULL,
+  description VARCHAR(500) DEFAULT NULL,
+  status CHAR(1) NOT NULL DEFAULT '0',
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  update_by VARCHAR(64) DEFAULT '',
+  update_time DATETIME DEFAULT NULL,
+  remark VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (variant_id),
+  UNIQUE KEY uk_req_variant_code (project_id, variant_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台客户定制线';
+
+CREATE TABLE IF NOT EXISTS req_module (
+  module_id BIGINT NOT NULL AUTO_INCREMENT,
+  project_id BIGINT NOT NULL,
+  parent_id BIGINT NOT NULL DEFAULT 0,
+  module_name VARCHAR(100) NOT NULL,
+  module_code VARCHAR(64) NOT NULL,
+  module_type VARCHAR(20) NOT NULL DEFAULT 'module',
+  repo_scope VARCHAR(20) NOT NULL DEFAULT 'both',
+  description VARCHAR(500) DEFAULT NULL,
+  order_num INT NOT NULL DEFAULT 0,
+  status CHAR(1) NOT NULL DEFAULT '0',
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  update_by VARCHAR(64) DEFAULT '',
+  update_time DATETIME DEFAULT NULL,
+  remark VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (module_id),
+  UNIQUE KEY uk_req_module_code (project_id, module_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台模块功能点';
+
+CREATE TABLE IF NOT EXISTS req_demand (
+  demand_id BIGINT NOT NULL AUTO_INCREMENT,
+  demand_no VARCHAR(64) NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  demand_type VARCHAR(32) NOT NULL,
+  project_id BIGINT NOT NULL,
+  variant_id BIGINT NOT NULL,
+  module_id BIGINT DEFAULT NULL,
+  feature_id BIGINT DEFAULT NULL,
+  business_background TEXT,
+  expected_result TEXT,
+  impact_page VARCHAR(1000) DEFAULT NULL,
+  impact_api VARCHAR(1000) DEFAULT NULL,
+  impact_data VARCHAR(1000) DEFAULT NULL,
+  impact_permission VARCHAR(1000) DEFAULT NULL,
+  impact_export_or_async VARCHAR(1000) DEFAULT NULL,
+  acceptance_text TEXT,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  creator_id BIGINT NOT NULL,
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  update_by VARCHAR(64) DEFAULT '',
+  update_time DATETIME DEFAULT NULL,
+  remark VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (demand_id),
+  UNIQUE KEY uk_req_demand_no (demand_no),
+  KEY idx_req_demand_project (project_id),
+  KEY idx_req_demand_variant (variant_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求';
+
+CREATE TABLE IF NOT EXISTS req_package_version (
+  package_id BIGINT NOT NULL AUTO_INCREMENT,
+  demand_id BIGINT NOT NULL,
+  artifact_type VARCHAR(32) NOT NULL,
+  version_no INT NOT NULL,
+  content MEDIUMTEXT NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  version_note VARCHAR(500) DEFAULT NULL,
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  PRIMARY KEY (package_id),
+  UNIQUE KEY uk_req_package_version (demand_id, artifact_type, version_no),
+  KEY idx_req_package_demand (demand_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求执行包版本';
+
+CREATE TABLE IF NOT EXISTS req_memory_index (
+  memory_id BIGINT NOT NULL AUTO_INCREMENT,
+  project_id BIGINT NOT NULL,
+  repo_id BIGINT NOT NULL,
+  variant_id BIGINT DEFAULT NULL,
+  doc_type VARCHAR(32) NOT NULL,
+  doc_path VARCHAR(500) NOT NULL,
+  doc_title VARCHAR(200) DEFAULT NULL,
+  branch_name VARCHAR(100) DEFAULT NULL,
+  commit_hash VARCHAR(100) DEFAULT NULL,
+  checksum VARCHAR(128) DEFAULT NULL,
+  tags VARCHAR(500) DEFAULT NULL,
+  summary VARCHAR(1000) DEFAULT NULL,
+  indexed_at DATETIME DEFAULT NULL,
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  update_by VARCHAR(64) DEFAULT '',
+  update_time DATETIME DEFAULT NULL,
+  PRIMARY KEY (memory_id),
+  KEY idx_req_memory_project (project_id),
+  KEY idx_req_memory_repo (repo_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目记忆索引';
+
+CREATE TABLE IF NOT EXISTS req_activity_log (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  user_id BIGINT DEFAULT NULL,
+  project_id BIGINT DEFAULT NULL,
+  demand_id BIGINT DEFAULT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  client_type VARCHAR(20) NOT NULL DEFAULT 'web',
+  summary VARCHAR(500) DEFAULT NULL,
+  metadata_json TEXT,
+  event_time DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_req_activity_user (user_id),
+  KEY idx_req_activity_project (project_id),
+  KEY idx_req_activity_demand (demand_id),
+  KEY idx_req_activity_time (event_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台业务事件';
