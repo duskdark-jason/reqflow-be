@@ -164,6 +164,35 @@ class ReqProjectInitServiceImplTest
     }
 
     @Test
+    void keepsNewChildrenInsertedDuringAggregateUpdate()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                mock(ReqModuleMapper.class), mock(ReqIndexModuleMapper.class), mock(ReqRepositoryIndexBatchMapper.class));
+        ReqProjectInitRequest request = baseRequest();
+        request.getProject().setProjectId(10L);
+        request.getRepositories().get(0).setRepoId(21L);
+
+        doAnswer(invocation -> {
+            ReqRepository repository = invocation.getArgument(0);
+            repository.setRepoId(22L);
+            return 1;
+        }).when(repositoryMapper).insertReqRepository(any(ReqRepository.class));
+        doAnswer(invocation -> {
+            ReqVariant variant = invocation.getArgument(0);
+            variant.setVariantId(31L);
+            return 1;
+        }).when(variantMapper).insertReqVariant(any(ReqVariant.class));
+
+        service.updateProjectInit(request, "admin");
+
+        verify(repositoryMapper).deleteReqRepositoryByProjectIdAndRepoIdsNotIn(eq(10L), argThat(ids -> Arrays.equals(ids, new Long[] {21L, 22L})));
+        verify(variantMapper).deleteReqVariantByProjectIdAndVariantIdsNotIn(eq(10L), argThat(ids -> Arrays.equals(ids, new Long[] {31L})));
+    }
+
+    @Test
     void marksChecklistIncompleteWhenRequiredKnowledgeIsMissing()
     {
         ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);

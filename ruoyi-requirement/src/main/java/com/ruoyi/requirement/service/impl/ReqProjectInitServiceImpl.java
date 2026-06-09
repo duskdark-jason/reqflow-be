@@ -198,12 +198,13 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
             {
                 repository.setCreateBy(username);
                 repositoryMapper.insertReqRepository(repository);
+                addIdIfPresent(keepIds, repository.getRepoId());
             }
             else
             {
                 repository.setUpdateBy(username);
                 repositoryMapper.updateReqRepository(repository);
-                keepIds.add(repository.getRepoId());
+                addIdIfPresent(keepIds, repository.getRepoId());
             }
             repositories.add(repository);
         }
@@ -229,12 +230,13 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
             {
                 variant.setCreateBy(username);
                 variantMapper.insertReqVariant(variant);
+                addIdIfPresent(keepIds, variant.getVariantId());
             }
             else
             {
                 variant.setUpdateBy(username);
                 variantMapper.updateReqVariant(variant);
-                keepIds.add(variant.getVariantId());
+                addIdIfPresent(keepIds, variant.getVariantId());
             }
             variants.add(variant);
         }
@@ -247,6 +249,14 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
             variantMapper.deleteReqVariantByProjectIdAndVariantIdsNotIn(projectId, keepIds.toArray(new Long[0]));
         }
         return variants;
+    }
+
+    private void addIdIfPresent(List<Long> ids, Long id)
+    {
+        if (id != null)
+        {
+            ids.add(id);
+        }
     }
 
     private List<ReqRepository> loadRepositories(Long projectId)
