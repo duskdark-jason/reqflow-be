@@ -114,6 +114,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </foreach>
     </delete>
 
+    <delete id="deleteReqRepositoryByProjectId" parameterType="Long">
+        delete from req_repository where project_id = #{projectId}
+    </delete>
+
+    <delete id="deleteReqRepositoryByProjectIdAndRepoIdsNotIn">
+        delete from req_repository
+        where project_id = #{projectId}
+          and repo_id not in
+        <foreach item="repoId" collection="repoIds" open="(" separator="," close=")">
+            #{repoId}
+        </foreach>
+    </delete>
+
     <update id="updateHarnessInitResult" parameterType="ReqRepository">
         update req_repository
         <set>

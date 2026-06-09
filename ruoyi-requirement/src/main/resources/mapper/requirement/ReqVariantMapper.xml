@@ -105,4 +105,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{variantId}
         </foreach>
     </delete>
+
+    <delete id="deleteReqVariantByProjectId" parameterType="Long">
+        delete from req_variant where project_id = #{projectId}
+    </delete>
+
+    <delete id="deleteReqVariantByProjectIdAndVariantIdsNotIn">
+        delete from req_variant
+        where project_id = #{projectId}
+          and variant_id not in
+        <foreach item="variantId" collection="variantIds" open="(" separator="," close=")">
+            #{variantId}
+        </foreach>
+    </delete>
 </mapper>

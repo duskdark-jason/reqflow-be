@@ -1,6 +1,7 @@
 package com.ruoyi.requirement.mapper;
 
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 import com.ruoyi.requirement.domain.ReqRepository;
 
 /**
@@ -19,6 +20,10 @@ public interface ReqRepositoryMapper
     int deleteReqRepositoryByRepoId(Long repoId);
 
     int deleteReqRepositoryByRepoIds(Long[] repoIds);
+
+    int deleteReqRepositoryByProjectId(Long projectId);
+
+    int deleteReqRepositoryByProjectIdAndRepoIdsNotIn(@Param("projectId") Long projectId, @Param("repoIds") Long[] repoIds);
 
     int updateHarnessInitResult(ReqRepository reqRepository);
 
