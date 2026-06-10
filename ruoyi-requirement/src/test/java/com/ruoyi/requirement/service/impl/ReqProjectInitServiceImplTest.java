@@ -483,6 +483,10 @@ class ReqProjectInitServiceImplTest
         assertTrue(branch.getInitInstruction().getContent().contains("mcpServer: reqflow"));
         assertTrue(branch.getInitInstruction().getContent().contains("toolName: publish_repository_index"));
         assertTrue(branch.getInitInstruction().getContent().contains("mcpKey: REQFLOW:MAIN"));
+        assertTrue(branch.getInitInstruction().getContent().contains("get_harness_template"));
+        assertTrue(branch.getInitInstruction().getContent().contains("写入或合并本地 harness 文件"));
+        assertTrue(branch.getInitInstruction().getContent().contains("sh scripts/check-harness.sh init"));
+        assertTrue(branch.getInitInstruction().getContent().contains("register_harness_init_result"));
         assertTrue(branch.getInitInstruction().getContent().contains("req_platform_req003_action_token.sql"));
     }
 

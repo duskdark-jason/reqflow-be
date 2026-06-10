@@ -5,6 +5,8 @@ import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 
 public interface ReqRepositoryIndexBatchMapper
 {
+    int checkReqRepositoryIndexBatchTable();
+
     List<ReqRepositoryIndexBatch> selectReqRepositoryIndexBatchList(ReqRepositoryIndexBatch batch);
 
     int insertReqRepositoryIndexBatch(ReqRepositoryIndexBatch batch);

@@ -5,6 +5,8 @@ import com.ruoyi.requirement.domain.ReqIndexModule;
 
 public interface ReqIndexModuleMapper
 {
+    int checkReqIndexModuleTable();
+
     List<ReqIndexModule> selectReqIndexModuleList(ReqIndexModule module);
 
     int insertReqIndexModule(ReqIndexModule module);

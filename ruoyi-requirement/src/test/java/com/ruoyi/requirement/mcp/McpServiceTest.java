@@ -117,6 +117,19 @@ class McpServiceTest
         assertTrue(String.valueOf(response.getResult()).contains("resourceTemplates"));
         assertTrue(String.valueOf(response.getResult()).contains("requirement://{demandNo}"));
         assertTrue(String.valueOf(response.getResult()).contains("memory://{projectId}/modules"));
+        assertTrue(String.valueOf(response.getResult()).contains("skill://reqflow/project-init"));
+    }
+
+    @Test
+    void readsReqflowProjectInitSkillResource()
+    {
+        McpResponse response = new McpService().handle(request("resources/read", params("uri", "skill://reqflow/project-init")));
+
+        String resultText = String.valueOf(response.getResult());
+        assertTrue(resultText.contains("Reqflow MCP 项目接入初始化技能"), resultText);
+        assertTrue(resultText.contains("mcp__reqflow.publish_repository_index"), resultText);
+        assertTrue(resultText.contains("arguments.actionToken"), resultText);
+        assertTrue(resultText.contains("get_harness_template"), resultText);
     }
 
     @Test
@@ -338,8 +351,19 @@ class McpServiceTest
         arguments.put("projectId", 10L);
         McpResponse response = service.handle(request("tools/call", toolParams("get_harness_template", arguments)));
 
-        assertTrue(String.valueOf(response.getResult()).contains("# AGENTS.md"));
-        assertTrue(String.valueOf(response.getResult()).contains("reqflow-ui"));
+        String resultText = String.valueOf(response.getResult());
+        assertTrue(resultText.contains("# AGENTS.md"), resultText);
+        assertTrue(resultText.contains("reqflow-ui"), resultText);
+        assertTrue(resultText.contains("reqflowMcpSkill"), resultText);
+        assertTrue(resultText.contains("Reqflow MCP 项目接入初始化技能"), resultText);
+        assertTrue(resultText.contains("workspaceFiles"), resultText);
+        assertTrue(resultText.contains("repositoryHarnessInstructions"), resultText);
+        assertTrue(resultText.contains("files"), resultText);
+        assertTrue(resultText.contains("docs/ai-harness/harness-index.json"), resultText);
+        assertTrue(resultText.contains("docs/ai-harness/modules/reqflow-ui-overview.md"), resultText);
+        assertTrue(resultText.contains("scripts/check-harness.sh"), resultText);
+        assertTrue(resultText.contains("publish_repository_index"), resultText);
+        assertTrue(resultText.contains("register_harness_init_result"), resultText);
         verify(projectMapper).selectReqProjectByProjectId(10L);
     }
 

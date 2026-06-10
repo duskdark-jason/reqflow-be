@@ -37,6 +37,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from req_impact_item
     </sql>
 
+    <select id="checkReqImpactItemTable" resultType="int">
+        select count(1) from req_impact_item where 1 = 0
+    </select>
+
     <select id="selectReqImpactItemList" parameterType="ReqImpactItem" resultMap="ReqImpactItemResult">
         <include refid="selectReqImpactItemVo"/>
         <where>

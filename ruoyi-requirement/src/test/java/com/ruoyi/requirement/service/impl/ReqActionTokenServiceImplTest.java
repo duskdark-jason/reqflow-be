@@ -45,6 +45,12 @@ class ReqActionTokenServiceImplTest
         assertTrue(instruction.getContent().contains("toolName: publish_repository_index"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));
         assertTrue(instruction.getContent().contains("actionToken 是 publish_repository_index 的 arguments.actionToken"));
+        assertTrue(instruction.getContent().contains("get_harness_template"));
+        assertTrue(instruction.getContent().contains("写入或合并本地 harness 文件"));
+        assertTrue(instruction.getContent().contains("sh scripts/check-docs.sh"));
+        assertTrue(instruction.getContent().contains("sh scripts/check-harness.sh init"));
+        assertTrue(instruction.getContent().contains("publish_repository_index"));
+        assertTrue(instruction.getContent().contains("register_harness_init_result"));
         assertTrue(instruction.getContent().contains("需求平台"));
         assertTrue(instruction.getContent().contains("main"));
 

@@ -2,6 +2,7 @@ package com.ruoyi.requirement.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.doAnswer;
@@ -95,6 +96,69 @@ class ReqRepositoryIndexServiceImplTest
         verify(impactMapper, times(2)).insertReqImpactItem(any());
         verify(repositoryMapper).updateHarnessInitResult(any(ReqRepository.class));
         verify(activityLogService).record(7L, 1L, null, "repository_index_published", "mcp", "仓库索引发布：git@example.com:reqflow-ui.git", null);
+    }
+
+    @Test
+    void rejectsImportWithFriendlyMessageWhenIndexBatchTableIsMissing()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, moduleMapper, impactMapper,
+                repositoryMapper, mock(ReqVariantMapper.class), mock(ReqActivityLogService.class));
+        when(batchMapper.checkReqRepositoryIndexBatchTable()).thenThrow(missingTable("req_repository_index_batch"));
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.importRepositoryIndex(baseRequest(), "mcp", "tester", 7L));
+
+        assertTrue(exception.getMessage().contains("平台索引表未初始化"));
+        assertTrue(exception.getMessage().contains("req_repository_index_batch"));
+        assertTrue(exception.getMessage().contains("sql/req_platform_req007_index_tables.sql"));
+        verify(repositoryMapper, never()).selectReqRepositoryByRepoId(any());
+        verify(batchMapper, never()).insertReqRepositoryIndexBatch(any());
+        verifyNoInteractions(moduleMapper, impactMapper);
+    }
+
+    @Test
+    void rejectsImportWithFriendlyMessageWhenIndexModuleTableIsMissing()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, moduleMapper, impactMapper,
+                repositoryMapper, mock(ReqVariantMapper.class), mock(ReqActivityLogService.class));
+        when(moduleMapper.checkReqIndexModuleTable()).thenThrow(missingTable("req_index_module"));
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.importRepositoryIndex(baseRequest(), "mcp", "tester", 7L));
+
+        assertTrue(exception.getMessage().contains("平台索引表未初始化"));
+        assertTrue(exception.getMessage().contains("req_index_module"));
+        verify(repositoryMapper, never()).selectReqRepositoryByRepoId(any());
+        verify(batchMapper, never()).insertReqRepositoryIndexBatch(any());
+        verifyNoInteractions(impactMapper);
+    }
+
+    @Test
+    void rejectsImportWithFriendlyMessageWhenImpactItemTableIsMissing()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, moduleMapper, impactMapper,
+                repositoryMapper, mock(ReqVariantMapper.class), mock(ReqActivityLogService.class));
+        when(impactMapper.checkReqImpactItemTable()).thenThrow(missingTable("req_impact_item"));
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.importRepositoryIndex(baseRequest(), "mcp", "tester", 7L));
+
+        assertTrue(exception.getMessage().contains("平台索引表未初始化"));
+        assertTrue(exception.getMessage().contains("req_impact_item"));
+        verify(repositoryMapper, never()).selectReqRepositoryByRepoId(any());
+        verify(batchMapper, never()).insertReqRepositoryIndexBatch(any());
     }
 
     @Test
@@ -321,6 +385,12 @@ class ReqRepositoryIndexServiceImplTest
         request.setCommitHash("abc123");
         request.setIndexVersion("v1");
         return request;
+    }
+
+    private BadSqlGrammarException missingTable(String tableName)
+    {
+        return new BadSqlGrammarException("checkTable", "select count(1) from " + tableName,
+                new SQLException("Table 'ry-vue." + tableName + "' doesn't exist", "42S02"));
     }
 
     private ReqIndexModulePayload module(String code, String name)

@@ -34,6 +34,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from req_repository_index_batch
     </sql>
 
+    <select id="checkReqRepositoryIndexBatchTable" resultType="int">
+        select count(1) from req_repository_index_batch where 1 = 0
+    </select>
+
     <select id="selectReqRepositoryIndexBatchList" parameterType="ReqRepositoryIndexBatch" resultMap="ReqRepositoryIndexBatchResult">
         <include refid="selectReqRepositoryIndexBatchVo"/>
         <where>

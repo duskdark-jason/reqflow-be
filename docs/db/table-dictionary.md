@@ -89,5 +89,5 @@
 
 - 表、字段、索引或约束变化：更新本文件。
 - 关系、join、聚合、分页粒度或过滤条件变化：更新 `relationship.md`。
-- 可执行 DDL、DML、迁移或修复脚本：保留在 `sql/`，并在当前 spec 的 `execution-report.md` 记录路径。
+- 可执行 DDL、DML、迁移或修复脚本：保留在 `sql/`，并在当前 spec 的 `execution-report.md` 记录路径。索引表缺失时先执行 `sql/req_platform_req007_index_tables.sql` 补齐 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。
 - 只改文档不改 SQL 时：在 `execution-report.md` 写明数据库影响为文档更新，无执行脚本。

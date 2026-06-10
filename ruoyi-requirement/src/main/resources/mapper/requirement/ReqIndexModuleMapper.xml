@@ -33,6 +33,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         from req_index_module
     </sql>
 
+    <select id="checkReqIndexModuleTable" resultType="int">
+        select count(1) from req_index_module where 1 = 0
+    </select>
+
     <select id="selectReqIndexModuleList" parameterType="ReqIndexModule" resultMap="ReqIndexModuleResult">
         <include refid="selectReqIndexModuleVo"/>
         <where>

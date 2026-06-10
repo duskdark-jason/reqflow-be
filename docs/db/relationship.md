@@ -76,6 +76,7 @@
 - 当前需求表没有逻辑删除字段，删除操作会物理删除基础数据；需求主流程暂不提供需求删除接口。
 - 菜单权限依赖 RuoYi `sys_menu.perms`，按钮权限必须与 Controller `@PreAuthorize` 保持一致。
 - 索引导入必须拒绝个人本机绝对路径，平台只保存 Git 远端、分支、commit、项目分支或真实分支、相对路径和结构化影响面。
+- 索引导入写入前必须确认 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item` 三张索引表已初始化；缺表时返回平台库初始化错误并指向 `sql/req_platform_req007_index_tables.sql`，不得写入部分批次或影响面。
 - 项目初始化保存同样必须拒绝个人本机绝对路径；`req_repository.local_path_hint` 不属于初始化向导保存内容，初始化接口会清空该字段。
 - 影响面推荐接收到 `variant_id` 时必须校验项目分支属于当前项目，并使用项目分支 `baseline_branch` 作为索引分支过滤条件。
 - 模块知识库接收到 `variant_id` 时必须严格过滤该项目分支，不再兼容混入 `variant_id is null` 的旧项目级索引模块。
@@ -93,5 +94,6 @@
 - MCP resource 可以读取 `req_project`、`req_repository`、`req_variant` 和 `req_memory_index`，但只能按项目和项目分支返回结构化上下文，不能代替执行器访问仓库文件系统。
 - 项目初始化编辑会同步删除本次维护弹窗移除的仓库和分支配置；如果未来为索引批次增加物理外键或软删除语义，必须重新评估删除策略，避免留下不可访问的历史索引。
 - `publish_repository_index` 的输入来自本地 agent 扫描结果，服务端必须再次校验路径和仓库身份，不能信任客户端；优先用 `actionToken + remoteUrl` 解析项目分支和仓库，旧 `mcpKey + remoteUrl` 只作为兼容路径。
+- `publish_repository_index` 只保存平台索引，不写接入项目本地文件；项目接入初始化必须先通过 `get_harness_template` 下发文件清单，由 agent 在目标 workspace 写入本地 harness 并运行 init 校验。
 - `publish_repository_index` 必须校验 `req:index:import`；执行资料保存类 MCP tool 和 harness 登记 tool 继续校验 `req:package:save`。
 - 新增 MCP 管理功能时必须区分 `req_action_token`、`req_variant.mcp_key` 和 `req_mcp_user_key`：动作 token 识别目标动作和上下文，分支 mcp key 仅保留兼容，人员 MCP Key 认证人员身份，三者不能混用。

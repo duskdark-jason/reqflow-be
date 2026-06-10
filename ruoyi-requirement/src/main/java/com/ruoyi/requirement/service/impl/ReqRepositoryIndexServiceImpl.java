@@ -47,6 +47,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     {
         validateRequired(request);
         validateNoPersonalAbsolutePath(request);
+        assertIndexTablesReady();
 
         ReqVariant branchVariant = resolveRequestContext(request);
         resolveRepository(request);
@@ -87,6 +88,29 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         result.setModuleCount(moduleCount);
         result.setImpactCount(impactCount);
         return result;
+    }
+
+    private void assertIndexTablesReady()
+    {
+        assertIndexTableReady("req_repository_index_batch", () -> batchMapper.checkReqRepositoryIndexBatchTable());
+        assertIndexTableReady("req_index_module", () -> moduleMapper.checkReqIndexModuleTable());
+        assertIndexTableReady("req_impact_item", () -> impactMapper.checkReqImpactItemTable());
+    }
+
+    private void assertIndexTableReady(String tableName, Runnable checker)
+    {
+        try
+        {
+            checker.run();
+        }
+        catch (DataAccessException e)
+        {
+            if (ReqOptionalIndexTableGuard.isMissingTable(e, tableName))
+            {
+                throw ReqOptionalIndexTableGuard.missingIndexTable(tableName);
+            }
+            throw e;
+        }
     }
 
     @Override

@@ -6,6 +6,8 @@ import com.ruoyi.requirement.dto.ReqImpactSuggestQuery;
 
 public interface ReqImpactItemMapper
 {
+    int checkReqImpactItemTable();
+
     List<ReqImpactItem> selectReqImpactItemList(ReqImpactItem item);
 
     List<ReqImpactItem> selectLatestImpactItems(ReqImpactSuggestQuery query);
