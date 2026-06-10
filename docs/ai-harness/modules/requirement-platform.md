@@ -13,7 +13,7 @@
 | 需求管理 | 分支知识库详情页签 | 按项目分支查看模块知识、索引批次和初始化指令 | `reqflow-ui/src/views/requirement/project/knowledge.vue` | `reqflow-ui/src/api/requirement/index.js`、`project.js` | `/requirement/index/module/tree`，`req:index:list`；`/requirement/index/batch/list`，`req:index:list` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper`、`ReqRepositoryIndexBatchMapper` |
 | 需求管理 | 需求列表 | 需求新增、编辑、查询和影响面推荐 | `reqflow-ui/src/views/requirement/demand/index.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；`/requirement/index/impact/suggest`，`req:index:list` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
 | 需求管理 | 需求执行包 | 保存和读取需求、计划、执行报告、Review 报告等交接资料 | `reqflow-ui/src/views/requirement/package/index.vue` | `reqflow-ui/src/api/requirement/package.js` | `/requirement/package/**`，`req:package:*` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
-| 需求管理 | MCP 管理 | 管理人员 MCP Key、MCP 地址和 Codex 配置片段 | `reqflow-ui/src/views/requirement/mcpKey/index.vue` | `reqflow-ui/src/api/requirement/mcpKey.js` | `/requirement/mcp/key/**`，`req:mcp:key:*`；`/requirement/mcp` | `ReqMcpKeyController`、`ReqMcpController`、`ReqMcpUserKeyServiceImpl`、`McpService` |
+| 需求管理 | MCP 管理 | 管理人员 MCP Key，创建或重置后返回一次性 Key 和 Codex 安装包 | `reqflow-ui/src/views/requirement/mcpKey/index.vue` | `reqflow-ui/src/api/requirement/mcpKey.js` | `/requirement/mcp/key/**`，`req:mcp:key:*`；`/requirement/mcp` | `ReqMcpKeyController`、`ReqMcpController`、`ReqMcpUserKeyServiceImpl`、`McpService` |
 | 需求管理 | 使用统计 | 需求、项目、用户和状态统计 | `reqflow-ui/src/views/requirement/statistics/index.vue` | `reqflow-ui/src/api/requirement/statistics.js` | `/requirement/statistics/**`，`req:stats:view` | `ReqStatisticsController`、`ReqStatisticsService` |
 | 需求管理 | 隐藏兼容能力 | 仓库、项目分支、人工模块兼容 CRUD，不作为左侧菜单独立入口 | `reqflow-ui/src/api/requirement/repository.js`、`variant.js`、`module.js` | 同前述 API 文件 | `/requirement/repository/**`、`/requirement/variant/**`、`/requirement/module/**`，`req:repo:*`、`req:variant:*`、`req:module:*` | `ReqRepositoryController`、`ReqVariantController`、`ReqModuleController` 及对应 Service/Mapper |
 
@@ -54,7 +54,7 @@
 - 修改项目初始化上下文时，必须同步检查前端项目管理、项目接入中心、分支知识库页签和需求表单的字段使用。
 - 修改索引导入或影响面推荐时，必须确认项目分支、真实 Git 分支、索引批次和模块知识的粒度一致。
 - MCP tools 新增或改名时，必须同步人员权限校验、接口契约、`tools/list` schema、前端文案和平台初始化指令。
-- MCP 管理配置或 Key 创建结果调整时，必须同步前端 MCP 管理页。全局 Codex skill 应通过跨平台 `codexGlobalSkillPackage` 返回，由 Codex 按自身 skill 规范安装，不能只下发 macOS/Linux shell 命令；推荐同时返回 `codexSetupPackage`，把 MCP 配置、全局 skill、短提示词和 server metadata 组合成一次复制入口，但不得在配置后自动调用 reqflow MCP tools。
+- MCP 管理 Key 创建或重置结果调整时，必须同步前端 MCP 管理页。页面不再提供配置查询入口；创建和重置响应只单独返回一次性 `plainKey` 与 `codexSetupPackage`。`codexSetupPackage` 把 MCP 配置、全局 skill、短提示词和 server metadata 组合成一次复制入口，但不得包含人员明文 Key，也不得在配置后自动调用 reqflow MCP tools。
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
 - 项目接入初始化指令调整时，必须保证 agent 能先识别 reqflow MCP skill，调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
