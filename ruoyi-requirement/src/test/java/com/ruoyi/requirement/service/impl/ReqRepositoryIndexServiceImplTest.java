@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.requirement.domain.ReqActionToken;
 import com.ruoyi.requirement.domain.ReqImpactItem;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
@@ -36,6 +37,7 @@ import com.ruoyi.requirement.mapper.ReqIndexModuleMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
 
 class ReqRepositoryIndexServiceImplTest
@@ -145,6 +147,63 @@ class ReqRepositoryIndexServiceImplTest
     }
 
     @Test
+    void importsIndexByActionTokenAndRemoteUrl()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, moduleMapper, impactMapper, repositoryMapper,
+                variantMapper, activityLogService, actionTokenService);
+
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_PROJECT_INIT);
+        token.setProjectId(1L);
+        token.setVariantId(8L);
+        token.setTargetMethod("publish_repository_index");
+        when(actionTokenService.resolveToken("reqflow_action_branch_init")).thenReturn(token);
+
+        ReqVariant branch = new ReqVariant();
+        branch.setVariantId(8L);
+        branch.setProjectId(1L);
+        branch.setBaselineBranch("release/hlj-main");
+        branch.setStatus("0");
+        when(variantMapper.selectReqVariantByVariantId(8L)).thenReturn(branch);
+
+        ReqRepository repository = new ReqRepository();
+        repository.setRepoId(2L);
+        repository.setProjectId(1L);
+        repository.setRepoUrl("git@example.com:reqflow-be.git");
+        repository.setRepoType("BACKEND");
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository));
+        doAnswer(invocation -> {
+            ReqRepositoryIndexBatch batch = invocation.getArgument(0);
+            batch.setBatchId(102L);
+            return 1;
+        }).when(batchMapper).insertReqRepositoryIndexBatch(any(ReqRepositoryIndexBatch.class));
+
+        ReqRepositoryIndexImportRequest request = new ReqRepositoryIndexImportRequest();
+        request.setActionToken("reqflow_action_branch_init");
+        request.setRemoteUrl("git@example.com:reqflow-be.git");
+        request.setCommitHash("def456");
+        request.setIndexVersion("v1");
+
+        ReqIndexImportResult result = service.importRepositoryIndex(request, "mcp", "tester", 7L);
+
+        assertEquals(102L, result.getBatchId());
+        ArgumentCaptor<ReqRepositoryIndexBatch> batchCaptor = forClass(ReqRepositoryIndexBatch.class);
+        verify(batchMapper).insertReqRepositoryIndexBatch(batchCaptor.capture());
+        assertEquals(1L, batchCaptor.getValue().getProjectId());
+        assertEquals(2L, batchCaptor.getValue().getRepoId());
+        assertEquals("BACKEND", batchCaptor.getValue().getRepoType());
+        assertEquals("release/hlj-main", batchCaptor.getValue().getBranchName());
+        verify(actionTokenService).resolveToken("reqflow_action_branch_init");
+    }
+
+    @Test
     void suggestsImpactItemsGroupedByType()
     {
         ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
@@ -232,6 +291,14 @@ class ReqRepositoryIndexServiceImplTest
     private ReqRepositoryIndexServiceImpl newService(ReqRepositoryIndexBatchMapper batchMapper, ReqIndexModuleMapper moduleMapper,
             ReqImpactItemMapper impactMapper, ReqRepositoryMapper repositoryMapper, ReqVariantMapper variantMapper, ReqActivityLogService activityLogService)
     {
+        return newService(batchMapper, moduleMapper, impactMapper, repositoryMapper, variantMapper, activityLogService,
+                mock(IReqActionTokenService.class));
+    }
+
+    private ReqRepositoryIndexServiceImpl newService(ReqRepositoryIndexBatchMapper batchMapper, ReqIndexModuleMapper moduleMapper,
+            ReqImpactItemMapper impactMapper, ReqRepositoryMapper repositoryMapper, ReqVariantMapper variantMapper,
+            ReqActivityLogService activityLogService, IReqActionTokenService actionTokenService)
+    {
         ReqRepositoryIndexServiceImpl service = new ReqRepositoryIndexServiceImpl();
         ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
         ReflectionTestUtils.setField(service, "moduleMapper", moduleMapper);
@@ -239,6 +306,7 @@ class ReqRepositoryIndexServiceImplTest
         ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
         ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
         ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
         return service;
     }
 

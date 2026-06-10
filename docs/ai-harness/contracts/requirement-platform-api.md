@@ -37,14 +37,29 @@
 
 - `project`：`req_project` 项目基础信息。
 - `repositories`：项目下团队共享仓库列表，一行代表一个 Git 远端仓库，接口返回时不回传个人本机路径。
-- `variants`：项目下分支配置列表，一行代表一个可供需求人员选择的项目分支。`branchLabel` 是需求人员可见中文标签，`baselineBranch` 是真实 Git 分支名，`mcpKey` 是 MCP 识别项目分支的稳定 key；`variantName`、`variantCode`、`customerName`、`scopeType`、`branchPolicy` 继续作为 `req_variant` 兼容字段返回。每行同时返回该分支独立的 `totalModules`、`indexedModules`、`manualModules`、`indexedRepositoryCount`、`unindexedRepositoryCount`、`latestIndexedAt` 和 `latestCommit`。
+- `variants`：项目下分支配置列表，一行代表一个可供需求人员选择的项目分支。`branchLabel` 是需求人员可见中文标签，`baselineBranch` 是真实 Git 分支名，`initInstruction` 是复制给 MCP 的项目分支初始化指令；`mcpKey`、`variantName`、`variantCode`、`customerName`、`scopeType`、`branchPolicy` 继续作为 `req_variant` 兼容字段返回。每行同时返回该分支独立的 `totalModules`、`indexedModules`、`manualModules`、`indexedRepositoryCount`、`unindexedRepositoryCount`、`latestIndexedAt` 和 `latestCommit`。
 - `moduleSummary`：`totalModules`、`indexedModules`、`manualModules`，分别表示项目级模块总数、索引模块数和人工维护模块数；分支级状态以 `variants` 每行字段为准。
 - `indexSummary`：`latestIndexedAt`、`latestCommit`、`indexedRepositoryCount`、`unindexedRepositoryCount`。
 - `initChecklist`：`projectReady`、`repositoryReady`、`variantReady`、`moduleReady`、`indexReady`。
 
 在本地库处于部分迁移状态、尚未创建可选索引表 `req_index_module` 或 `req_repository_index_batch` 时，初始化上下文仍必须稳定返回项目、仓库和项目分支数据；模块摘要和索引摘要按空集合计算，`moduleReady` 与 `indexReady` 为 `false`。除这两个可选索引表缺失外，其他数据库异常不得被吞掉。
 
-初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成。
+`initInstruction` 结构如下：
+
+```json
+{
+  "actionType": "project_init",
+  "targetMethod": "publish_repository_index",
+  "token": "reqflow_action_xxx",
+  "tokenPrefix": "reqflow_action_xxx",
+  "prompt": "请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。",
+  "content": "请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。\ntargetMethod: publish_repository_index\nactionToken: reqflow_action_xxx",
+  "copyLabel": "复制初始化指令",
+  "expireTime": null
+}
+```
+
+初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成兼容字段，前端主展示以 `initInstruction` 为准。
 
 初始化保存必须在同一事务内完成。新增时先写 `req_project`，再写 `req_repository` 和 `req_variant`；更新时按传入 ID 更新已有仓库/分支配置、插入新增行，并删除本次维护弹窗中移除的仓库/分支配置。接口拒绝仓库地址、默认分支、真实分支名、项目说明或备注中的个人本机绝对路径。
 
@@ -77,7 +92,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 
 索引批次列表和模块知识只读接口用于项目接入中心展示。模块知识库需要同时关联 `projectId` 和 `variantId`；传入 `variantId` 时只返回该项目分支的模块知识，不再混入 `variant_id is null` 的项目级旧数据。部分迁移库缺少 `req_repository_index_batch` 或 `req_index_module` 时，这两个只读接口返回空列表和成功响应，避免项目接入中心整页不可用；索引导入、影响面推荐和其他表异常仍按真实错误处理。
 
-索引导入优先支持 `mcpKey + remoteUrl`：服务端按 `mcpKey` 解析项目分支，并在同项目下按 `remoteUrl` 定位代码仓库；同时兼容旧的 `projectId + repoId + branchName`。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。每个项目分支都需要单独初始化索引，不能用主线索引代替客户分支或其他功能分支。
+索引导入优先支持 `actionToken + remoteUrl`：服务端按动作 token 解析目标动作、项目和项目分支，并在同项目下按 `remoteUrl` 定位代码仓库。`actionToken` 必须能解析为 `project_init` 动作且 `targetMethod` 为 `publish_repository_index`；同时兼容旧的 `mcpKey + remoteUrl` 和 `projectId + repoId + branchName`。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按动作 token、项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。每个项目分支都需要单独初始化索引，不能用主线索引代替客户分支或其他功能分支。
 
 影响面推荐请求可传 `projectId`、`repoId`、`variantId`、`moduleId`、`moduleCode`。当传入 `variantId` 时，服务端必须校验项目分支属于当前项目，并使用该项目分支 `baselineBranch` 过滤影响面；查询只返回目标仓库或每个仓库最新 `imported` 批次的数据。返回 `pages`、`apis`、`tables`、`permissions` 和 `documents` 五类列表，每一项来自 `req_impact_item`，同类资源按 `itemKey/apiPath/permissionKey/tableName/relativePath/itemName` 去重。
 
@@ -146,6 +161,20 @@ harness_init_result
 | `/requirement/statistics/user-usage` | GET | `req:stats:view` | 按用户聚合提交和报告上传次数 |
 
 统计查询必须保持项目级或用户级数据粒度，避免一对多 join 放大需求数。
+
+## MCP动作Token接口与数据模型
+
+项目分支初始化、后续需求编排 token 和开发执行 token 统一使用 `req_action_token` 表保存动作上下文。复制给 MCP 的明文 token 只在指令响应中出现，服务端落库字段为 SHA-256 哈希、token 前缀、动作类型、目标 MCP 方法、项目、分支、需求、状态、过期时间和最近使用时间。
+
+`req_action_token.action_type` 当前支持：
+
+```text
+project_init
+requirement_plan
+requirement_develop
+```
+
+动作 token 不是人员认证 Key，不能替代 MCP 请求头 `X-MCP-Key`；人员 Key 负责认证和权限，动作 token 负责让 MCP 服务识别应该调用哪个接口以及绑定到哪个项目、分支或需求上下文。任何列表、日志或前端持久化都不得展示 `token_hash`，也不得把明文 action token 写入本地存储。
 
 ## MCP人员Key管理接口
 
@@ -225,6 +254,6 @@ MCP 安全边界：
 - 不允许执行 Git、shell、clone、branch、文件系统写入或大模型调用。
 - `get_harness_template` 必须校验 `req:project:query`，返回项目、仓库、项目分支、workspace `AGENTS.md` 内容和每个仓库的 harness 初始化指令；该工具只读平台配置，不写仓库文件、不执行 Git 或 shell。
 - `register_harness_init_result` 只更新 `req_repository` 的 harness 字段，必须校验 `req:package:save`。
-- `publish_repository_index` 必须校验 `req:index:import`，优先接收 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
+- `publish_repository_index` 必须校验 `req:index:import`，优先接收 `actionToken + remoteUrl`，兼容旧 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
 - 报告上传、计划保存和执行资料类工具必须校验 `req:package:save`，并且只追加 `req_package_version`。
 - `artifactType` 必须属于本文列出的支持类型。

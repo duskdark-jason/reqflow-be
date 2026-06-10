@@ -34,6 +34,7 @@ import com.ruoyi.requirement.domain.ReqProject;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
+import com.ruoyi.requirement.dto.ReqActionInstruction;
 import com.ruoyi.requirement.dto.ReqProjectInitRepositoryItem;
 import com.ruoyi.requirement.dto.ReqProjectInitRequest;
 import com.ruoyi.requirement.dto.ReqProjectInitResponse;
@@ -44,6 +45,7 @@ import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 
 class ReqProjectInitServiceImplTest
 {
@@ -155,6 +157,37 @@ class ReqProjectInitServiceImplTest
         ArgumentCaptor<ReqVariant> variantCaptor = forClass(ReqVariant.class);
         verify(variantMapper).insertReqVariant(variantCaptor.capture());
         assertEquals("REQFLOW:MAIN", variantCaptor.getValue().getMcpKey());
+    }
+
+    @Test
+    void returnsProjectInitInstructionForProjectBranch()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                mock(ReqModuleMapper.class), mock(ReqIndexModuleMapper.class), mock(ReqRepositoryIndexBatchMapper.class),
+                actionTokenService);
+
+        doAnswer(invocation -> {
+            ReqProject project = invocation.getArgument(0);
+            project.setProjectId(10L);
+            return 1;
+        }).when(projectMapper).insertReqProject(any(ReqProject.class));
+        doAnswer(invocation -> {
+            ReqVariant variant = invocation.getArgument(0);
+            variant.setVariantId(31L);
+            return 1;
+        }).when(variantMapper).insertReqVariant(any(ReqVariant.class));
+        ReqActionInstruction instruction = initInstruction();
+        when(actionTokenService.createProjectInitInstruction(any(ReqProject.class), any(ReqVariant.class), eq("admin")))
+                .thenReturn(instruction);
+
+        ReqProjectInitResponse response = service.insertProjectInit(baseRequest(), "admin");
+
+        assertEquals(instruction, response.getVariants().get(0).getInitInstruction());
+        assertEquals("复制初始化指令", response.getVariants().get(0).getInitInstruction().getCopyLabel());
     }
 
     @Test
@@ -422,6 +455,14 @@ class ReqProjectInitServiceImplTest
             ReqVariantMapper variantMapper, ReqModuleMapper moduleMapper, ReqIndexModuleMapper indexModuleMapper,
             ReqRepositoryIndexBatchMapper batchMapper)
     {
+        return newService(projectMapper, repositoryMapper, variantMapper, moduleMapper, indexModuleMapper, batchMapper,
+                mock(IReqActionTokenService.class));
+    }
+
+    private ReqProjectInitServiceImpl newService(ReqProjectMapper projectMapper, ReqRepositoryMapper repositoryMapper,
+            ReqVariantMapper variantMapper, ReqModuleMapper moduleMapper, ReqIndexModuleMapper indexModuleMapper,
+            ReqRepositoryIndexBatchMapper batchMapper, IReqActionTokenService actionTokenService)
+    {
         ReqProjectInitServiceImpl service = new ReqProjectInitServiceImpl();
         ReflectionTestUtils.setField(service, "projectMapper", projectMapper);
         ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
@@ -429,7 +470,20 @@ class ReqProjectInitServiceImplTest
         ReflectionTestUtils.setField(service, "moduleMapper", moduleMapper);
         ReflectionTestUtils.setField(service, "indexModuleMapper", indexModuleMapper);
         ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
         return service;
+    }
+
+    private ReqActionInstruction initInstruction()
+    {
+        ReqActionInstruction instruction = new ReqActionInstruction();
+        instruction.setActionType(IReqActionTokenService.ACTION_PROJECT_INIT);
+        instruction.setTargetMethod("publish_repository_index");
+        instruction.setToken("reqflow_action_test");
+        instruction.setPrompt("请执行项目分支初始化");
+        instruction.setContent("请执行项目分支初始化\nToken: reqflow_action_test");
+        instruction.setCopyLabel("复制初始化指令");
+        return instruction;
     }
 
     private ReqProjectInitRequest baseRequest()

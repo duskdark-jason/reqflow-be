@@ -257,6 +257,28 @@ CREATE TABLE IF NOT EXISTS req_impact_item (
   KEY idx_req_impact_type (item_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模块影响面索引';
 
+CREATE TABLE IF NOT EXISTS req_action_token (
+  token_id BIGINT NOT NULL AUTO_INCREMENT,
+  action_type VARCHAR(64) NOT NULL,
+  token_prefix VARCHAR(64) NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  target_method VARCHAR(100) NOT NULL,
+  project_id BIGINT DEFAULT NULL,
+  variant_id BIGINT DEFAULT NULL,
+  demand_id BIGINT DEFAULT NULL,
+  status CHAR(1) NOT NULL DEFAULT '0',
+  expire_time DATETIME DEFAULT NULL,
+  last_used_time DATETIME DEFAULT NULL,
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  update_by VARCHAR(64) DEFAULT '',
+  update_time DATETIME DEFAULT NULL,
+  remark VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (token_id),
+  UNIQUE KEY uk_req_action_token_hash (token_hash),
+  KEY idx_req_action_token_context (action_type, project_id, variant_id, demand_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='MCP动作Token表';
+
 CREATE TABLE IF NOT EXISTS req_activity_log (
   id BIGINT NOT NULL AUTO_INCREMENT,
   user_id BIGINT DEFAULT NULL,

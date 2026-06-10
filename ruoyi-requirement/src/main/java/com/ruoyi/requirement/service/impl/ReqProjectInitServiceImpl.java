@@ -31,6 +31,7 @@ import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 import com.ruoyi.requirement.service.IReqProjectInitService;
 
 @Service
@@ -42,6 +43,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
     @Autowired private ReqModuleMapper moduleMapper;
     @Autowired private ReqIndexModuleMapper indexModuleMapper;
     @Autowired private ReqRepositoryIndexBatchMapper batchMapper;
+    @Autowired private IReqActionTokenService actionTokenService;
 
     @Override
     public ReqProjectInitResponse selectProjectInit(Long projectId)
@@ -391,6 +393,8 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         item.setBaselineBranch(variant.getBaselineBranch());
         item.setBranchPolicy(variant.getBranchPolicy());
         item.setMcpKey(firstNotEmpty(variant.getMcpKey(), buildMcpKey(project.getProjectCode(), variant.getVariantCode())));
+        item.setInitInstruction(actionTokenService.createProjectInitInstruction(project, variant,
+                firstNotEmpty(variant.getUpdateBy(), variant.getCreateBy(), project.getUpdateBy(), project.getCreateBy())));
         enrichVariantKnowledge(item, variant, repositories, modules, indexModules, batches);
         item.setDescription(variant.getDescription());
         item.setStatus(variant.getStatus());

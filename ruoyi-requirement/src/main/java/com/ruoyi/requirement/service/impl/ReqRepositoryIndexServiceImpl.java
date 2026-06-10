@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.requirement.domain.ReqActionToken;
 import com.ruoyi.requirement.domain.ReqImpactItem;
 import com.ruoyi.requirement.domain.ReqIndexModule;
 import com.ruoyi.requirement.domain.ReqRepository;
@@ -25,6 +26,7 @@ import com.ruoyi.requirement.mapper.ReqIndexModuleMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 import com.ruoyi.requirement.service.IReqRepositoryIndexService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
 
@@ -37,6 +39,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     @Autowired private ReqRepositoryMapper repositoryMapper;
     @Autowired private ReqVariantMapper variantMapper;
     @Autowired private ReqActivityLogService activityLogService;
+    @Autowired private IReqActionTokenService actionTokenService;
 
     @Override
     @Transactional
@@ -188,11 +191,11 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             throw new ServiceException("项目和仓库不能为空");
         }
-        if (StringUtils.isNotEmpty(request.getMcpKey()))
+        if (StringUtils.isNotEmpty(request.getMcpKey()) || StringUtils.isNotEmpty(request.getActionToken()))
         {
             if (StringUtils.isEmpty(request.getRemoteUrl()) || StringUtils.isEmpty(request.getCommitHash()) || StringUtils.isEmpty(request.getIndexVersion()))
             {
-                throw new ServiceException("MCP key、仓库远端、commit 和索引版本不能为空");
+                throw new ServiceException("初始化指令、仓库远端、commit 和索引版本不能为空");
             }
             return;
         }
@@ -211,6 +214,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     {
         checkPath(request.getRemoteUrl());
         checkPath(request.getMcpKey());
+        checkPath(request.getActionToken());
         checkPath(request.getBranchName());
         checkPath(request.getCommitHash());
         for (ReqIndexModulePayload module : safeList(request.getModules()))
@@ -338,11 +342,41 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
 
     private ReqVariant resolveRequestContext(ReqRepositoryIndexImportRequest request)
     {
+        if (StringUtils.isNotEmpty(request.getActionToken()))
+        {
+            return resolveBranchByActionToken(request.getActionToken(), request);
+        }
         if (StringUtils.isEmpty(request.getMcpKey()))
         {
             return null;
         }
         ReqVariant branch = resolveBranchByMcpKey(request.getMcpKey());
+        request.setProjectId(branch.getProjectId());
+        request.setBranchName(branch.getBaselineBranch());
+        return branch;
+    }
+
+    private ReqVariant resolveBranchByActionToken(String actionToken, ReqRepositoryIndexImportRequest request)
+    {
+        ReqActionToken token = actionTokenService.resolveToken(actionToken);
+        if (!IReqActionTokenService.ACTION_PROJECT_INIT.equals(token.getActionType())
+                || !"publish_repository_index".equals(token.getTargetMethod()))
+        {
+            throw new ServiceException("动作Token不能用于仓库索引发布");
+        }
+        if (token.getVariantId() == null)
+        {
+            throw new ServiceException("动作Token未绑定项目分支");
+        }
+        ReqVariant branch = variantMapper.selectReqVariantByVariantId(token.getVariantId());
+        if (branch == null || !"0".equals(branch.getStatus()))
+        {
+            throw new ServiceException("动作Token对应的项目分支不存在");
+        }
+        if (token.getProjectId() != null && !token.getProjectId().equals(branch.getProjectId()))
+        {
+            throw new ServiceException("动作Token项目与分支不一致");
+        }
         request.setProjectId(branch.getProjectId());
         request.setBranchName(branch.getBaselineBranch());
         return branch;
@@ -364,7 +398,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     private ReqRepository resolveRepository(ReqRepositoryIndexImportRequest request)
     {
         ReqRepository repository;
-        if (StringUtils.isNotEmpty(request.getMcpKey()))
+        if (StringUtils.isNotEmpty(request.getMcpKey()) || StringUtils.isNotEmpty(request.getActionToken()))
         {
             ReqRepository query = new ReqRepository();
             query.setProjectId(request.getProjectId());
@@ -373,7 +407,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
             repository = repositories == null || repositories.isEmpty() ? null : repositories.get(0);
             if (repository == null)
             {
-                throw new ServiceException("MCP key 对应项目下不存在该仓库");
+                throw new ServiceException("初始化指令对应项目下不存在该仓库");
             }
             request.setRepoId(repository.getRepoId());
             request.setRepoType(firstNotEmpty(request.getRepoType(), repository.getRepoType()));
