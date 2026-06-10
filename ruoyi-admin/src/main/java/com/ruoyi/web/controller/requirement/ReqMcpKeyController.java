@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +35,9 @@ public class ReqMcpKeyController extends BaseController
     @Autowired
     private IReqMcpUserKeyService reqMcpUserKeyService;
 
+    @Value("${reqflow.mcp.public-url:}")
+    private String mcpPublicUrl;
+
     @PreAuthorize("@ss.hasPermi('req:mcp:key:list')")
     @GetMapping("/list")
     public TableDataInfo list(ReqMcpUserKey reqMcpUserKey)
@@ -47,10 +51,11 @@ public class ReqMcpKeyController extends BaseController
     @GetMapping("/config")
     public AjaxResult config(HttpServletRequest request)
     {
+        String mcpAddress = mcpAddress(request);
         Map<String, Object> data = new HashMap<>();
-        data.put("mcpAddress", mcpAddress(request));
+        data.put("mcpAddress", mcpAddress);
         data.put("headerName", ReqMcpUserKeyServiceImpl.MCP_KEY_HEADER);
-        data.put("codexConfigTemplate", codexConfigTemplate(mcpAddress(request)));
+        data.put("codexConfigTemplate", codexConfigTemplate(mcpAddress));
         return success(data);
     }
 
@@ -103,6 +108,12 @@ public class ReqMcpKeyController extends BaseController
 
     private String mcpAddress(HttpServletRequest request)
     {
+        String configuredMcpAddress = normalizeMcpPublicUrl();
+        if (StringUtils.isNotEmpty(configuredMcpAddress))
+        {
+            return configuredMcpAddress;
+        }
+
         String scheme = StringUtils.defaultIfEmpty(request.getHeader("X-Forwarded-Proto"), request.getScheme());
         String host = StringUtils.defaultIfEmpty(request.getHeader("X-Forwarded-Host"), request.getHeader("Host"));
         if (StringUtils.isEmpty(host))
@@ -115,6 +126,16 @@ public class ReqMcpKeyController extends BaseController
             }
         }
         return scheme + "://" + host + request.getContextPath() + "/requirement/mcp";
+    }
+
+    private String normalizeMcpPublicUrl()
+    {
+        String publicUrl = StringUtils.trim(mcpPublicUrl);
+        while (StringUtils.isNotEmpty(publicUrl) && publicUrl.endsWith("/") && !publicUrl.endsWith("://"))
+        {
+            publicUrl = publicUrl.substring(0, publicUrl.length() - 1);
+        }
+        return publicUrl;
     }
 
     private boolean isDefaultPort(String scheme, int port)
