@@ -41,6 +41,10 @@ class ReqActionTokenServiceImplTest
         assertTrue(instruction.getPrompt().contains("项目分支初始化"));
         assertTrue(instruction.getContent().contains(instruction.getPrompt()));
         assertTrue(instruction.getContent().contains(instruction.getToken()));
+        assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
+        assertTrue(instruction.getContent().contains("toolName: publish_repository_index"));
+        assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));
+        assertTrue(instruction.getContent().contains("actionToken 是 publish_repository_index 的 arguments.actionToken"));
         assertTrue(instruction.getContent().contains("需求平台"));
         assertTrue(instruction.getContent().contains("main"));
 

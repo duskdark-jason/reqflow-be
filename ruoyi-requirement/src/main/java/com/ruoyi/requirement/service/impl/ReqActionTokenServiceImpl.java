@@ -24,6 +24,10 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
 {
     private static final String TOKEN_PREFIX = "reqflow_action_";
 
+    private static final String PROJECT_INIT_MCP_SERVER = "reqflow";
+
+    private static final String PROJECT_INIT_TOOL_NAME = "publish_repository_index";
+
     private static final int RANDOM_BYTES = 32;
 
     private static final int MAX_GENERATE_ATTEMPTS = 10;
@@ -41,10 +45,10 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         {
             throw new ServiceException("项目和分支不能为空");
         }
-        String prompt = "请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。";
+        String prompt = "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。";
         ReqActionInstruction instruction = createInstruction(ACTION_PROJECT_INIT, project.getProjectId(), variant.getVariantId(),
-                null, "publish_repository_index", prompt, "复制初始化指令", operator);
-        instruction.setContent(instruction.getContent()
+                null, PROJECT_INIT_TOOL_NAME, prompt, "复制初始化指令", operator);
+        instruction.setContent(projectInitInstructionContent(prompt, instruction.getTargetMethod(), instruction.getToken())
                 + "\n项目：" + firstNotEmpty(project.getProjectName(), project.getProjectCode())
                 + "\n分支：" + firstNotEmpty(variant.getVariantName(), variant.getVariantCode())
                 + "\n真实分支：" + firstNotEmpty(variant.getBaselineBranch(), "未填写"));
@@ -187,6 +191,21 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
             }
         }
         return "";
+    }
+
+    private String projectInitInstructionContent(String prompt, String targetMethod, String actionToken)
+    {
+        return prompt
+                + "\nmcpServer: " + PROJECT_INIT_MCP_SERVER
+                + "\ntoolName: " + PROJECT_INIT_TOOL_NAME
+                + "\nmcpTool: " + PROJECT_INIT_MCP_SERVER + "." + PROJECT_INIT_TOOL_NAME
+                + "\ntargetMethod: " + targetMethod
+                + "\nactionToken: " + actionToken
+                + "\n调用要求："
+                + "\n1. 在接入项目的 Codex 会话中确认已加载名为 reqflow 的 MCP server。"
+                + "\n2. 通过 tools/list 查找 reqflow.publish_repository_index，只调用该 server 下的该 tool。"
+                + "\n3. 通过 tools/call 传入 arguments.actionToken、remoteUrl、branchName、commitHash、indexVersion 和结构化索引列表。"
+                + "\n4. actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。";
     }
 
     private static class GeneratedToken

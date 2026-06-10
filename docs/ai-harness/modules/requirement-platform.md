@@ -43,6 +43,8 @@
 - 项目、仓库、项目分支和模块知识必须按项目分支隔离；不能把其他分支或旧项目级模块默认混入当前分支。
 - 新增或编辑需求时，后端必须校验 `projectId + variantId` 属于同一项目，且项目分支已完成模块知识和仓库索引初始化。
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。
+- 项目初始化指令必须明确包含 `mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，确保接入项目能定位到指定 MCP server 的指定 tool。
+- `/requirement/mcp` 必须支持 MCP `initialize -> notifications/initialized -> tools/list` lifecycle；新增 tool 时必须同步 `tools/list` 的描述和 `inputSchema`。
 - 项目接入初始化由平台存储和下发 harness 模板，后端不直接执行 Git、shell 或写用户本地文件。
 - 用户可见系统名称统一为“统一需求流转平台”，但底层 RuoYi 包名、权限框架和通用基础能力保持兼容。
 
@@ -50,7 +52,8 @@
 
 - 修改项目初始化上下文时，必须同步检查前端项目管理、项目接入中心、分支知识库页签和需求表单的字段使用。
 - 修改索引导入或影响面推荐时，必须确认项目分支、真实 Git 分支、索引批次和模块知识的粒度一致。
-- MCP tools 新增或改名时，必须同步人员权限校验、接口契约、前端文案和平台初始化指令。
+- MCP tools 新增或改名时，必须同步人员权限校验、接口契约、`tools/list` schema、前端文案和平台初始化指令。
+- MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - 菜单权限调整时，必须同时检查 `sql/req_platform_menu.sql`、Controller `@PreAuthorize` 和前端按钮权限。
 
 ## 验证建议
@@ -58,4 +61,5 @@
 - 最低文档门禁：`sh scripts/check-docs.sh && sh scripts/check-harness.sh init`。
 - 后端契约或 Service 变更：运行 `mvn -pl ruoyi-requirement -am test`，必要时补指定测试类。
 - 后端打包验证：运行 `mvn -pl ruoyi-admin -am -DskipTests package`。
+- MCP 协议变更：在后端启动后用 `curl` 或 MCP 客户端验证 `initialize -> notifications/initialized -> resources/templates/list -> tools/list`，并确认工具列表含 `publish_repository_index`。
 - 跨端流程变更：配合前端验证项目管理、项目接入中心、分支知识库详情、需求新增、执行包保存、MCP Key 管理和统计页面。

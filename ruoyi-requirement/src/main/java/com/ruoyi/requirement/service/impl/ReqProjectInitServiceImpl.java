@@ -424,9 +424,13 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         ReqActionInstruction instruction = new ReqActionInstruction();
         instruction.setActionType(IReqActionTokenService.ACTION_PROJECT_INIT);
         instruction.setTargetMethod("publish_repository_index");
-        instruction.setPrompt("请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。");
+        instruction.setPrompt("请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。");
         instruction.setCopyLabel("复制兼容初始化指令");
-        instruction.setContent("请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。"
+        instruction.setContent("请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。"
+                + "\nmcpServer: reqflow"
+                + "\ntoolName: publish_repository_index"
+                + "\nmcpTool: reqflow.publish_repository_index"
+                + "\ntargetMethod: publish_repository_index"
                 + "\nmcpKey: " + firstNotEmpty(mcpKey, "-")
                 + "\n说明：当前数据库未创建 req_action_token，请先执行 sql/req_platform_req003_action_token.sql 后重新复制 actionToken 指令。");
         return instruction;

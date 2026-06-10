@@ -480,6 +480,8 @@ class ReqProjectInitServiceImplTest
         ReqProjectInitVariantItem branch = response.getVariants().get(0);
         assertNotNull(branch.getInitInstruction());
         assertEquals(IReqActionTokenService.ACTION_PROJECT_INIT, branch.getInitInstruction().getActionType());
+        assertTrue(branch.getInitInstruction().getContent().contains("mcpServer: reqflow"));
+        assertTrue(branch.getInitInstruction().getContent().contains("toolName: publish_repository_index"));
         assertTrue(branch.getInitInstruction().getContent().contains("mcpKey: REQFLOW:MAIN"));
         assertTrue(branch.getInitInstruction().getContent().contains("req_platform_req003_action_token.sql"));
     }
@@ -514,7 +516,7 @@ class ReqProjectInitServiceImplTest
         instruction.setTargetMethod("publish_repository_index");
         instruction.setToken("reqflow_action_test");
         instruction.setPrompt("请执行项目分支初始化");
-        instruction.setContent("请执行项目分支初始化\nToken: reqflow_action_test");
+        instruction.setContent("请执行项目分支初始化\nmcpServer: reqflow\ntoolName: publish_repository_index\nmcpTool: reqflow.publish_repository_index\nToken: reqflow_action_test");
         instruction.setCopyLabel("复制初始化指令");
         return instruction;
     }

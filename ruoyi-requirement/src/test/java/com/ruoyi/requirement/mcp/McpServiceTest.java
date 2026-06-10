@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
@@ -36,12 +37,63 @@ import com.ruoyi.requirement.service.ReqActivityLogService;
 class McpServiceTest
 {
     @Test
+    @SuppressWarnings("unchecked")
+    void initializeDeclaresMcpCapabilities()
+    {
+        Map<String, Object> clientInfo = new HashMap<>();
+        clientInfo.put("name", "codex");
+        clientInfo.put("version", "1.0.0");
+        Map<String, Object> params = new HashMap<>();
+        params.put("protocolVersion", "2025-11-25");
+        params.put("capabilities", new HashMap<>());
+        params.put("clientInfo", clientInfo);
+
+        McpResponse response = new McpService().handle(request("initialize", params));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        assertEquals("2025-11-25", result.get("protocolVersion"));
+        assertTrue(String.valueOf(result.get("capabilities")).contains("tools"));
+        assertTrue(String.valueOf(result.get("capabilities")).contains("resources"));
+        assertTrue(String.valueOf(result.get("capabilities")).contains("prompts"));
+        assertTrue(String.valueOf(result.get("serverInfo")).contains("reqflow"));
+    }
+
+    @Test
     void toolListIncludesRepositoryIndexPublisher()
     {
         McpResponse response = new McpService().handle(request("tools/list", null));
 
         assertTrue(String.valueOf(response.getResult()).contains("publish_repository_index"));
         assertTrue(String.valueOf(response.getResult()).contains("get_harness_template"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void toolListExposesRepositoryIndexPublisherSchema()
+    {
+        McpResponse response = new McpService().handle(request("tools/list", null));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        List<Map<String, Object>> tools = (List<Map<String, Object>>) result.get("tools");
+        Map<String, Object> publisher = tools.stream()
+                .filter(tool -> "publish_repository_index".equals(tool.get("name")))
+                .findFirst()
+                .orElseThrow();
+
+        assertTrue(String.valueOf(publisher.get("description")).contains("发布"));
+        assertTrue(String.valueOf(publisher.get("inputSchema")).contains("actionToken"));
+        assertTrue(String.valueOf(publisher.get("inputSchema")).contains("remoteUrl"));
+        assertTrue(String.valueOf(publisher.get("inputSchema")).contains("modules"));
+    }
+
+    @Test
+    void resourceTemplatesListReturnsMcpTemplates()
+    {
+        McpResponse response = new McpService().handle(request("resources/templates/list", null));
+
+        assertTrue(String.valueOf(response.getResult()).contains("resourceTemplates"));
+        assertTrue(String.valueOf(response.getResult()).contains("requirement://{demandNo}"));
+        assertTrue(String.valueOf(response.getResult()).contains("memory://{projectId}/modules"));
     }
 
     @Test
@@ -134,12 +186,15 @@ class McpServiceTest
         IReqRepositoryIndexService indexService = mock(IReqRepositoryIndexService.class);
         ReqIndexImportResult importResult = new ReqIndexImportResult();
         importResult.setBatchId(9L);
+        importResult.setModuleCount(1);
+        importResult.setImpactCount(2);
         when(indexService.importRepositoryIndex(any(ReqRepositoryIndexImportRequest.class), eq("mcp"), any(), any())).thenReturn(importResult);
 
         McpService service = new TestableMcpService(true);
         ReflectionTestUtils.setField(service, "repositoryIndexService", indexService);
 
         Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_abc");
         arguments.put("projectId", 1L);
         arguments.put("repoId", 2L);
         arguments.put("repoType", "FRONTEND");
@@ -153,8 +208,39 @@ class McpServiceTest
 
         service.handle(request("tools/call", params));
 
-        verify(indexService).importRepositoryIndex(any(ReqRepositoryIndexImportRequest.class), eq("mcp"), any(), any());
+        ArgumentCaptor<ReqRepositoryIndexImportRequest> captor = forClass(ReqRepositoryIndexImportRequest.class);
+        verify(indexService).importRepositoryIndex(captor.capture(), eq("mcp"), any(), any());
+        assertEquals("reqflow_action_abc", captor.getValue().getActionToken());
     }
+
+    @Test
+    void publishRepositoryIndexToolReturnsMcpToolResultContent()
+    {
+        IReqRepositoryIndexService indexService = mock(IReqRepositoryIndexService.class);
+        ReqIndexImportResult importResult = new ReqIndexImportResult();
+        importResult.setBatchId(9L);
+        importResult.setModuleCount(1);
+        importResult.setImpactCount(2);
+        when(indexService.importRepositoryIndex(any(ReqRepositoryIndexImportRequest.class), eq("mcp"), any(), any())).thenReturn(importResult);
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "repositoryIndexService", indexService);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_abc");
+        arguments.put("remoteUrl", "git@example.com:reqflow-ui.git");
+        Map<String, Object> params = new HashMap<>();
+        params.put("name", "publish_repository_index");
+        params.put("arguments", arguments);
+
+        McpResponse response = service.handle(request("tools/call", params));
+
+        String responseText = String.valueOf(response.getError()) + " / " + String.valueOf(response.getResult());
+        assertTrue(String.valueOf(response.getResult()).contains("content"), responseText);
+        assertTrue(String.valueOf(response.getResult()).contains("structuredContent"), responseText);
+        assertTrue(String.valueOf(response.getResult()).contains("isError=false"), responseText);
+    }
+
 
     @Test
     void publishRepositoryIndexToolRequiresIndexImportPermission()
@@ -303,6 +389,18 @@ class McpServiceTest
         protected boolean hasPermission(String permission)
         {
             return allowed;
+        }
+
+        @Override
+        protected String currentUsername()
+        {
+            return "mcp";
+        }
+
+        @Override
+        protected Long currentUserId()
+        {
+            return 0L;
         }
     }
 }

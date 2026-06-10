@@ -2,6 +2,7 @@ package com.ruoyi.web.controller.requirement;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,7 +35,7 @@ public class ReqMcpController
     private IReqMcpUserKeyService reqMcpUserKeyService;
 
     @PostMapping
-    public McpResponse handle(@RequestBody McpRequest request, HttpServletRequest httpRequest)
+    public ResponseEntity<McpResponse> handle(@RequestBody McpRequest request, HttpServletRequest httpRequest)
     {
         Authentication originalAuthentication = SecurityContextHolder.getContext().getAuthentication();
         boolean useMcpKey = false;
@@ -42,7 +43,7 @@ public class ReqMcpController
         {
             if (request == null)
             {
-                return McpResponse.error(null, "MCP请求不能为空");
+                return ResponseEntity.ok(McpResponse.error(null, "MCP请求不能为空"));
             }
             String plainKey = httpRequest.getHeader(ReqMcpUserKeyServiceImpl.MCP_KEY_HEADER);
             if (StringUtils.isNotEmpty(plainKey))
@@ -54,13 +55,18 @@ public class ReqMcpController
             }
             if (!hasAnyMcpPermission())
             {
-                return McpResponse.error(request.getId(), "调用MCP需要权限：req:package:save、req:index:import 或 req:project:query");
+                return ResponseEntity.ok(McpResponse.error(request.getId(), "调用MCP需要权限：req:package:save、req:index:import 或 req:project:query"));
             }
-            return mcpService.handle(request);
+            McpResponse response = mcpService.handle(request);
+            if (isNotification(request))
+            {
+                return ResponseEntity.accepted().build();
+            }
+            return ResponseEntity.ok(response);
         }
         catch (Exception e)
         {
-            return McpResponse.error(request.getId(), e.getMessage());
+            return ResponseEntity.ok(McpResponse.error(request == null ? null : request.getId(), e.getMessage()));
         }
         finally
         {
@@ -88,5 +94,11 @@ public class ReqMcpController
             }
         }
         return false;
+    }
+
+    private boolean isNotification(McpRequest request)
+    {
+        return request != null && request.getId() == null
+                && request.getMethod() != null && request.getMethod().startsWith("notifications/");
     }
 }

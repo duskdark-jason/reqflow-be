@@ -4,10 +4,12 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.alibaba.fastjson2.JSON;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqMemoryIndex;
@@ -43,11 +45,19 @@ public class McpService
     {
         try
         {
+            if ("initialize".equals(request.getMethod())) return McpResponse.success(request.getId(), initialize(request));
+            if ("notifications/initialized".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.emptyMap());
+            if ("ping".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.emptyMap());
             if ("resources/list".equals(request.getMethod())) return McpResponse.success(request.getId(), resourcesList());
             if ("resources/read".equals(request.getMethod())) return McpResponse.success(request.getId(), resourcesRead(stringParam(request, "uri")));
-            if ("prompts/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("prompts", Arrays.asList(prompt("generate_agent_requirement_package"), prompt("generate_development_plan"), prompt("generate_execution_prompt"), prompt("generate_review_prompt"))));
+            if ("resources/templates/list".equals(request.getMethod())) return McpResponse.success(request.getId(), resourceTemplatesList());
+            if ("prompts/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("prompts", Arrays.asList(
+                    prompt("generate_agent_requirement_package", "生成需求说明包"),
+                    prompt("generate_development_plan", "生成开发计划"),
+                    prompt("generate_execution_prompt", "生成执行提示"),
+                    prompt("generate_review_prompt", "生成 Review 提示"))));
             if ("prompts/get".equals(request.getMethod())) return McpResponse.success(request.getId(), promptsGet(stringParam(request, "name")));
-            if ("tools/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("tools", Arrays.asList(tool("save_requirement_package"), tool("save_development_plan"), tool("upload_execution_report"), tool("upload_review_report"), tool("register_harness_init_result"), tool("get_harness_template"), tool("publish_repository_index"))));
+            if ("tools/list".equals(request.getMethod())) return McpResponse.success(request.getId(), toolsList());
             if ("tools/call".equals(request.getMethod())) return McpResponse.success(request.getId(), toolsCall(request));
             return McpResponse.error(request.getId(), "不支持的MCP方法：" + request.getMethod());
         }
@@ -55,6 +65,47 @@ public class McpService
         {
             return McpResponse.error(request.getId(), e.getMessage());
         }
+    }
+
+    private Map<String, Object> initialize(McpRequest request)
+    {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("protocolVersion", negotiatedProtocolVersion(stringParam(request, "protocolVersion")));
+        result.put("capabilities", serverCapabilities());
+
+        Map<String, Object> serverInfo = new LinkedHashMap<>();
+        serverInfo.put("name", "reqflow");
+        serverInfo.put("title", "统一需求流转平台 MCP 服务");
+        serverInfo.put("version", "2026-06-10");
+        serverInfo.put("description", "提供需求平台上下文、项目接入初始化和仓库索引发布能力。");
+        result.put("serverInfo", serverInfo);
+        result.put("instructions", "通过 tools/list 发现能力；项目接入初始化使用 publish_repository_index 发布仓库索引。");
+        return result;
+    }
+
+    private String negotiatedProtocolVersion(String requested)
+    {
+        if (requested != null && requested.startsWith("2025-"))
+        {
+            return requested;
+        }
+        return "2025-11-25";
+    }
+
+    private Map<String, Object> serverCapabilities()
+    {
+        Map<String, Object> capabilities = new LinkedHashMap<>();
+        capabilities.put("resources", capability("listChanged", true));
+        capabilities.put("tools", capability("listChanged", true));
+        capabilities.put("prompts", capability("listChanged", true));
+        return capabilities;
+    }
+
+    private Map<String, Object> capability(String key, Object value)
+    {
+        Map<String, Object> capability = new LinkedHashMap<>();
+        capability.put(key, value);
+        return capability;
     }
 
     private Map<String, Object> resourcesList()
@@ -75,35 +126,52 @@ public class McpService
                 resource("workspace://{projectId}/agents", "工作空间AGENTS")));
     }
 
+    private Map<String, Object> resourceTemplatesList()
+    {
+        return Collections.singletonMap("resourceTemplates", Arrays.asList(
+                resourceTemplate("requirement://{demandNo}", "需求详情", "按稳定需求编号读取需求详情"),
+                resourceTemplate("requirement://{demandNo}/draft-package", "需求草稿包", "读取最新需求草稿包"),
+                resourceTemplate("requirement://{demandNo}/context-manifest", "上下文清单", "读取最新需求上下文清单"),
+                resourceTemplate("project://{projectId}/overview", "项目概览", "读取项目、仓库和项目分支"),
+                resourceTemplate("project://{projectId}/repositories", "项目仓库清单", "读取项目下代码仓库"),
+                resourceTemplate("variant://{variantId}/overview", "项目分支概览", "读取项目分支详情"),
+                resourceTemplate("variant://{variantId}/branch-policy", "项目分支策略", "读取项目分支策略"),
+                resourceTemplate("memory://{projectId}/modules?variantId={variantId}", "分支模块知识库", "读取指定项目分支的模块知识"),
+                resourceTemplate("memory://{projectId}/contracts?variantId={variantId}", "分支接口契约知识库", "读取指定项目分支的接口契约"),
+                resourceTemplate("memory://{projectId}/decisions?variantId={variantId}", "分支决策知识库", "读取指定项目分支的决策记录"),
+                resourceTemplate("memory://{projectId}/runbooks?variantId={variantId}", "分支运行手册知识库", "读取指定项目分支的运行手册"),
+                resourceTemplate("memory://{projectId}/specs/done?variantId={variantId}", "分支已完成需求知识库", "读取指定项目分支的已完成需求"),
+                resourceTemplate("workspace://{projectId}/agents", "工作空间AGENTS", "生成工作空间 AGENTS 内容")));
+    }
+
     private Map<String, Object> resourcesRead(String uri)
     {
-        Map<String, Object> result = new HashMap<>();
-        result.put("uri", uri);
+        Object content;
         if (uri != null && uri.startsWith("requirement://"))
         {
-            result.put("content", readRequirementResource(uri));
+            content = readRequirementResource(uri);
         }
         else if (uri != null && uri.startsWith("project://"))
         {
-            result.put("content", readProjectResource(uri));
+            content = readProjectResource(uri);
         }
         else if (uri != null && uri.startsWith("variant://"))
         {
-            result.put("content", readVariantResource(uri));
+            content = readVariantResource(uri);
         }
         else if (uri != null && uri.startsWith("memory://"))
         {
-            result.put("content", readMemoryResource(uri));
+            content = readMemoryResource(uri);
         }
         else if (uri != null && uri.startsWith("workspace://"))
         {
-            result.put("content", readWorkspaceResource(uri));
+            content = readWorkspaceResource(uri);
         }
         else
         {
-            result.put("content", "resource not materialized in MVP-lite");
+            content = "resource not materialized in MVP-lite";
         }
-        return result;
+        return resourceReadResult(uri, content);
     }
 
     private Object readRequirementResource(String uri)
@@ -236,8 +304,20 @@ public class McpService
         Map<String, Object> result = new HashMap<>();
         result.put("name", name);
         result.put("description", "需求平台MVP-lite提示词：" + name);
-        result.put("messages", Arrays.asList(Collections.singletonMap("content", "请按需求平台上下文执行：" + name)));
+        result.put("messages", Arrays.asList(promptMessage("请按需求平台上下文执行：" + name)));
         return result;
+    }
+
+    private Map<String, Object> toolsList()
+    {
+        return Collections.singletonMap("tools", Arrays.asList(
+                tool("save_requirement_package", "保存需求说明包", packageToolSchema(true)),
+                tool("save_development_plan", "保存开发计划", packageToolSchema(false)),
+                tool("upload_execution_report", "上传执行报告", packageToolSchema(false)),
+                tool("upload_review_report", "上传 Review 报告", packageToolSchema(false)),
+                tool("register_harness_init_result", "登记项目 harness 初始化结果", registerHarnessSchema()),
+                tool("get_harness_template", "读取项目 harness 初始化模板包", getHarnessTemplateSchema()),
+                tool("publish_repository_index", "发布当前仓库索引到需求平台项目分支知识库", publishRepositoryIndexSchema())));
     }
 
     @SuppressWarnings("unchecked")
@@ -248,7 +328,7 @@ public class McpService
         if ("get_harness_template".equals(name))
         {
             requirePermission("get_harness_template", "req:project:query");
-            return getHarnessTemplate(longArg(arguments, "projectId"));
+            return toolResult(getHarnessTemplate(longArg(arguments, "projectId")));
         }
         if ("register_harness_init_result".equals(name))
         {
@@ -260,17 +340,17 @@ public class McpService
             repository.setUpdateBy(currentUsername());
             int rows = reqRepositoryMapper.updateHarnessInitResult(repository);
             activityLogService.record(currentUserId(), null, null, "harness_init_registered", "mcp", "登记Harness初始化结果", null);
-            return Collections.singletonMap("updated", rows);
+            return toolResult(Collections.singletonMap("updated", rows));
         }
         if ("publish_repository_index".equals(name))
         {
             requirePermission("publish_repository_index", "req:index:import");
-            return Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(toIndexRequest(arguments), "mcp", currentUsername(), currentUserId()));
+            return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(toIndexRequest(arguments), "mcp", currentUsername(), currentUserId())));
         }
         requirePermission(name, "req:package:save");
         Long demandId = longArg(arguments, "demandId");
         String artifactType = artifactTypeForTool(name, stringArg(arguments, "artifactType"));
-        return Collections.singletonMap("version", reqPackageService.saveVersion(demandId, artifactType, stringArg(arguments, "content"), name));
+        return toolResult(Collections.singletonMap("version", reqPackageService.saveVersion(demandId, artifactType, stringArg(arguments, "content"), name)));
     }
 
     private ReqRepositoryIndexImportRequest toIndexRequest(Map<String, Object> arguments)
@@ -279,6 +359,7 @@ public class McpService
         request.setProjectId(longArg(arguments, "projectId"));
         request.setRepoId(longArg(arguments, "repoId"));
         request.setMcpKey(stringArg(arguments, "mcpKey"));
+        request.setActionToken(stringArg(arguments, "actionToken"));
         request.setRepoType(stringArg(arguments, "repoType"));
         request.setRemoteUrl(stringArg(arguments, "remoteUrl"));
         request.setBranchName(stringArg(arguments, "branchName"));
@@ -432,6 +513,140 @@ public class McpService
         return map;
     }
 
+    private Map<String, Object> resourceTemplate(String uriTemplate, String name, String description)
+    {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("uriTemplate", uriTemplate);
+        map.put("name", name);
+        map.put("description", description);
+        map.put("mimeType", "application/json");
+        return map;
+    }
+
+    private Map<String, Object> resourceReadResult(String uri, Object content)
+    {
+        Map<String, Object> text = new LinkedHashMap<>();
+        text.put("uri", uri);
+        text.put("mimeType", "application/json");
+        text.put("text", JSON.toJSONString(content));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("contents", Collections.singletonList(text));
+        result.put("structuredContent", content);
+        return result;
+    }
+
+    private Map<String, Object> promptMessage(String text)
+    {
+        Map<String, Object> content = new LinkedHashMap<>();
+        content.put("type", "text");
+        content.put("text", text);
+
+        Map<String, Object> message = new LinkedHashMap<>();
+        message.put("role", "user");
+        message.put("content", content);
+        return message;
+    }
+
+    private Map<String, Object> toolResult(Object structuredContent)
+    {
+        Map<String, Object> text = new LinkedHashMap<>();
+        text.put("type", "text");
+        text.put("text", JSON.toJSONString(structuredContent));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("content", Collections.singletonList(text));
+        result.put("structuredContent", structuredContent);
+        result.put("isError", false);
+        return result;
+    }
+
+    private Map<String, Object> tool(String name, String description, Map<String, Object> inputSchema)
+    {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("name", name);
+        map.put("description", description);
+        map.put("inputSchema", inputSchema);
+        return map;
+    }
+
+    private Map<String, Object> objectSchema(Map<String, Object> properties, List<String> required)
+    {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        if (required != null && !required.isEmpty())
+        {
+            schema.put("required", required);
+        }
+        schema.put("additionalProperties", true);
+        return schema;
+    }
+
+    private Map<String, Object> property(String type, String description)
+    {
+        Map<String, Object> property = new LinkedHashMap<>();
+        property.put("type", type);
+        property.put("description", description);
+        return property;
+    }
+
+    private Map<String, Object> arrayProperty(String description)
+    {
+        Map<String, Object> property = property("array", description);
+        property.put("items", Collections.singletonMap("type", "object"));
+        return property;
+    }
+
+    private Map<String, Object> packageToolSchema(boolean allowArtifactType)
+    {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("demandId", property("integer", "需求 ID"));
+        properties.put("content", property("string", "要保存的交接资料正文"));
+        if (allowArtifactType)
+        {
+            properties.put("artifactType", property("string", "产物类型，缺省为 requirement"));
+        }
+        return objectSchema(properties, Arrays.asList("demandId", "content"));
+    }
+
+    private Map<String, Object> registerHarnessSchema()
+    {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("repoId", property("integer", "仓库 ID"));
+        properties.put("harnessStatus", property("string", "初始化状态"));
+        properties.put("harnessCommit", property("string", "初始化结果 commit"));
+        return objectSchema(properties, Arrays.asList("repoId", "harnessStatus"));
+    }
+
+    private Map<String, Object> getHarnessTemplateSchema()
+    {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("projectId", property("integer", "需求平台项目 ID"));
+        return objectSchema(properties, Collections.singletonList("projectId"));
+    }
+
+    private Map<String, Object> publishRepositoryIndexSchema()
+    {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("actionToken", property("string", "项目分支初始化指令中的动作 token，优先用于定位项目、分支和目标方法"));
+        properties.put("remoteUrl", property("string", "当前仓库 Git 远端地址"));
+        properties.put("projectId", property("integer", "兼容路径：需求平台项目 ID"));
+        properties.put("repoId", property("integer", "兼容路径：需求平台仓库 ID"));
+        properties.put("mcpKey", property("string", "兼容路径：项目分支识别 key"));
+        properties.put("repoType", property("string", "仓库类型，例如 FRONTEND 或 BACKEND"));
+        properties.put("branchName", property("string", "真实 Git 分支名"));
+        properties.put("commitHash", property("string", "当前索引 commit"));
+        properties.put("indexVersion", property("string", "索引数据格式版本"));
+        properties.put("modules", arrayProperty("模块或功能点索引列表"));
+        properties.put("pages", arrayProperty("页面影响面列表"));
+        properties.put("apis", arrayProperty("接口影响面列表"));
+        properties.put("tables", arrayProperty("数据表影响面列表"));
+        properties.put("permissions", arrayProperty("权限影响面列表"));
+        properties.put("documents", arrayProperty("文档影响面列表"));
+        return objectSchema(properties, Collections.singletonList("remoteUrl"));
+    }
+
     private String stripQuery(String text)
     {
         if (text == null) return "";
@@ -500,12 +715,33 @@ public class McpService
         return list == null ? Collections.emptyList() : list;
     }
 
-    private Map<String, Object> prompt(String name) { return Collections.singletonMap("name", name); }
-    private Map<String, Object> tool(String name) { return Collections.singletonMap("name", name); }
+    private Map<String, Object> prompt(String name, String description) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("name", name);
+        map.put("description", description);
+        return map;
+    }
     private String stringParam(McpRequest request, String key) { return request.getParams() == null || request.getParams().get(key) == null ? null : String.valueOf(request.getParams().get(key)); }
     private String stringArg(Map<String, Object> arguments, String key) { Object value = arguments.get(key); return value == null ? null : String.valueOf(value); }
-    private Long longArg(Map<String, Object> arguments, String key) { Object value = arguments.get(key); return value instanceof Number ? ((Number) value).longValue() : (value == null ? null : Long.valueOf(String.valueOf(value))); }
-    private Integer intArg(Map<String, Object> arguments, String key) { Object value = arguments.get(key); return value instanceof Number ? ((Number) value).intValue() : (value == null ? null : Integer.valueOf(String.valueOf(value))); }
-    private String currentUsername() { try { return SecurityUtils.getUsername(); } catch (Exception e) { return "mcp"; } }
-    private Long currentUserId() { try { return SecurityUtils.getUserId(); } catch (Exception e) { return 0L; } }
+    private Long longArg(Map<String, Object> arguments, String key) {
+        Object value = arguments.get(key);
+        if (value == null) return null;
+        if (value instanceof Number) return Long.valueOf(((Number) value).longValue());
+        return Long.valueOf(String.valueOf(value));
+    }
+    private Integer intArg(Map<String, Object> arguments, String key) {
+        Object value = arguments.get(key);
+        if (value == null) return null;
+        if (value instanceof Number) return Integer.valueOf(((Number) value).intValue());
+        return Integer.valueOf(String.valueOf(value));
+    }
+    protected String currentUsername() { try { return SecurityUtils.getUsername(); } catch (Exception e) { return "mcp"; } }
+    protected Long currentUserId() {
+        try {
+            Long userId = SecurityUtils.getUserId();
+            return userId == null ? 0L : userId;
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
 }

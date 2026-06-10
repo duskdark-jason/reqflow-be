@@ -52,12 +52,14 @@
   "targetMethod": "publish_repository_index",
   "token": "reqflow_action_xxx",
   "tokenPrefix": "reqflow_action_xxx",
-  "prompt": "请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。",
-  "content": "请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。\ntargetMethod: publish_repository_index\nactionToken: reqflow_action_xxx",
+  "prompt": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。",
+  "content": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。\nmcpServer: reqflow\ntoolName: publish_repository_index\nmcpTool: reqflow.publish_repository_index\ntargetMethod: publish_repository_index\nactionToken: reqflow_action_xxx\n调用要求：\n1. 在接入项目的 Codex 会话中确认已加载名为 reqflow 的 MCP server。\n2. 通过 tools/list 查找 reqflow.publish_repository_index，只调用该 server 下的该 tool。\n3. 通过 tools/call 传入 arguments.actionToken、remoteUrl、branchName、commitHash、indexVersion 和结构化索引列表。\n4. actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。",
   "copyLabel": "复制初始化指令",
   "expireTime": null
 }
 ```
+
+`initInstruction.content` 必须保留 `mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index` 三个机器可读字段，避免接入项目在存在多个 MCP server 或同名能力描述时无法定位到需求平台工具。`actionToken` 是项目分支动作 token，只能作为 `publish_repository_index` 的 `arguments.actionToken` 传入，不能写入 `X-MCP-Key` 请求头。
 
 初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成兼容字段，前端主展示以 `initInstruction` 为准。
 
@@ -211,13 +213,19 @@ Controller 粗授权为 `req:package:save`、`req:index:import` 或 `req:project
 支持方法：
 
 ```text
+initialize
+notifications/initialized
+ping
 resources/list
 resources/read
+resources/templates/list
 prompts/list
 prompts/get
 tools/list
 tools/call
 ```
+
+MCP 客户端必须先调用 `initialize` 完成协议协商。服务端返回 `protocolVersion`、`serverInfo.name=reqflow`，并声明 `tools`、`resources`、`prompts` capabilities；随后接受 `notifications/initialized`，该通知不产生业务写入。`tools/list` 返回的每个工具必须包含 `name`、中文 `description` 和 JSON `inputSchema`，其中 `publish_repository_index` 至少声明 `actionToken`、`remoteUrl`、`projectId`、`repoId`、`mcpKey`、`repoType`、`branchName`、`commitHash`、`indexVersion` 以及 `modules/pages/apis/tables/permissions/documents` 等结构化索引列表。`tools/call` 成功响应必须是 MCP tool result，包含 `content`、`structuredContent` 和 `isError=false`。
 
 资源读取：
 
