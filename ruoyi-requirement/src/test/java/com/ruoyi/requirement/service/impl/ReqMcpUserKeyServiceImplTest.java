@@ -55,6 +55,10 @@ class ReqMcpUserKeyServiceImplTest
         assertEquals("reqflow-mcp", result.getCodexGlobalSkillPackage().get("skillName"));
         assertEquals("global", result.getCodexGlobalSkillPackage().get("installScope"));
         assertPackageDoesNotContainPlainKey(result.getCodexGlobalSkillPackage(), result.getPlainKey());
+        assertNotNull(result.getCodexSetupPackage());
+        assertEquals("reqflow-codex-setup", result.getCodexSetupPackage().get("packageName"));
+        assertEquals("global", result.getCodexSetupPackage().get("installScope"));
+        assertPackageDoesNotContainPlainKey(result.getCodexSetupPackage(), result.getPlainKey());
 
         ArgumentCaptor<ReqMcpUserKey> captor = forClass(ReqMcpUserKey.class);
         verify(mapper).insertReqMcpUserKey(captor.capture());

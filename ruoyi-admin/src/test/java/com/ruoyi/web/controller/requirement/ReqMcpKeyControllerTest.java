@@ -99,4 +99,35 @@ class ReqMcpKeyControllerTest
         assertTrue(packageText.contains("mcp__reqflow.publish_repository_index"), packageText);
         assertTrue(packageText.contains("mcp__reqflow.register_harness_init_result"), packageText);
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void configReturnsCodexSetupPackage()
+    {
+        ReqMcpKeyController controller = new ReqMcpKeyController();
+        ReflectionTestUtils.setField(controller, "mcpPublicUrl", "https://reqflow.example.com/requirement/mcp");
+
+        AjaxResult result = controller.config(mock(HttpServletRequest.class));
+        Map<String, Object> data = (Map<String, Object>) result.get(AjaxResult.DATA_TAG);
+        Map<String, Object> setupPackage = (Map<String, Object>) data.get("codexSetupPackage");
+
+        assertEquals("reqflow-codex-setup", setupPackage.get("packageName"));
+        assertEquals("global", setupPackage.get("installScope"));
+        assertEquals(data.get("codexConfigTemplate"), setupPackage.get("codexConfigTemplate"));
+
+        Map<String, Object> mcpServer = (Map<String, Object>) setupPackage.get("mcpServer");
+        assertEquals("reqflow", mcpServer.get("name"));
+        assertEquals("streamable-http", mcpServer.get("transport"));
+        assertEquals("https://reqflow.example.com/requirement/mcp", mcpServer.get("url"));
+        assertEquals("X-MCP-Key", mcpServer.get("headerName"));
+
+        String setupText = String.valueOf(setupPackage);
+        assertTrue(setupText.contains("skillPackage"), setupText);
+        assertTrue(setupText.contains("请安装 reqflow MCP 配置"), setupText);
+        assertTrue(setupText.contains("不要自动调用 publish_repository_index"), setupText);
+        assertTrue(setupText.contains("serverMetadata"), setupText);
+        assertTrue(setupText.contains("project-init"), setupText);
+        assertTrue(setupText.contains("index-publish"), setupText);
+        assertTrue(setupText.contains("package-handoff"), setupText);
+    }
 }

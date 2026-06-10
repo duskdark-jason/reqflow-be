@@ -20,6 +20,8 @@ public class ReqMcpUserKeyCreateResult
 
     private Map<String, Object> codexGlobalSkillPackage;
 
+    private Map<String, Object> codexSetupPackage;
+
     public ReqMcpUserKey getKey()
     {
         return key;
@@ -78,5 +80,15 @@ public class ReqMcpUserKeyCreateResult
     public void setCodexGlobalSkillPackage(Map<String, Object> codexGlobalSkillPackage)
     {
         this.codexGlobalSkillPackage = codexGlobalSkillPackage;
+    }
+
+    public Map<String, Object> getCodexSetupPackage()
+    {
+        return codexSetupPackage;
+    }
+
+    public void setCodexSetupPackage(Map<String, Object> codexSetupPackage)
+    {
+        this.codexSetupPackage = codexSetupPackage;
     }
 }

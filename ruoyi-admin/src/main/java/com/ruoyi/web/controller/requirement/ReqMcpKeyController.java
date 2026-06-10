@@ -25,6 +25,7 @@ import com.ruoyi.requirement.domain.ReqMcpUserKey;
 import com.ruoyi.requirement.service.IReqMcpUserKeyService;
 import com.ruoyi.requirement.service.impl.ReqMcpUserKeyServiceImpl;
 import com.ruoyi.requirement.template.ReqflowCodexGlobalSkillTemplate;
+import com.ruoyi.requirement.template.ReqflowCodexSetupPackageTemplate;
 
 /**
  * MCP人员Key管理Controller
@@ -58,6 +59,7 @@ public class ReqMcpKeyController extends BaseController
         data.put("headerName", ReqMcpUserKeyServiceImpl.MCP_KEY_HEADER);
         data.put("codexConfigTemplate", codexConfigTemplate(mcpAddress));
         data.put("codexGlobalSkillPackage", ReqflowCodexGlobalSkillTemplate.globalSkillPackage());
+        data.put("codexSetupPackage", ReqflowCodexSetupPackageTemplate.setupPackage(mcpAddress));
         return success(data);
     }
 
@@ -147,15 +149,6 @@ public class ReqMcpKeyController extends BaseController
 
     private String codexConfigTemplate(String mcpAddress)
     {
-        return "{\n"
-                + "  \"mcpServers\": {\n"
-                + "    \"reqflow\": {\n"
-                + "      \"url\": \"" + mcpAddress + "\",\n"
-                + "      \"headers\": {\n"
-                + "        \"" + ReqMcpUserKeyServiceImpl.MCP_KEY_HEADER + "\": \"创建或重置后返回的Key\"\n"
-                + "      }\n"
-                + "    }\n"
-                + "  }\n"
-                + "}";
+        return ReqflowCodexSetupPackageTemplate.codexConfigTemplate(mcpAddress);
     }
 }
