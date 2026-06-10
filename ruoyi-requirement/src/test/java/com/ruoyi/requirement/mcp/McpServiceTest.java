@@ -1,6 +1,8 @@
 package com.ruoyi.requirement.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
@@ -10,10 +12,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.HashMap;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -36,6 +39,26 @@ import com.ruoyi.requirement.service.ReqActivityLogService;
 
 class McpServiceTest
 {
+    @Test
+    void successResponseSerializesWithoutNullError() throws Exception
+    {
+        String json = new ObjectMapper().writeValueAsString(McpResponse.success(1, Collections.emptyMap()));
+
+        assertTrue(json.contains("\"result\":{}"), json);
+        assertFalse(json.contains("\"error\""), json);
+    }
+
+    @Test
+    void errorResponseSerializesJsonRpcErrorWithoutNullResult() throws Exception
+    {
+        String json = new ObjectMapper().writeValueAsString(McpResponse.error(7, "boom"));
+
+        assertTrue(json.contains("\"code\":-32603"), json);
+        assertTrue(json.contains("\"message\":\"boom\""), json);
+        assertFalse(json.contains("\"result\""), json);
+        assertFalse(json.contains("\"error\":null"), json);
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void initializeDeclaresMcpCapabilities()
@@ -255,8 +278,30 @@ class McpServiceTest
 
         McpResponse response = service.handle(request("tools/call", params));
 
-        assertTrue(String.valueOf(response.getError()).contains("req:index:import"));
+        assertToolErrorResult(response, "req:index:import");
         verify(indexService, never()).importRepositoryIndex(any(), any(), any(), any());
+    }
+
+    @Test
+    void publishRepositoryIndexToolBusinessErrorReturnsMcpToolErrorResult()
+    {
+        IReqRepositoryIndexService indexService = mock(IReqRepositoryIndexService.class);
+        when(indexService.importRepositoryIndex(any(ReqRepositoryIndexImportRequest.class), eq("mcp"), any(), any()))
+                .thenThrow(new IllegalArgumentException("初始化指令不存在或已失效"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "repositoryIndexService", indexService);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_invalid");
+        arguments.put("remoteUrl", "git@example.com:reqflow-ui.git");
+        arguments.put("branchName", "main");
+        arguments.put("commitHash", "abc123");
+        arguments.put("indexVersion", "v1");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("publish_repository_index", arguments)));
+
+        assertToolErrorResult(response, "初始化指令不存在或已失效");
     }
 
     @Test
@@ -309,7 +354,7 @@ class McpServiceTest
         arguments.put("projectId", 10L);
         McpResponse response = service.handle(request("tools/call", toolParams("get_harness_template", arguments)));
 
-        assertTrue(String.valueOf(response.getError()).contains("req:project:query"));
+        assertToolErrorResult(response, "req:project:query");
         verify(projectMapper, never()).selectReqProjectByProjectId(any());
     }
 
@@ -329,7 +374,7 @@ class McpServiceTest
 
         McpResponse response = service.handle(request("tools/call", params));
 
-        assertTrue(String.valueOf(response.getError()).contains("req:package:save"));
+        assertToolErrorResult(response, "req:package:save");
         verify(repositoryMapper, never()).updateHarnessInitResult(any(ReqRepository.class));
     }
 
@@ -356,6 +401,15 @@ class McpServiceTest
         params.put("name", name);
         params.put("arguments", arguments);
         return params;
+    }
+
+    private void assertToolErrorResult(McpResponse response, String expectedText)
+    {
+        String resultText = String.valueOf(response.getResult());
+        assertNull(response.getError(), resultText);
+        assertTrue(resultText.contains("content"), resultText);
+        assertTrue(resultText.contains("isError=true"), resultText);
+        assertTrue(resultText.contains(expectedText), resultText);
     }
 
     private ReqDemand demand(Long demandId)

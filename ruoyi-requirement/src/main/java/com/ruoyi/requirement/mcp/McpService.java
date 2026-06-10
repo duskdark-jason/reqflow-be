@@ -43,6 +43,10 @@ public class McpService
 
     public McpResponse handle(McpRequest request)
     {
+        if (request == null)
+        {
+            return McpResponse.error(null, "MCP请求不能为空");
+        }
         try
         {
             if ("initialize".equals(request.getMethod())) return McpResponse.success(request.getId(), initialize(request));
@@ -58,12 +62,24 @@ public class McpService
                     prompt("generate_review_prompt", "生成 Review 提示"))));
             if ("prompts/get".equals(request.getMethod())) return McpResponse.success(request.getId(), promptsGet(stringParam(request, "name")));
             if ("tools/list".equals(request.getMethod())) return McpResponse.success(request.getId(), toolsList());
-            if ("tools/call".equals(request.getMethod())) return McpResponse.success(request.getId(), toolsCall(request));
-            return McpResponse.error(request.getId(), "不支持的MCP方法：" + request.getMethod());
+            if ("tools/call".equals(request.getMethod())) return McpResponse.success(request.getId(), toolsCallResult(request));
+            return McpResponse.methodNotFound(request.getId(), "不支持的MCP方法：" + request.getMethod());
         }
         catch (Exception e)
         {
             return McpResponse.error(request.getId(), e.getMessage());
+        }
+    }
+
+    private Map<String, Object> toolsCallResult(McpRequest request)
+    {
+        try
+        {
+            return toolsCall(request);
+        }
+        catch (Exception e)
+        {
+            return toolError(e.getMessage());
         }
     }
 
@@ -558,6 +574,18 @@ public class McpService
         result.put("content", Collections.singletonList(text));
         result.put("structuredContent", structuredContent);
         result.put("isError", false);
+        return result;
+    }
+
+    private Map<String, Object> toolError(String message)
+    {
+        Map<String, Object> text = new LinkedHashMap<>();
+        text.put("type", "text");
+        text.put("text", message == null || message.isEmpty() ? "MCP工具调用失败" : message);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("content", Collections.singletonList(text));
+        result.put("isError", true);
         return result;
     }
 

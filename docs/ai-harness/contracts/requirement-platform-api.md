@@ -227,6 +227,12 @@ tools/call
 
 MCP 客户端必须先调用 `initialize` 完成协议协商。服务端返回 `protocolVersion`、`serverInfo.name=reqflow`，并声明 `tools`、`resources`、`prompts` capabilities；随后接受 `notifications/initialized`，该通知不产生业务写入。`tools/list` 返回的每个工具必须包含 `name`、中文 `description` 和 JSON `inputSchema`，其中 `publish_repository_index` 至少声明 `actionToken`、`remoteUrl`、`projectId`、`repoId`、`mcpKey`、`repoType`、`branchName`、`commitHash`、`indexVersion` 以及 `modules/pages/apis/tables/permissions/documents` 等结构化索引列表。`tools/call` 成功响应必须是 MCP tool result，包含 `content`、`structuredContent` 和 `isError=false`。
 
+MCP 响应错误边界：
+
+- 协议级错误用于未知方法、非法请求或非 tool 调用阶段异常，返回 JSON-RPC `error` object，必须包含数值 `code` 和 `message`，且不能同时输出 `result:null`。
+- tool 执行业务错误用于 `tools/call` 内的权限不足、参数校验、动作 token 无效、导入失败等业务异常，返回 JSON-RPC success，`result.content[0].type=text`、`result.content[0].text` 为可读错误说明，并设置 `result.isError=true`。
+- tool 执行成功继续返回 `result.content`、`result.structuredContent` 和 `result.isError=false`。
+
 资源读取：
 
 | URI | 内容 | 粒度/过滤 |
