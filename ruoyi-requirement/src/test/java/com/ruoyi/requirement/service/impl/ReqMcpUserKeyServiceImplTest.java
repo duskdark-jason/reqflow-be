@@ -57,6 +57,7 @@ class ReqMcpUserKeyServiceImplTest
         assertNotNull(result.getCodexSetupPackage());
         assertEquals("reqflow-codex-setup", result.getCodexSetupPackage().get("packageName"));
         assertEquals("global", result.getCodexSetupPackage().get("installScope"));
+        assertInstallCommands(result.getCodexSetupPackage(), result.getPlainKey());
         assertPackageDoesNotContainPlainKey(result.getCodexSetupPackage(), result.getPlainKey());
 
         ArgumentCaptor<ReqMcpUserKey> captor = forClass(ReqMcpUserKey.class);
@@ -241,6 +242,34 @@ class ReqMcpUserKeyServiceImplTest
         assertFalse(packageText.contains(plainKey), packageText);
         assertFalse(packageText.contains("mkdir -p"), packageText);
         assertFalse(packageText.contains("$HOME/.codex"), packageText);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertInstallCommands(Map<String, Object> setupPackage, String plainKey)
+    {
+        Object commandsValue = setupPackage.get("installCommands");
+        assertNotNull(commandsValue);
+        List<Map<String, Object>> commands = (List<Map<String, Object>>) commandsValue;
+        assertEquals(2, commands.size());
+
+        Map<String, Object> bash = commands.stream()
+                .filter(command -> "macos-linux".equals(command.get("platform")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("bash", bash.get("language"));
+        assertTrue(String.valueOf(bash.get("command")).contains("install.sh"));
+        assertTrue(String.valueOf(bash.get("command")).contains("${REQFLOW_MCP_KEY}"));
+
+        Map<String, Object> powershell = commands.stream()
+                .filter(command -> "windows-powershell".equals(command.get("platform")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("powershell", powershell.get("language"));
+        assertTrue(String.valueOf(powershell.get("command")).contains("install.ps1"));
+        assertTrue(String.valueOf(powershell.get("command")).contains("${REQFLOW_MCP_KEY}"));
+
+        assertFalse(String.valueOf(commands).contains(plainKey), String.valueOf(commands));
+        assertFalse(String.valueOf(commands).contains("actionToken"), String.valueOf(commands));
     }
 
     private void assertNoCreateResultAccessor(String methodName)

@@ -16,6 +16,8 @@ public final class ReqflowCodexSetupPackageTemplate
 
     public static final String MCP_KEY_HEADER = "X-MCP-Key";
 
+    public static final String MCP_KEY_PLACEHOLDER = "${REQFLOW_MCP_KEY}";
+
     private ReqflowCodexSetupPackageTemplate()
     {
     }
@@ -29,6 +31,8 @@ public final class ReqflowCodexSetupPackageTemplate
         setupPackage.put("installInstructions", installInstructions());
         setupPackage.put("mcpServer", mcpServer(mcpAddress));
         setupPackage.put("codexConfigTemplate", codexConfigTemplate);
+        setupPackage.put("installScripts", installScripts(mcpAddress));
+        setupPackage.put("installCommands", installCommands(mcpAddress));
         setupPackage.put("skillPackage", ReqflowCodexGlobalSkillTemplate.globalSkillPackage());
         setupPackage.put("installPrompt", installPrompt());
         setupPackage.put("serverMetadata", serverMetadata(mcpAddress));
@@ -71,6 +75,61 @@ public final class ReqflowCodexSetupPackageTemplate
     {
         return "请安装 reqflow MCP 配置和 reqflow-mcp 全局 skill。配置完成后只确认 MCP server 与 skill 已安装，"
                 + "不要自动调用 publish_repository_index 或其他 reqflow MCP 工具；不要把 plainKey 或 actionToken 写入 skill 文件。";
+    }
+
+    private static List<Map<String, Object>> installScripts(String mcpAddress)
+    {
+        List<Map<String, Object>> scripts = new ArrayList<>();
+        scripts.add(installScript("macos-linux", "macOS / Linux", "bash", installScriptUrl(mcpAddress, "install.sh")));
+        scripts.add(installScript("windows-powershell", "Windows PowerShell", "powershell", installScriptUrl(mcpAddress, "install.ps1")));
+        return scripts;
+    }
+
+    private static Map<String, Object> installScript(String platform, String label, String language, String url)
+    {
+        Map<String, Object> script = new LinkedHashMap<>();
+        script.put("platform", platform);
+        script.put("label", label);
+        script.put("language", language);
+        script.put("url", url);
+        return script;
+    }
+
+    private static List<Map<String, Object>> installCommands(String mcpAddress)
+    {
+        List<Map<String, Object>> commands = new ArrayList<>();
+        String shellUrl = installScriptUrl(mcpAddress, "install.sh");
+        String powerShellUrl = installScriptUrl(mcpAddress, "install.ps1");
+        commands.add(installCommand("macos-linux", "macOS / Linux", "bash",
+                "export REQFLOW_MCP_KEY=\"" + MCP_KEY_PLACEHOLDER + "\"\n"
+                        + "curl -fsSL \"" + escapeCommand(shellUrl) + "\" | bash -s -- --url \"" + escapeCommand(mcpAddress) + "\""));
+        commands.add(installCommand("windows-powershell", "Windows PowerShell", "powershell",
+                "$env:REQFLOW_MCP_KEY = \"" + MCP_KEY_PLACEHOLDER + "\"\n"
+                        + "$script = irm \"" + escapeCommand(powerShellUrl) + "\"\n"
+                        + "& ([scriptblock]::Create($script)) -McpUrl \"" + escapeCommand(mcpAddress) + "\""));
+        return commands;
+    }
+
+    private static Map<String, Object> installCommand(String platform, String label, String language, String command)
+    {
+        Map<String, Object> installCommand = new LinkedHashMap<>();
+        installCommand.put("platform", platform);
+        installCommand.put("label", label);
+        installCommand.put("language", language);
+        installCommand.put("command", command);
+        return installCommand;
+    }
+
+    private static String installScriptUrl(String mcpAddress, String fileName)
+    {
+        String address = trimTrailingSlash(mcpAddress);
+        String marker = "/requirement/mcp";
+        int markerIndex = address.indexOf(marker);
+        if (markerIndex >= 0)
+        {
+            return address.substring(0, markerIndex) + "/requirement/codex/" + fileName;
+        }
+        return address + "/codex/" + fileName;
     }
 
     private static Map<String, Object> serverMetadata(String mcpAddress)
@@ -142,5 +201,24 @@ public final class ReqflowCodexSetupPackageTemplate
             return "";
         }
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String escapeCommand(String value)
+    {
+        if (value == null)
+        {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String trimTrailingSlash(String value)
+    {
+        String result = value == null ? "" : value.trim();
+        while (result.endsWith("/") && !result.endsWith("://"))
+        {
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
     }
 }

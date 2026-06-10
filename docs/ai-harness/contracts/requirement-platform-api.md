@@ -208,7 +208,16 @@ requirement_develop
 
 `/requirement/mcp/key/config` 已删除，MCP 管理页不再常驻展示 MCP 地址、请求头名、Codex 配置模板、全局 skill 包或 Codex 安装指令包。
 
-创建 Key 和重置 Key 响应只单独返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 是一次性明文；`codexSetupPackage` 是推荐复制给 Codex 的安装指令包，包含 `packageName=reqflow-codex-setup`、`installScope=global`、`mcpServer`、`codexConfigTemplate`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。安装指令包不得包含人员明文 Key 或一次性 `actionToken`，配置完成后不得自动调用 `publish_repository_index` 或其他工具。
+创建 Key 和重置 Key 响应只单独返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 是一次性明文；`codexSetupPackage` 是推荐复制给 Codex 的安装指令包，包含 `packageName=reqflow-codex-setup`、`installScope=global`、`mcpServer`、`codexConfigTemplate`、`installScripts`、`installCommands`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`installCommands[]` 至少包含 `macos-linux` 与 `windows-powershell` 两个平台，每项包含 `platform`、`label`、`language` 和 markdown 代码块使用的 `command` 模板；`command` 使用 `${REQFLOW_MCP_KEY}` 作为 Key 占位符，不得直接包含人员明文 Key 或一次性 `actionToken`。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。配置完成后不得自动调用 `publish_repository_index` 或其他工具。
+
+安装脚本端点：
+
+| 路径 | 方法 | 权限 | 说明 |
+|---|---|---|---|
+| `/requirement/codex/install.sh` | GET | 匿名可读 | 返回 macOS/Linux 安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `--key` 读取人员 Key，并写入 Codex MCP 配置和全局 `reqflow-mcp` skill |
+| `/requirement/codex/install.ps1` | GET | 匿名可读 | 返回 Windows PowerShell 安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `-McpKey` 读取人员 Key，并写入 Codex MCP 配置和全局 `reqflow-mcp` skill |
+
+安装脚本不得内置人员明文 Key，不得自动调用 reqflow MCP tool；脚本执行后只提示用户重启或刷新 Codex。
 
 `codexSetupPackage` 内的 MCP 地址优先读取后端配置项 `reqflow.mcp.public-url`。该配置项应填写完整 MCP 对外访问地址，例如 `https://reqflow.example.com/requirement/mcp`；为空时服务端才按 `X-Forwarded-Proto`、`X-Forwarded-Host`、`Host` 和 `context-path` 自动推导地址。部署在反向代理、HTTPS、非默认端口或非本机访问场景时，建议显式配置 `reqflow.mcp.public-url`，避免安装包包含 `localhost` 或临时代理端口。
 

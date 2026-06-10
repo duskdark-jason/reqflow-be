@@ -44,7 +44,7 @@ public final class ReqflowCodexGlobalSkillTemplate
                 + "then create or update the files listed in files[]. Do not store personal MCP keys in the skill.";
     }
 
-    private static String skillContent()
+    public static String skillContent()
     {
         return "---\n"
                 + "name: reqflow-mcp\n"

@@ -105,6 +105,7 @@ public class SecurityConfig
                     .requestMatchers(HttpMethod.GET, "/", "/*.html", "/**.html", "/**.css", "/**.js", "/profile/**").permitAll()
                     .requestMatchers("/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**", "/druid/**").permitAll()
                     .requestMatchers("/requirement/mcp").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/requirement/codex/install.sh", "/requirement/codex/install.ps1").permitAll()
                     // 除上面外的所有请求全部需要鉴权认证
                     .anyRequest().authenticated();
             })
