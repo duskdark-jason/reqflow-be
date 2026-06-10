@@ -24,6 +24,7 @@ import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
 import com.ruoyi.requirement.service.IReqMcpUserKeyService;
 import com.ruoyi.requirement.service.impl.ReqMcpUserKeyServiceImpl;
+import com.ruoyi.requirement.template.ReqflowCodexGlobalSkillTemplate;
 
 /**
  * MCP人员Key管理Controller
@@ -56,6 +57,7 @@ public class ReqMcpKeyController extends BaseController
         data.put("mcpAddress", mcpAddress);
         data.put("headerName", ReqMcpUserKeyServiceImpl.MCP_KEY_HEADER);
         data.put("codexConfigTemplate", codexConfigTemplate(mcpAddress));
+        data.put("codexGlobalSkillPackage", ReqflowCodexGlobalSkillTemplate.globalSkillPackage());
         return success(data);
     }
 

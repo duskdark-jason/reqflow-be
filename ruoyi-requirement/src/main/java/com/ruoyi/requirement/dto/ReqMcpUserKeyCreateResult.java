@@ -1,5 +1,6 @@
 package com.ruoyi.requirement.dto;
 
+import java.util.Map;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
 
 /**
@@ -16,6 +17,8 @@ public class ReqMcpUserKeyCreateResult
     private String headerName;
 
     private String codexConfig;
+
+    private Map<String, Object> codexGlobalSkillPackage;
 
     public ReqMcpUserKey getKey()
     {
@@ -65,5 +68,15 @@ public class ReqMcpUserKeyCreateResult
     public void setCodexConfig(String codexConfig)
     {
         this.codexConfig = codexConfig;
+    }
+
+    public Map<String, Object> getCodexGlobalSkillPackage()
+    {
+        return codexGlobalSkillPackage;
+    }
+
+    public void setCodexGlobalSkillPackage(Map<String, Object> codexGlobalSkillPackage)
+    {
+        this.codexGlobalSkillPackage = codexGlobalSkillPackage;
     }
 }

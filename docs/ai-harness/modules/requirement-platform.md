@@ -54,6 +54,7 @@
 - 修改项目初始化上下文时，必须同步检查前端项目管理、项目接入中心、分支知识库页签和需求表单的字段使用。
 - 修改索引导入或影响面推荐时，必须确认项目分支、真实 Git 分支、索引批次和模块知识的粒度一致。
 - MCP tools 新增或改名时，必须同步人员权限校验、接口契约、`tools/list` schema、前端文案和平台初始化指令。
+- MCP 管理配置或 Key 创建结果调整时，必须同步前端 MCP 管理页。全局 Codex skill 应通过跨平台 `codexGlobalSkillPackage` 返回，由 Codex 按自身 skill 规范安装，不能只下发 macOS/Linux shell 命令。
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
 - 项目接入初始化指令调整时，必须保证 agent 能先识别 reqflow MCP skill，调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。

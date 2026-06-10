@@ -1,6 +1,7 @@
 package com.ruoyi.requirement.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -15,6 +16,7 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -49,6 +51,10 @@ class ReqMcpUserKeyServiceImplTest
         assertTrue(result.getPlainKey().startsWith("reqflow_mcp_"));
         assertEquals("X-MCP-Key", result.getHeaderName());
         assertTrue(result.getCodexConfig().contains(result.getPlainKey()));
+        assertNotNull(result.getCodexGlobalSkillPackage());
+        assertEquals("reqflow-mcp", result.getCodexGlobalSkillPackage().get("skillName"));
+        assertEquals("global", result.getCodexGlobalSkillPackage().get("installScope"));
+        assertPackageDoesNotContainPlainKey(result.getCodexGlobalSkillPackage(), result.getPlainKey());
 
         ArgumentCaptor<ReqMcpUserKey> captor = forClass(ReqMcpUserKey.class);
         verify(mapper).insertReqMcpUserKey(captor.capture());
@@ -219,6 +225,19 @@ class ReqMcpUserKeyServiceImplTest
         ReflectionTestUtils.setField(service, "userService", userService);
         ReflectionTestUtils.setField(service, "menuService", menuService);
         return service;
+    }
+
+    private void assertPackageDoesNotContainPlainKey(Map<String, Object> skillPackage, String plainKey)
+    {
+        String packageText = String.valueOf(skillPackage);
+        assertTrue(packageText.contains("SKILL.md"), packageText);
+        assertTrue(packageText.contains("name: reqflow-mcp"), packageText);
+        assertTrue(packageText.contains("mcp__reqflow.get_harness_template"), packageText);
+        assertTrue(packageText.contains("mcp__reqflow.publish_repository_index"), packageText);
+        assertTrue(packageText.contains("mcp__reqflow.register_harness_init_result"), packageText);
+        assertFalse(packageText.contains(plainKey), packageText);
+        assertFalse(packageText.contains("mkdir -p"), packageText);
+        assertFalse(packageText.contains("$HOME/.codex"), packageText);
     }
 
     private SysUser enabledUser(Long userId, String userName)

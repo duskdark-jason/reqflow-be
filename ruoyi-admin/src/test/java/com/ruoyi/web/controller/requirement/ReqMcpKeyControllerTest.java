@@ -70,4 +70,33 @@ class ReqMcpKeyControllerTest
         assertTrue(((String) data.get("codexConfigTemplate"))
                 .contains("\"url\": \"https://reqflow.example.com/requirement/mcp\""));
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void configReturnsCrossPlatformGlobalSkillPackage()
+    {
+        ReqMcpKeyController controller = new ReqMcpKeyController();
+        ReflectionTestUtils.setField(controller, "mcpPublicUrl", "https://reqflow.example.com/requirement/mcp");
+
+        AjaxResult result = controller.config(mock(HttpServletRequest.class));
+        Map<String, Object> data = (Map<String, Object>) result.get(AjaxResult.DATA_TAG);
+        Map<String, Object> skillPackage = (Map<String, Object>) data.get("codexGlobalSkillPackage");
+
+        assertEquals("reqflow-mcp", skillPackage.get("skillName"));
+        assertEquals("global", skillPackage.get("installScope"));
+        assertTrue(String.valueOf(skillPackage.get("installInstructions")).contains("Codex skill"));
+        assertFalse(String.valueOf(skillPackage.get("installInstructions")).contains("mkdir -p"));
+        assertFalse(String.valueOf(skillPackage.get("installInstructions")).contains("$HOME/.codex"));
+
+        String packageText = String.valueOf(skillPackage);
+        assertTrue(packageText.contains("SKILL.md"), packageText);
+        assertTrue(packageText.contains("name: reqflow-mcp"), packageText);
+        assertTrue(packageText.contains("description:"), packageText);
+        assertTrue(packageText.contains("actionToken"), packageText);
+        assertTrue(packageText.contains("mcpServer: reqflow"), packageText);
+        assertTrue(packageText.contains("mcpTool: reqflow.publish_repository_index"), packageText);
+        assertTrue(packageText.contains("mcp__reqflow.get_harness_template"), packageText);
+        assertTrue(packageText.contains("mcp__reqflow.publish_repository_index"), packageText);
+        assertTrue(packageText.contains("mcp__reqflow.register_harness_init_result"), packageText);
+    }
 }

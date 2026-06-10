@@ -25,6 +25,7 @@ import com.ruoyi.requirement.dto.ReqMcpUserKeyCreateResult;
 import com.ruoyi.requirement.dto.ReqMcpUserOption;
 import com.ruoyi.requirement.mapper.ReqMcpUserKeyMapper;
 import com.ruoyi.requirement.service.IReqMcpUserKeyService;
+import com.ruoyi.requirement.template.ReqflowCodexGlobalSkillTemplate;
 import com.ruoyi.system.service.ISysMenuService;
 import com.ruoyi.system.service.ISysUserService;
 
@@ -277,6 +278,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
         result.setMcpAddress(mcpAddress);
         result.setHeaderName(MCP_KEY_HEADER);
         result.setCodexConfig(codexConfig(mcpAddress, plainKey));
+        result.setCodexGlobalSkillPackage(ReqflowCodexGlobalSkillTemplate.globalSkillPackage());
         return result;
     }
 
