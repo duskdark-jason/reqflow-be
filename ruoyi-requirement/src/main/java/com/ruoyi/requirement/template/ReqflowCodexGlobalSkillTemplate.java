@@ -64,11 +64,13 @@ public final class ReqflowCodexGlobalSkillTemplate
                 + "2. Call `mcp__reqflow.get_harness_template` first with the project ID from the instruction or platform context.\n"
                 + "3. Write or merge the returned `workspaceFiles` and `repositoryHarnessInstructions[].files` into the target workspace and repositories.\n"
                 + "4. In each target repository, run `sh scripts/check-docs.sh` and `sh scripts/check-harness.sh init` when those scripts are present.\n"
-                + "5. Publish each repository index with `mcp__reqflow.publish_repository_index`. Put the action token in `arguments.actionToken`; do not use it as `X-MCP-Key`.\n"
-                + "6. Register the local harness result with `mcp__reqflow.register_harness_init_result`.\n\n"
+                + "5. Before publishing the index, inspect frontend routes, menus, page components, and API wrappers. Build `modules` as concrete frontend page business functions, menu entries, submenus, or hidden tabs. For backend-only repositories, map modules to companion frontend menus, MCP capabilities, or background jobs.\n"
+                + "6. Publish each repository index with `mcp__reqflow.publish_repository_index`. `modules` must not be empty; each module should represent one frontend page business function or backend capability, and `pages/apis/tables/permissions/documents` must reference the matching `moduleCode`. Put the action token in `arguments.actionToken`; do not use it as `X-MCP-Key`.\n"
+                + "7. Register the local harness result with `mcp__reqflow.register_harness_init_result`.\n\n"
                 + "## Guardrails\n\n"
                 + "- The reqflow MCP server stores platform context and repository indexes; it does not directly write files on behalf of another local workspace.\n"
                 + "- For multi-repository workspaces, process each registered repository separately.\n"
+                + "- Do not publish a repository-level overview as the only module. Project onboarding must persist a concrete business knowledge base derived from frontend pages or equivalent backend capabilities.\n"
                 + "- If `publish_repository_index` reports missing index tables, surface the platform migration hint to the user instead of retrying blindly.\n";
     }
 }

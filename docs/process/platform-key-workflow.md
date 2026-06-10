@@ -45,7 +45,7 @@
 - 单仓项目只下发子仓库 `AGENTS.md`、`docs/` 和 `scripts/`；多仓 workspace 必须同时下发 workspace 根目录 `AGENTS.md` 和每个子仓库的 harness。
 - workspace 根目录 `AGENTS.md` 只写项目分流、通用授权语义和子仓库入口，不沉淀具体业务规则。
 - 子仓库 harness 必须写入 `docs/process/platform-key-workflow.md`，确保后续编排 Key 和开发 Key 都按平台驱动流程执行。
-- 子仓库初始化不能只保留 `docs/ai-harness/modules/.gitkeep`；必须至少生成一个 `docs/ai-harness/modules/*.md` 非模板模块文档。初始化阶段可以先生成主模块骨架，优先按前端菜单或项目主能力建立初始索引；纯后端项目可按它服务的 MCP 能力、后台任务或 companion 前端菜单写清对应关系。
+- 子仓库初始化不能只保留 `docs/ai-harness/modules/.gitkeep`；必须至少生成一个 `docs/ai-harness/modules/*.md` 非模板模块文档。初始化阶段必须先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能建立具体业务知识库；纯后端项目按它服务的 companion 前端菜单、MCP 能力或后台任务写清对应关系，不得只生成仓库概览。
 - 如果需求平台登记或项目扫描表明子仓库承担数据库、SQL、Mapper 或统计口径职责，初始化时必须生成 `docs/db/README.md`、`docs/db/table-dictionary.md` 和 `docs/db/relationship.md`。纯前端或无数据库职责项目可以不创建 `docs/db/`。如果仓库没有 DDL、迁移脚本、schema 导出或可信数据库字典，只能生成“暂无确认表结构来源/暂无确认关系来源”的待补齐骨架，记录已扫描路径和后续补齐方式，不得虚构表、字段或关系。
 - 已初始化项目禁止整包覆盖。必须保留项目自有的 `docs/ai-harness/modules/**`、`docs/ai-harness/contracts/**`、`docs/ai-harness/decisions/**`、`docs/domains/**`、`docs/db/**`、`docs/specs/**` 和 `docs/runbooks/local-run.md`；除非用户明确授权，不得删除、重命名或改写这些文件。
 - 已存在 `AGENTS.md` 时只能合并 snippet，不得覆盖全文；如果自动合并有冲突，停止并列出冲突段和建议人工处理方式。

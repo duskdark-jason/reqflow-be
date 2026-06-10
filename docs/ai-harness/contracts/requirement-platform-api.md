@@ -81,13 +81,13 @@
 
 - `reqflowMcpSkill`：可嵌入 `AGENTS.md` 的 reqflow MCP 项目接入初始化技能文本，触发条件覆盖 `actionToken`、`mcpServer: reqflow`、`mcpTool: reqflow.publish_repository_index` 和项目接入初始化。
 - `workspaceFiles`：workspace 根目录文件清单，当前至少包含根 `AGENTS.md`，写入模式为合并已有规则。
-- `repositoryHarnessInstructions`：每个仓库一项，包含 `repository`、自然语言 `content` 和可落地的 `files`。`files` 必须基于 `src/main/resources/harness-template/files.txt` 下发完整 `docs/**` 和 `scripts/**` 模板，至少包含子仓库 `AGENTS.md`、完整 `docs/process/**`、`docs/templates/**`、`docs/ai-harness/**`、一个非模板 `docs/ai-harness/modules/*.md`、`scripts/check-docs.sh`、`scripts/check-harness.sh` 和对应测试脚本。
+- `repositoryHarnessInstructions`：每个仓库一项，包含 `repository`、自然语言 `content` 和可落地的 `files`。`files` 必须基于 `src/main/resources/harness-template/files.txt` 下发完整 `docs/**` 和 `scripts/**` 模板，至少包含子仓库 `AGENTS.md`、完整 `docs/process/**`、`docs/templates/**`、`docs/ai-harness/**`、一个命名为 `docs/ai-harness/modules/*-page-functions.md` 的非模板页面功能索引文档、`scripts/check-docs.sh`、`scripts/check-harness.sh` 和对应测试脚本。
 
-Codex 落地初始化结果时，不能只保留 `docs/ai-harness/modules/.gitkeep`；必须基于项目主菜单、子菜单、隐藏页签或主后端能力生成至少一个 `docs/ai-harness/modules/*.md` 模块知识库文档，记录功能接口、权限标识和涉及文件。纯后端服务没有前端菜单时，应按 companion 前端菜单、MCP 能力或后台任务建立对应关系。
+Codex 落地初始化结果时，不能只保留 `docs/ai-harness/modules/.gitkeep`，也不能把仓库概览、技术层目录或空模块当作模块知识库。必须先分析前端路由、菜单、页面组件和 API 封装，基于项目主菜单、子菜单、隐藏页签或页面业务功能生成至少一个 `docs/ai-harness/modules/*.md` 具体业务知识库文档，记录功能接口、权限标识和涉及文件。纯后端服务没有前端菜单时，应按 companion 前端菜单、MCP 能力或后台任务建立对应关系。
 
 多仓 workspace 初始化必须同时下发 workspace 根目录 `AGENTS.md` 和各子仓库 `AGENTS.md`。workspace 入口只做分流和通用护栏；业务规则、验证命令和契约仍落到对应子仓库 `docs/ai-harness`、`docs/process` 和 `docs/specs`。
 
-全局 `reqflow-mcp` skill 的执行顺序必须是：确认 reqflow MCP 已加载 -> 调用 `get_harness_template` -> 写入或合并本地 harness 文件 -> 在每个目标子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init` -> 调用 `publish_repository_index` -> 调用 `register_harness_init_result`。`publish_repository_index` 不负责写调用方本地文件，不能作为初始化第一步。
+全局 `reqflow-mcp` skill 的执行顺序必须是：确认 reqflow MCP 已加载 -> 调用 `get_harness_template` -> 写入或合并本地 harness 文件 -> 在每个目标子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init` -> 分析前端路由、菜单、页面组件和 API 封装并生成页面业务功能粒度的 `modules` -> 调用 `publish_repository_index` -> 调用 `register_harness_init_result`。`publish_repository_index` 不负责写调用方本地文件，不能作为初始化第一步。
 
 Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requirement/project/{projectId}/harness-init-result` 回写结果，内容包括仓库远端、当前分支、写入文件清单、校验命令、校验结果、失败原因和是否需要人工确认。
 
@@ -104,7 +104,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 
 索引批次列表和模块知识只读接口用于项目接入中心展示。模块知识库需要同时关联 `projectId` 和 `variantId`；传入 `variantId` 时只返回该项目分支的模块知识，不再混入 `variant_id is null` 的项目级旧数据。部分迁移库缺少 `req_repository_index_batch` 或 `req_index_module` 时，这两个只读接口返回空列表和成功响应，避免项目接入中心整页不可用；索引导入、影响面推荐和其他表异常仍按真实错误处理。
 
-索引导入优先支持 `actionToken + remoteUrl`：服务端按动作 token 解析目标动作、项目和项目分支，并在同项目下按 `remoteUrl` 定位代码仓库。`actionToken` 必须能解析为 `project_init` 动作且 `targetMethod` 为 `publish_repository_index`；同时兼容旧的 `mcpKey + remoteUrl` 和 `projectId + repoId + branchName`。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按动作 token、项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。每个项目分支都需要单独初始化索引，不能用主线索引代替客户分支或其他功能分支。
+索引导入优先支持 `actionToken + remoteUrl`：服务端按动作 token 解析目标动作、项目和项目分支，并在同项目下按 `remoteUrl` 定位代码仓库。`actionToken` 必须能解析为 `project_init` 动作且 `targetMethod` 为 `publish_repository_index`；同时兼容旧的 `mcpKey + remoteUrl` 和 `projectId + repoId + branchName`。项目初始化上下文中的 `modules` 不能为空，且每一项必须有稳定 `moduleCode` 和业务 `moduleName`；推荐按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按动作 token、项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。每个项目分支都需要单独初始化索引，不能用主线索引代替客户分支或其他功能分支。
 
 索引导入写入前会预检 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。缺任一表时返回业务错误 `平台索引表未初始化：<table>`，并提示执行 `sql/req_platform_req007_index_tables.sql` 或总 schema 中对应建表段；不得让调用方只看到数据库原始 `Table ... doesn't exist` 作为最终结论。
 

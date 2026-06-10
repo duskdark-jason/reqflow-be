@@ -47,6 +47,7 @@
 - `/requirement/mcp` 必须支持 MCP `initialize -> notifications/initialized -> tools/list` lifecycle；新增 tool 时必须同步 `tools/list` 的描述和 `inputSchema`。
 - `/requirement/mcp` 的协议级错误必须返回标准 JSON-RPC `error.code/error.message`，不能同时带 `result:null`；`tools/call` 内的业务错误必须返回 MCP tool result，并设置 `isError=true`。
 - 项目接入初始化由平台存储和下发 harness 模板，后端不直接执行 Git、shell 或写用户本地文件。
+- 项目接入初始化的模块知识库必须按前端页面业务功能优先生成：初始化 agent 先扫描前端路由、菜单、页面组件和 API 封装，再用 `publish_repository_index.modules` 按菜单目录、子菜单、隐藏页签或页面业务功能发布；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务发布。不得把仓库概览、技术层目录或空数组当作模块知识库。
 - 用户可见系统名称统一为“统一需求流转平台”，但底层 RuoYi 包名、权限框架和通用基础能力保持兼容。
 
 ## 常见风险
@@ -60,6 +61,7 @@
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
 - 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
+- 项目接入初始化索引调整时，必须防止“已发布索引但没有具体业务模块”的假阳性；`actionToken` 或 `mcpKey` 项目初始化上下文下，`modules` 至少包含一个带 `moduleCode` 和 `moduleName` 的页面业务功能或后端主能力。
 - MCP 下发的完整 harness 模板由后端 `ruoyi-requirement/src/main/resources/harness-template/` 保存并随包发布；`files.txt` 是下发清单，必须与 workspace 根目录 `harness-template/` 的流程、模板和脚本保持一致。
 - 索引表迁移不完整时，`publish_repository_index` 必须返回指向 `sql/req_platform_req007_index_tables.sql` 的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
 - 菜单权限调整时，必须同时检查 `sql/req_platform_menu.sql`、Controller `@PreAuthorize` 和前端按钮权限。
@@ -70,6 +72,6 @@
 - 后端契约或 Service 变更：运行 `mvn -pl ruoyi-requirement -am test`，必要时补指定测试类。
 - 后端打包验证：运行 `mvn -pl ruoyi-admin -am -DskipTests package`。
 - MCP 协议变更：在后端启动后用 `curl` 或 MCP 客户端验证 `initialize -> notifications/initialized -> resources/templates/list -> tools/list`，并确认工具列表含 `publish_repository_index`。
-- MCP 项目接入初始化变更：验证 `resources/templates/list` 含 `skill://reqflow/project-init`，`get_harness_template` 返回 `reqflowMcpSkill`、`workspaceFiles` 和每个仓库的 `files`，且 `files` 包含非模板模块文档、完整 `docs/process/**`、完整 `docs/templates/**`、检查脚本和测试脚本。
+- MCP 项目接入初始化变更：验证 `resources/templates/list` 含 `skill://reqflow/project-init`，`get_harness_template` 返回 `reqflowMcpSkill`、`workspaceFiles` 和每个仓库的 `files`，且 `files` 包含 `docs/ai-harness/modules/*-page-functions.md` 非模板页面功能索引文档、完整 `docs/process/**`、完整 `docs/templates/**`、检查脚本和测试脚本。
 - MCP tool 错误路径变更：用无效 `actionToken` 调用 `tools/call publish_repository_index`，确认 HTTP 响应没有顶层 protocol `error`，而是 `result.content` 中包含错误说明且 `result.isError=true`。
 - 跨端流程变更：配合前端验证项目管理、项目接入中心、分支知识库详情、需求新增、执行包保存、MCP Key 管理和统计页面。

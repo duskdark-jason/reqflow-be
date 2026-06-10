@@ -104,9 +104,28 @@ class McpServiceTest
                 .orElseThrow();
 
         assertTrue(String.valueOf(publisher.get("description")).contains("发布"));
-        assertTrue(String.valueOf(publisher.get("inputSchema")).contains("actionToken"));
-        assertTrue(String.valueOf(publisher.get("inputSchema")).contains("remoteUrl"));
-        assertTrue(String.valueOf(publisher.get("inputSchema")).contains("modules"));
+        Map<String, Object> schema = (Map<String, Object>) publisher.get("inputSchema");
+        Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+        assertTrue(properties.containsKey("actionToken"));
+        assertTrue(properties.containsKey("remoteUrl"));
+        assertTrue(properties.containsKey("modules"));
+        assertTrue(((List<String>) schema.get("required")).contains("commitHash"), String.valueOf(schema));
+        assertTrue(((List<String>) schema.get("required")).contains("indexVersion"), String.valueOf(schema));
+
+        Map<String, Object> modules = (Map<String, Object>) properties.get("modules");
+        Map<String, Object> moduleItems = (Map<String, Object>) modules.get("items");
+        Map<String, Object> moduleItemProperties = (Map<String, Object>) moduleItems.get("properties");
+        assertTrue(String.valueOf(modules.get("description")).contains("前端页面业务功能"), String.valueOf(modules));
+        assertTrue(moduleItemProperties.containsKey("moduleCode"), String.valueOf(moduleItems));
+        assertTrue(moduleItemProperties.containsKey("moduleName"), String.valueOf(moduleItems));
+        assertTrue(((List<String>) moduleItems.get("required")).contains("moduleCode"), String.valueOf(moduleItems));
+        assertTrue(((List<String>) moduleItems.get("required")).contains("moduleName"), String.valueOf(moduleItems));
+
+        Map<String, Object> pages = (Map<String, Object>) properties.get("pages");
+        Map<String, Object> pageItems = (Map<String, Object>) pages.get("items");
+        Map<String, Object> pageItemProperties = (Map<String, Object>) pageItems.get("properties");
+        assertTrue(pageItemProperties.containsKey("moduleCode"), String.valueOf(pageItems));
+        assertTrue(String.valueOf(pageItemProperties.get("moduleCode")).contains("modules[].moduleCode"), String.valueOf(pageItemProperties));
     }
 
     @Test
@@ -130,6 +149,9 @@ class McpServiceTest
         assertTrue(resultText.contains("mcp__reqflow.publish_repository_index"), resultText);
         assertTrue(resultText.contains("arguments.actionToken"), resultText);
         assertTrue(resultText.contains("get_harness_template"), resultText);
+        assertTrue(resultText.contains("前端路由"), resultText);
+        assertTrue(resultText.contains("页面组件"), resultText);
+        assertTrue(resultText.contains("前端页面业务功能"), resultText);
     }
 
     @Test
@@ -362,7 +384,10 @@ class McpServiceTest
         assertTrue(resultText.contains("docs/ai-harness/harness-index.json"), resultText);
         assertTrue(resultText.contains("\"template\": false"), resultText);
         assertTrue(resultText.contains("\"initialized\": true"), resultText);
-        assertTrue(resultText.contains("docs/ai-harness/modules/reqflow-ui-overview.md"), resultText);
+        assertTrue(resultText.contains("docs/ai-harness/modules/reqflow-ui-page-functions.md"), resultText);
+        assertTrue(resultText.contains("前端页面功能索引"), resultText);
+        assertTrue(resultText.contains("菜单目录、子菜单、隐藏页签"), resultText);
+        assertTrue(resultText.contains("页面组件和 API 封装"), resultText);
         assertTrue(resultText.contains("docs/process/agent-workflow.md"), resultText);
         assertTrue(resultText.contains("docs/process/new-requirement-flow.md"), resultText);
         assertTrue(resultText.contains("docs/templates/review-report-template.md"), resultText);

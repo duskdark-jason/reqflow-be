@@ -19,6 +19,9 @@ class ReqflowCodexGlobalSkillTemplateTest
         assertTrue(description.contains("actionToken"));
         assertTrue(description.contains("publish_repository_index"));
         assertTrue(description.contains("get_harness_template"));
+        String skillContent = ReqflowCodexGlobalSkillTemplate.skillContent();
+        assertTrue(skillContent.contains("frontend routes"), skillContent);
+        assertTrue(skillContent.contains("frontend page business function"), skillContent);
     }
 
     @SuppressWarnings("unchecked")

@@ -2,7 +2,9 @@ package com.ruoyi.requirement.service.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -55,6 +57,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             branchVariant = resolveBranchVariant(request);
         }
+        validateModuleKnowledgeForProjectInit(request);
         ReqRepositoryIndexBatch batch = buildBatch(request, sourceType, username);
         batchMapper.insertReqRepositoryIndexBatch(batch);
         Long batchId = batch.getBatchId();
@@ -231,6 +234,34 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
                 || StringUtils.isEmpty(request.getCommitHash()) || StringUtils.isEmpty(request.getIndexVersion()))
         {
             throw new ServiceException("仓库远端、分支、commit 和索引版本不能为空");
+        }
+    }
+
+    private void validateModuleKnowledgeForProjectInit(ReqRepositoryIndexImportRequest request)
+    {
+        if (StringUtils.isEmpty(request.getMcpKey()) && StringUtils.isEmpty(request.getActionToken()))
+        {
+            return;
+        }
+        if (safeList(request.getModules()).isEmpty())
+        {
+            throw new ServiceException("项目初始化索引必须包含模块知识库，请先按前端页面、菜单或后端主能力分析生成 modules。");
+        }
+        Set<String> moduleCodes = new HashSet<>();
+        for (ReqIndexModulePayload module : safeList(request.getModules()))
+        {
+            if (StringUtils.isEmpty(module.getModuleCode()) || StringUtils.isEmpty(module.getModuleName()))
+            {
+                throw new ServiceException("项目初始化索引的模块知识库编码和名称不能为空");
+            }
+            moduleCodes.add(module.getModuleCode());
+        }
+        for (ReqIndexImpactPayload impact : collectImpacts(request))
+        {
+            if (StringUtils.isEmpty(impact.getModuleCode()) || !moduleCodes.contains(impact.getModuleCode()))
+            {
+                throw new ServiceException("项目初始化影响面必须归属到本次 modules 中的 moduleCode");
+            }
         }
     }
 

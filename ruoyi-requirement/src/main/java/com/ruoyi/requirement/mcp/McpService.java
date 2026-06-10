@@ -477,9 +477,9 @@ public class McpService
         content.append("\n## 初始化要求\n");
         content.append("1. 进入目标仓库后先校验远端和当前分支。\n");
         content.append("2. 下发或更新仓库 AGENTS.md、docs/ai-harness、docs/process、docs/templates 和 scripts。\n");
-        content.append("3. 按项目分支分别初始化模块与知识库索引，不能用主线结果代替其他分支。\n");
+        content.append("3. 先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能生成模块知识库；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n");
         content.append("4. 运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。\n");
-        content.append("5. 通过 mcp__reqflow.publish_repository_index 发布结构化索引。\n");
+        content.append("5. 通过 mcp__reqflow.publish_repository_index 发布结构化索引，modules 必须是一行一个前端页面业务功能或后端主能力，pages/apis/permissions/tables/documents 通过 moduleCode 归属。\n");
         content.append("6. 通过 mcp__reqflow.register_harness_init_result 回写初始化结果。\n");
         return content.toString();
     }
@@ -507,7 +507,7 @@ public class McpService
             }
             files.add(harnessFile(path, repositoryTemplateContent(path), templateWriteMode(path)));
         }
-        files.add(harnessFile("docs/ai-harness/modules/" + slug + "-overview.md", repositoryModuleContent(repository), "create-if-missing"));
+        files.add(harnessFile("docs/ai-harness/modules/" + slug + "-page-functions.md", repositoryModuleContent(repository), "create-if-missing"));
         return files;
     }
 
@@ -644,12 +644,28 @@ public class McpService
 
     private String repositoryModuleContent(ReqRepository repository)
     {
-        return "# " + firstNotEmpty(repository.getRepoName(), "仓库") + "模块概览\n\n"
-                + "## 模块定位\n\n"
-                + "- 仓库类型：" + firstNotEmpty(repository.getRepoType(), "UNKNOWN") + "\n"
-                + "- 服务范围：项目接入初始化阶段生成的初始模块知识，后续应按真实菜单、接口或后台任务补充。\n\n"
-                + "## 初始化验收\n\n"
-                + "- 本文件不是模板占位，后续需求应把接口、权限、页面或数据口径继续沉淀到本文件或同目录模块文档。\n";
+        String repoName = firstNotEmpty(repository.getRepoName(), "仓库");
+        String repoType = firstNotEmpty(repository.getRepoType(), "UNKNOWN");
+        return "# " + repoName + "前端页面功能索引\n\n"
+                + "## 业务目的\n\n"
+                + "本文件是项目接入初始化阶段生成的非模板模块知识库骨架。初始化 agent 必须先扫描当前仓库的前端路由、菜单配置、页面组件和 API 封装，"
+                + "再把每个菜单目录、子菜单、隐藏页签或页面业务功能沉淀为具体模块；纯后端仓库应按 companion 前端菜单、MCP 能力或后台任务建立同等粒度的业务模块。\n\n"
+                + "## 初始化分析入口\n\n"
+                + "| 类型 | 优先扫描路径 | 沉淀要求 |\n"
+                + "|---|---|---|\n"
+                + "| 仓库信息 | `" + repoName + "` / `" + repoType + "` | 只作为范围说明，不得把整个仓库当成唯一业务模块。 |\n"
+                + "| 前端路由与菜单 | `src/router/**`、`src/store/modules/permission.*`、后端菜单 SQL 或动态路由接口 | 提取一级菜单、子菜单、隐藏页签和权限标识。 |\n"
+                + "| 页面组件 | `src/views/**`、`pages/**`、`app/**` | 一行一个可被用户理解的页面业务功能，记录页面文件和关键用户动作。 |\n"
+                + "| API 封装 | `src/api/**`、请求 hooks 或 service 文件 | 记录页面功能调用的接口路径、方法和状态字段。 |\n"
+                + "| 后端主能力 | Controller、MCP tool、后台任务、Mapper | 无前端页面时，说明它服务的菜单、隐藏页签、MCP 能力或后台流程。 |\n\n"
+                + "## 菜单与功能入口\n\n"
+                + "| 菜单目录 | 子菜单/页面 | 功能说明 | 前端文件 | API 封装 | 后端接口与权限 | 后端核心文件 |\n"
+                + "|---|---|---|---|---|---|---|\n"
+                + "| 初始化待补齐 | 初始化待补齐 | 初始化 agent 发布 `publish_repository_index` 前必须替换为真实页面业务功能。 | `初始化待补齐` | `初始化待补齐` | `初始化待补齐` | `初始化待补齐` |\n\n"
+                + "## 发布索引要求\n\n"
+                + "- `publish_repository_index.modules` 必须按前端页面业务功能或后端主能力生成，不能只提交仓库概览、技术层目录或空数组。\n"
+                + "- `moduleCode` 使用稳定 ASCII 编码，`moduleName` 使用业务中文名称，`moduleType` 推荐使用 `PAGE_FUNCTION`、`BUSINESS` 或 `BACKEND_CAPABILITY`。\n"
+                + "- `pages`、`apis`、`tables`、`permissions` 和 `documents` 必须通过 `moduleCode` 归属到对应业务模块，并只写相对路径或结构化标识。\n";
     }
 
     private String reqflowProjectInitSkillContent()
@@ -667,9 +683,10 @@ public class McpService
                 + "2. 调用 `get_harness_template` 获取 `workspaceFiles` 和 `repositoryHarnessInstructions[].files`。\n"
                 + "3. 在目标 workspace 写入或合并本地 harness 文件，不允许只调用发布索引工具。\n"
                 + "4. 在每个子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
-                + "5. 调用 `publish_repository_index`，`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
-                + "6. 调用 `register_harness_init_result` 回写 harness 初始化状态和 commit。\n"
-                + "7. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
+                + "5. 发布索引前，先扫描前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或前端页面业务功能生成 `modules`；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n"
+                + "6. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
+                + "7. 调用 `register_harness_init_result` 回写 harness 初始化状态和 commit。\n"
+                + "8. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
     }
 
     private String escapeJson(String value)
@@ -870,11 +887,46 @@ public class McpService
         return property;
     }
 
-    private Map<String, Object> arrayProperty(String description)
+    private Map<String, Object> arrayObjectProperty(String description, Map<String, Object> itemProperties, List<String> required)
     {
         Map<String, Object> property = property("array", description);
-        property.put("items", Collections.singletonMap("type", "object"));
+        property.put("items", objectSchema(itemProperties, required));
         return property;
+    }
+
+    private Map<String, Object> moduleArrayProperty()
+    {
+        Map<String, Object> itemProperties = new LinkedHashMap<>();
+        itemProperties.put("variantId", property("integer", "项目分支 ID，可省略；省略时服务端按 actionToken、mcpKey 或 branchName 归属"));
+        itemProperties.put("parentCode", property("string", "父级模块编码，适用于菜单目录和子页面层级"));
+        itemProperties.put("moduleCode", property("string", "稳定 ASCII 模块编码，项目初始化时必填"));
+        itemProperties.put("moduleName", property("string", "业务模块中文名称，项目初始化时必填"));
+        itemProperties.put("moduleType", property("string", "模块类型，推荐 PAGE_FUNCTION、BUSINESS 或 BACKEND_CAPABILITY"));
+        itemProperties.put("repoScope", property("string", "仓库范围，例如 FRONTEND、BACKEND 或 FULLSTACK"));
+        itemProperties.put("relativePath", property("string", "模块主入口相对路径，不得使用个人本机绝对路径"));
+        itemProperties.put("sourceRef", property("string", "模块来源说明，例如路由、菜单、页面组件或后台任务"));
+        itemProperties.put("summary", property("string", "模块业务摘要"));
+        itemProperties.put("orderNum", property("integer", "排序号"));
+        return arrayObjectProperty("模块或功能点索引列表；项目初始化时不能为空，优先按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块",
+                itemProperties, Arrays.asList("moduleCode", "moduleName"));
+    }
+
+    private Map<String, Object> impactArrayProperty(String description)
+    {
+        Map<String, Object> itemProperties = new LinkedHashMap<>();
+        itemProperties.put("moduleCode", property("string", "必须匹配本次 modules[].moduleCode，用于把影响面归属到具体业务知识库模块"));
+        itemProperties.put("moduleId", property("integer", "兼容字段：人工模块 ID"));
+        itemProperties.put("variantId", property("integer", "项目分支 ID，可省略；省略时服务端按模块或 actionToken 归属"));
+        itemProperties.put("itemName", property("string", "影响面名称"));
+        itemProperties.put("itemKey", property("string", "影响面稳定标识，例如路由名、组件名或文档标识"));
+        itemProperties.put("relativePath", property("string", "相对路径，不得使用个人本机绝对路径"));
+        itemProperties.put("httpMethod", property("string", "接口请求方法，接口影响面使用"));
+        itemProperties.put("apiPath", property("string", "接口路径，接口影响面使用"));
+        itemProperties.put("permissionKey", property("string", "权限标识，权限影响面使用"));
+        itemProperties.put("tableName", property("string", "数据表名，数据表影响面使用"));
+        itemProperties.put("summary", property("string", "影响面摘要"));
+        itemProperties.put("tags", property("string", "标签，逗号分隔"));
+        return arrayObjectProperty(description, itemProperties, Collections.singletonList("moduleCode"));
     }
 
     private Map<String, Object> packageToolSchema(boolean allowArtifactType)
@@ -917,13 +969,13 @@ public class McpService
         properties.put("branchName", property("string", "真实 Git 分支名"));
         properties.put("commitHash", property("string", "当前索引 commit"));
         properties.put("indexVersion", property("string", "索引数据格式版本"));
-        properties.put("modules", arrayProperty("模块或功能点索引列表"));
-        properties.put("pages", arrayProperty("页面影响面列表"));
-        properties.put("apis", arrayProperty("接口影响面列表"));
-        properties.put("tables", arrayProperty("数据表影响面列表"));
-        properties.put("permissions", arrayProperty("权限影响面列表"));
-        properties.put("documents", arrayProperty("文档影响面列表"));
-        return objectSchema(properties, Collections.singletonList("remoteUrl"));
+        properties.put("modules", moduleArrayProperty());
+        properties.put("pages", impactArrayProperty("页面影响面列表；每项 moduleCode 必须匹配 modules[].moduleCode"));
+        properties.put("apis", impactArrayProperty("接口影响面列表；每项 moduleCode 必须匹配 modules[].moduleCode"));
+        properties.put("tables", impactArrayProperty("数据表影响面列表；每项 moduleCode 必须匹配 modules[].moduleCode"));
+        properties.put("permissions", impactArrayProperty("权限影响面列表；每项 moduleCode 必须匹配 modules[].moduleCode"));
+        properties.put("documents", impactArrayProperty("文档影响面列表；每项 moduleCode 必须匹配 modules[].moduleCode"));
+        return objectSchema(properties, Arrays.asList("remoteUrl", "commitHash", "indexVersion"));
     }
 
     private String stripQuery(String text)
