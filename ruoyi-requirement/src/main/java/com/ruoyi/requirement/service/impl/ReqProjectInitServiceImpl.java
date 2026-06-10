@@ -18,6 +18,7 @@ import com.ruoyi.requirement.domain.ReqProject;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
+import com.ruoyi.requirement.dto.ReqActionInstruction;
 import com.ruoyi.requirement.dto.ReqProjectInitChecklist;
 import com.ruoyi.requirement.dto.ReqProjectInitIndexSummary;
 import com.ruoyi.requirement.dto.ReqProjectInitModuleSummary;
@@ -31,6 +32,7 @@ import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 import com.ruoyi.requirement.service.IReqProjectInitService;
 
 @Service
@@ -42,6 +44,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
     @Autowired private ReqModuleMapper moduleMapper;
     @Autowired private ReqIndexModuleMapper indexModuleMapper;
     @Autowired private ReqRepositoryIndexBatchMapper batchMapper;
+    @Autowired private IReqActionTokenService actionTokenService;
 
     @Override
     public ReqProjectInitResponse selectProjectInit(Long projectId)
@@ -391,11 +394,42 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         item.setBaselineBranch(variant.getBaselineBranch());
         item.setBranchPolicy(variant.getBranchPolicy());
         item.setMcpKey(firstNotEmpty(variant.getMcpKey(), buildMcpKey(project.getProjectCode(), variant.getVariantCode())));
+        item.setInitInstruction(buildInitInstruction(project, variant, item.getMcpKey()));
         enrichVariantKnowledge(item, variant, repositories, modules, indexModules, batches);
         item.setDescription(variant.getDescription());
         item.setStatus(variant.getStatus());
         item.setRemark(variant.getRemark());
         return item;
+    }
+
+    private ReqActionInstruction buildInitInstruction(ReqProject project, ReqVariant variant, String mcpKey)
+    {
+        try
+        {
+            return actionTokenService.createProjectInitInstruction(project, variant,
+                    firstNotEmpty(variant.getUpdateBy(), variant.getCreateBy(), project.getUpdateBy(), project.getCreateBy()));
+        }
+        catch (DataAccessException e)
+        {
+            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_action_token"))
+            {
+                return buildMigrationPendingInstruction(mcpKey);
+            }
+            throw e;
+        }
+    }
+
+    private ReqActionInstruction buildMigrationPendingInstruction(String mcpKey)
+    {
+        ReqActionInstruction instruction = new ReqActionInstruction();
+        instruction.setActionType(IReqActionTokenService.ACTION_PROJECT_INIT);
+        instruction.setTargetMethod("publish_repository_index");
+        instruction.setPrompt("请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。");
+        instruction.setCopyLabel("复制兼容初始化指令");
+        instruction.setContent("请执行项目分支初始化，调用 publish_repository_index 发布当前仓库索引。"
+                + "\nmcpKey: " + firstNotEmpty(mcpKey, "-")
+                + "\n说明：当前数据库未创建 req_action_token，请先执行 sql/req_platform_req003_action_token.sql 后重新复制 actionToken 指令。");
+        return instruction;
     }
 
     private void enrichVariantKnowledge(ReqProjectInitVariantItem item, ReqVariant variant, List<ReqRepository> repositories,

@@ -15,6 +15,7 @@
 | `req_index_module` | 仓库索引模块知识 | 一行代表索引得到的一个模块或功能点 |
 | `req_impact_item` | 模块影响面条目 | 一行代表某索引批次、项目分支或真实分支下的一个页面、接口、数据表、权限或文档资源 |
 | `req_mcp_user_key` | 人员 MCP 访问 Key | 一行代表一个绑定到系统用户的 MCP Key，只保存哈希和前缀 |
+| `req_action_token` | MCP 动作 Token | 一行代表一个项目初始化、需求编排或开发执行动作上下文，只保存哈希和前缀 |
 | `req_activity_log` | 业务事件 | 一行一次用户或 MCP 事件 |
 
 ## 关系与证据
@@ -22,7 +23,7 @@
 确认关系：
 
 - `req_repository.project_id -> req_project.project_id`，证据：DDL 索引 `idx_req_repo_project`，仓库列表按项目筛选。
-- `req_variant.project_id -> req_project.project_id`，证据：唯一键 `uk_req_variant_code(project_id, variant_code)`，`mcp_key` 为 MCP 识别项目分支的稳定 key。
+- `req_variant.project_id -> req_project.project_id`，证据：唯一键 `uk_req_variant_code(project_id, variant_code)`，`mcp_key` 仅保留为 MCP 识别项目分支的兼容 key。
 - `req_module.project_id -> req_project.project_id`，证据：索引 `idx_req_module_project_variant`。
 - `req_module.variant_id -> req_variant.variant_id`，证据：`req_platform_req005_branch_module_migration.sql` 增加 `variant_id`，唯一键调整为 `uk_req_module_code(project_id, variant_id, module_code)`，人工模块按项目分支独立维护。
 - `req_module.parent_id -> req_module.module_id`，证据：模块树形字段。
@@ -42,8 +43,11 @@
 - `req_impact_item.batch_id -> req_repository_index_batch.batch_id`，证据：Mapper 插入时使用同一导入批次 ID。
 - `req_impact_item.project_id -> req_project.project_id`，证据：DDL 索引 `idx_req_impact_project_module`。
 - `req_impact_item.repo_id -> req_repository.repo_id`，证据：DDL 索引 `idx_req_impact_repo`。
-- `req_impact_item.variant_id -> req_variant.variant_id`，证据：DDL 索引 `idx_req_impact_variant_branch`，导入时由 payload、`mcp_key` 或 `project_id + branch_name` 反查项目分支。
+- `req_impact_item.variant_id -> req_variant.variant_id`，证据：DDL 索引 `idx_req_impact_variant_branch`，导入时由 payload、动作 token、`mcp_key` 或 `project_id + branch_name` 反查项目分支。
 - `req_mcp_user_key.user_id -> sys_user.user_id`，证据：`ReqMcpUserKeyMapper.selectReqMcpUserKeyVo` 左连接 `sys_user` 回显账号和昵称，`ReqMcpUserKeyServiceImpl.authenticate` 按绑定用户加载当前菜单权限。
+- `req_action_token.project_id -> req_project.project_id`，证据：DDL 索引 `idx_req_action_token_context`，项目初始化和后续需求动作必须绑定项目上下文。
+- `req_action_token.variant_id -> req_variant.variant_id`，证据：`ReqActionTokenServiceImpl.createProjectInitInstruction` 为项目分支生成动作 token，`ReqRepositoryIndexServiceImpl` 可按 `actionToken + remoteUrl` 解析项目分支。
+- `req_action_token.demand_id -> req_demand.demand_id`，证据：字段预留用于 `requirement_plan` 和 `requirement_develop` 动作上下文。
 - `req_activity_log.project_id -> req_project.project_id`，证据：统计按项目聚合。
 - `req_activity_log.demand_id -> req_demand.demand_id`，证据：事件记录需求创建、执行包生成和报告上传。
 - 项目初始化聚合关系：`req_project` 为主表，按 `project_id` 读取并同步 `req_repository`、`req_variant`、`req_module`、`req_index_module` 和 `req_repository_index_batch`，证据：`ReqProjectInitServiceImpl.selectProjectInit` 和 `ReqProjectInitServiceImpl.updateProjectInit`。
@@ -60,8 +64,9 @@
 - `req_impact_item` 对同一模块可跨项目分支、真实分支和多个索引批次保留历史记录。影响面推荐必须先按所选 `variant_id` 解析真实分支，再限定每个仓库最新 `imported` 批次，最后按资源键去重，不能把其他项目分支或旧批次混入推荐。
 - `req_module` 在 REQ-005 后按 `project_id + variant_id + module_code` 保持唯一；新增人工模块、需求表单模块下拉和父级模块选择都必须带 `variant_id`，否则不同分支的同名模块会互相污染。
 - `req_mcp_user_key` 与 `sys_user` 是多对一关系，一个用户可拥有多个 Key。列表页只能 join 用户表展示账号和昵称，不能因一个用户多个 Key 反向放大用户数量或权限判断。
+- `req_action_token` 与项目、项目分支和需求都是上下文定位关系，不代表人员身份。统计或审计时不能把 action token 数量当作用户数量，也不能用 action token 绕过 `X-MCP-Key` 认证和菜单权限。
 - 项目初始化上下文一次返回一个项目全貌，不能直接把 `req_repository`、`req_variant`、`req_module`、`req_index_module`、`req_repository_index_batch` 做一条 SQL join 后分页，否则会因多组一对多关系放大行数；当前实现使用分表查询后在 Service 层聚合。
-- 在 REQ-004 后，`req_variant.variant_name` 兼容承载需求人员可见中文标签，`req_variant.baseline_branch` 承载真实 Git 分支名，`req_variant.mcp_key` 承载 MCP 项目分支识别 key；`variant_code` 保持唯一键需要，允许由后端根据真实分支名兜底生成。
+- 在 REQ-004 后，`req_variant.variant_name` 兼容承载需求人员可见中文标签，`req_variant.baseline_branch` 承载真实 Git 分支名，`req_variant.mcp_key` 保留 MCP 项目分支兼容 key；REQ-003 后前端主展示和 MCP 新指令使用 `req_action_token` 生成的 `actionToken`。`variant_code` 保持唯一键需要，允许由后端根据真实分支名兜底生成。
 
 ## 必要过滤
 
@@ -72,8 +77,10 @@
 - 项目初始化保存同样必须拒绝个人本机绝对路径；`req_repository.local_path_hint` 不属于初始化向导保存内容，初始化接口会清空该字段。
 - 影响面推荐接收到 `variant_id` 时必须校验项目分支属于当前项目，并使用项目分支 `baseline_branch` 作为索引分支过滤条件。
 - 模块知识库接收到 `variant_id` 时必须严格过滤该项目分支，不再兼容混入 `variant_id is null` 的旧项目级索引模块。
+- 新增或修改需求时必须校验 `req_demand.project_id + req_demand.variant_id` 指向已初始化完成的项目分支：`req_variant.project_id` 必须等于需求项目，分支未停用，项目有效仓库不能为空，所选分支至少有一条 `req_module` 或 `req_index_module` 知识，并且每个有效仓库都有该分支 `baseline_branch` 对应的 `req_repository_index_batch.status='imported'` 批次。
 - MCP 读取 `memory://{projectId}/...?...variantId={variantId}` 时必须按 `req_memory_index.project_id + req_memory_index.variant_id + doc_type` 查询；分支知识库缺少 `variant_id` 会导致同项目不同长期分支的模块、契约或决策文档混用。
 - MCP 人员 Key 只允许匹配 `status='0'` 且绑定用户也为启用、未删除状态；停用 Key、停用用户或已删除用户都不能继续鉴权。Key 明文不得落库、不得出现在列表响应或操作日志中。
+- MCP 动作 Token 只允许匹配 `status='0'` 且未过期记录；明文只出现在本次初始化指令响应中，服务端落库和列表只能保存哈希、前缀和上下文。`project_init` 动作必须校验 `target_method='publish_repository_index'` 后才能用于索引导入。
 
 ## 开发指导
 
@@ -83,6 +90,6 @@
 - MCP 工具只能写平台表，不能扩大到仓库文件、Git 或 shell。
 - MCP resource 可以读取 `req_project`、`req_repository`、`req_variant` 和 `req_memory_index`，但只能按项目和项目分支返回结构化上下文，不能代替执行器访问仓库文件系统。
 - 项目初始化编辑会同步删除本次维护弹窗移除的仓库和分支配置；如果未来为索引批次增加物理外键或软删除语义，必须重新评估删除策略，避免留下不可访问的历史索引。
-- `publish_repository_index` 的输入来自本地 agent 扫描结果，服务端必须再次校验路径和仓库身份，不能信任客户端；优先用 `mcpKey + remoteUrl` 解析项目分支和仓库。
+- `publish_repository_index` 的输入来自本地 agent 扫描结果，服务端必须再次校验路径和仓库身份，不能信任客户端；优先用 `actionToken + remoteUrl` 解析项目分支和仓库，旧 `mcpKey + remoteUrl` 只作为兼容路径。
 - `publish_repository_index` 必须校验 `req:index:import`；执行资料保存类 MCP tool 和 harness 登记 tool 继续校验 `req:package:save`。
-- 新增 MCP 管理功能时必须区分 `req_variant.mcp_key` 和 `req_mcp_user_key`：前者识别项目分支，后者认证人员身份，不能混用。
+- 新增 MCP 管理功能时必须区分 `req_action_token`、`req_variant.mcp_key` 和 `req_mcp_user_key`：动作 token 识别目标动作和上下文，分支 mcp key 仅保留兼容，人员 MCP Key 认证人员身份，三者不能混用。

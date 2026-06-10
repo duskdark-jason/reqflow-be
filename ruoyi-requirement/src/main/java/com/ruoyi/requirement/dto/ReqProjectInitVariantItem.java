@@ -14,6 +14,7 @@ public class ReqProjectInitVariantItem
     private String baselineBranch;
     private String branchPolicy;
     private String mcpKey;
+    private ReqActionInstruction initInstruction;
     private Integer totalModules;
     private Integer indexedModules;
     private Integer manualModules;
@@ -45,6 +46,8 @@ public class ReqProjectInitVariantItem
     public void setBranchPolicy(String branchPolicy) { this.branchPolicy = branchPolicy; }
     public String getMcpKey() { return mcpKey; }
     public void setMcpKey(String mcpKey) { this.mcpKey = mcpKey; }
+    public ReqActionInstruction getInitInstruction() { return initInstruction; }
+    public void setInitInstruction(ReqActionInstruction initInstruction) { this.initInstruction = initInstruction; }
     public Integer getTotalModules() { return totalModules; }
     public void setTotalModules(Integer totalModules) { this.totalModules = totalModules; }
     public Integer getIndexedModules() { return indexedModules; }
