@@ -57,5 +57,5 @@
 ## 执行约束
 
 - 不修改 MCP 协议入口 `/requirement/mcp`。
-- 不修改数据库、菜单 SQL 或权限点。
+- 不涉及持久化结构、菜单脚本或权限点变更。
 - Execution Agent 按计划实现后必须提交，并自动进入 Review。

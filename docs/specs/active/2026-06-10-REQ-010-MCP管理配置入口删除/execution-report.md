@@ -2,9 +2,9 @@
 
 ## 执行结论
 
-- 状态：已完成，待提交
+- 状态：已完成
 - 分支：feature/REQ-20260610-010-mcp-key-config-cleanup
-- commit：待提交后回填
+- commit：290a434a711cdd7e5b5c19b56fdf3f1b49f69e13（主体实现提交；闭环文档回填见本分支最新提交）
 
 ## 修改摘要
 
@@ -49,7 +49,7 @@
 
 ## 运行态证据
 
-- 执行目录：`/Users/dusk/Projects/reqflow/reqflow-be`
+- 执行目录：当前 `reqflow-be` 子仓库根目录
 - 启动命令：`SPRING_PROFILES_ACTIVE=druid,test java -jar ruoyi-admin/target/ruoyi-admin.jar --server.port=18080`
 - profile/env/mode：`druid,test`，端口 `18080`
 - 检查命令：`curl -i -s http://localhost:18080/requirement/mcp/key/config`
