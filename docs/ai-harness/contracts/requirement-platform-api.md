@@ -21,7 +21,7 @@
 | 项目删除 | `/requirement/project/{projectIds}` | DELETE | `req:project:remove` | 一个或多个项目 |
 | 项目仓库兼容接口 | `/requirement/repository/**` | GET/POST/PUT/DELETE | `req:repo:*` | 一个代码仓库，左侧菜单不再暴露 |
 | 项目分支兼容接口 | `/requirement/variant/**` | GET/POST/PUT/DELETE | `req:variant:*` | 一个项目分支，左侧菜单不再暴露 |
-| 人工模块兼容接口 | `/requirement/module/**` | GET/POST/PUT/DELETE | `req:module:*` | 一个模块或功能点，左侧菜单不再暴露 |
+| 人工模块兼容接口 | `/requirement/module/**` | GET/POST/PUT/DELETE | `req:module:*` | 一个项目分支下的人工模块或功能点，左侧菜单不再暴露 |
 
 ## 项目初始化接口
 
@@ -37,8 +37,8 @@
 
 - `project`：`req_project` 项目基础信息。
 - `repositories`：项目下团队共享仓库列表，一行代表一个 Git 远端仓库，接口返回时不回传个人本机路径。
-- `variants`：项目下分支配置列表，一行代表一个可供需求人员选择的项目分支。`branchLabel` 是需求人员可见中文标签，`baselineBranch` 是真实 Git 分支名，`mcpKey` 是 MCP 识别项目分支的稳定 key；`variantName`、`variantCode`、`customerName`、`scopeType`、`branchPolicy` 继续作为 `req_variant` 兼容字段返回。
-- `moduleSummary`：`totalModules`、`indexedModules`、`manualModules`，分别表示模块总数、索引模块数和人工维护模块数。
+- `variants`：项目下分支配置列表，一行代表一个可供需求人员选择的项目分支。`branchLabel` 是需求人员可见中文标签，`baselineBranch` 是真实 Git 分支名，`mcpKey` 是 MCP 识别项目分支的稳定 key；`variantName`、`variantCode`、`customerName`、`scopeType`、`branchPolicy` 继续作为 `req_variant` 兼容字段返回。每行同时返回该分支独立的 `totalModules`、`indexedModules`、`manualModules`、`indexedRepositoryCount`、`unindexedRepositoryCount`、`latestIndexedAt` 和 `latestCommit`。
+- `moduleSummary`：`totalModules`、`indexedModules`、`manualModules`，分别表示项目级模块总数、索引模块数和人工维护模块数；分支级状态以 `variants` 每行字段为准。
 - `indexSummary`：`latestIndexedAt`、`latestCommit`、`indexedRepositoryCount`、`unindexedRepositoryCount`。
 - `initChecklist`：`projectReady`、`repositoryReady`、`variantReady`、`moduleReady`、`indexReady`。
 
@@ -75,9 +75,9 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 
 索引导入只保存 Git 远端、仓库类型、分支、commit、相对路径和结构化影响面。上传内容如果包含个人本机绝对路径，服务端必须拒绝导入。
 
-索引批次列表和模块知识只读接口用于项目接入中心展示。部分迁移库缺少 `req_repository_index_batch` 或 `req_index_module` 时，这两个只读接口返回空列表和成功响应，避免项目接入中心整页不可用；索引导入、影响面推荐和其他表异常仍按真实错误处理。
+索引批次列表和模块知识只读接口用于项目接入中心展示。模块知识库需要同时关联 `projectId` 和 `variantId`；传入 `variantId` 时只返回该项目分支的模块知识，不再混入 `variant_id is null` 的项目级旧数据。部分迁移库缺少 `req_repository_index_batch` 或 `req_index_module` 时，这两个只读接口返回空列表和成功响应，避免项目接入中心整页不可用；索引导入、影响面推荐和其他表异常仍按真实错误处理。
 
-索引导入优先支持 `mcpKey + remoteUrl`：服务端按 `mcpKey` 解析项目分支，并在同项目下按 `remoteUrl` 定位代码仓库；同时兼容旧的 `projectId + repoId + branchName`。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。
+索引导入优先支持 `mcpKey + remoteUrl`：服务端按 `mcpKey` 解析项目分支，并在同项目下按 `remoteUrl` 定位代码仓库；同时兼容旧的 `projectId + repoId + branchName`。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。每个项目分支都需要单独初始化索引，不能用主线索引代替客户分支或其他功能分支。
 
 影响面推荐请求可传 `projectId`、`repoId`、`variantId`、`moduleId`、`moduleCode`。当传入 `variantId` 时，服务端必须校验项目分支属于当前项目，并使用该项目分支 `baselineBranch` 过滤影响面；查询只返回目标仓库或每个仓库最新 `imported` 批次的数据。返回 `pages`、`apis`、`tables`、`permissions` 和 `documents` 五类列表，每一项来自 `req_impact_item`，同类资源按 `itemKey/apiPath/permissionKey/tableName/relativePath/itemName` 去重。
 
@@ -147,9 +147,30 @@ harness_init_result
 
 统计查询必须保持项目级或用户级数据粒度，避免一对多 join 放大需求数。
 
+## MCP人员Key管理接口
+
+| 路径 | 方法 | 权限 | 说明 |
+|---|---|---|---|
+| `/requirement/mcp/key/list` | GET | `req:mcp:key:list` | 分页查询人员 MCP Key，列表只返回 Key 前缀和绑定人员，不返回明文或哈希 |
+| `/requirement/mcp/key/config` | GET | `req:mcp:key:list`、`req:mcp:key:add` 或 `req:mcp:key:edit` | 查询 MCP 地址、请求头名和 Codex 配置模板 |
+| `/requirement/mcp/key/{keyId}` | GET | `req:mcp:key:query` | 查询单个人员 MCP Key |
+| `/requirement/mcp/key` | POST | `req:mcp:key:add` | 为启用用户创建随机唯一 MCP Key，明文只在本次响应返回 |
+| `/requirement/mcp/key` | PUT | `req:mcp:key:edit` | 修改 Key 名称、状态和备注；停用后不能继续用于 MCP 鉴权 |
+| `/requirement/mcp/key/{keyId}/regenerate` | POST | `req:mcp:key:edit` | 重置 Key 并返回一次性明文，旧 Key 立即失效 |
+| `/requirement/mcp/key/{keyIds}` | DELETE | `req:mcp:key:remove` | 删除一个或多个人员 MCP Key |
+
+人员 Key 使用 `req_mcp_user_key` 表保存，服务端只落库 SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。前端和列表接口不得展示 `keyHash`，明文 `plainKey` 只允许在创建和重置响应中出现一次。
+
+MCP 管理菜单权限独立于需求提交权限。提需求人员角色默认不分配 `req:mcp:key:*`，管理员或平台维护人员可通过该菜单为开发人员、管理员等已启用用户创建 Key。Key 鉴权后使用绑定用户的当前菜单权限集合，因此即使 Key 有效，调用 MCP 工具仍受 `req:package:save`、`req:index:import`、`req:project:query` 等权限限制。
+
 ## MCP 接口
 
-入口：`POST /requirement/mcp`，Controller 粗授权为 `req:package:save` 或 `req:index:import`，Service 必须继续按 tool name 做细粒度权限校验。
+入口：`POST /requirement/mcp`。该路径允许匿名进入安全过滤链，Controller 内部按两种方式鉴权：
+
+- 已登录 Web 用户：沿用当前 Spring Security 登录态和菜单权限。
+- 外部 Codex/MCP 客户端：在请求头 `X-MCP-Key` 传入人员 Key，服务端按 Key 哈希查找绑定用户，临时构建登录上下文。
+
+Controller 粗授权为 `req:package:save`、`req:index:import` 或 `req:project:query` 任一权限，Service 必须继续按 tool name 做细粒度权限校验。
 
 支持方法：
 
@@ -161,6 +182,26 @@ prompts/get
 tools/list
 tools/call
 ```
+
+资源读取：
+
+| URI | 内容 | 粒度/过滤 |
+|---|---|---|
+| `requirement://{demandNo}` | 需求详情 | 按稳定需求编号读取 |
+| `requirement://{demandNo}/draft-package` | 最新需求草稿包 | 按需求读取最新 `requirement_draft` 版本 |
+| `requirement://{demandNo}/context-manifest` | 最新上下文清单 | 按需求读取最新 `context_manifest` 版本 |
+| `project://{projectId}/overview` | 项目、仓库清单、项目分支清单 | 一个项目全貌 |
+| `project://{projectId}/repositories` | 项目仓库清单 | 按 `projectId` 过滤 |
+| `variant://{variantId}/overview` | 项目分支详情 | 一个项目分支 |
+| `variant://{variantId}/branch-policy` | 项目分支策略 | 一个项目分支的 `branchPolicy` |
+| `memory://{projectId}/modules?variantId={variantId}` | 模块知识库文档 | `projectId + variantId + docType=module` |
+| `memory://{projectId}/contracts?variantId={variantId}` | 接口契约知识库文档 | `projectId + variantId + docType=contract` |
+| `memory://{projectId}/decisions?variantId={variantId}` | 决策记录知识库文档 | `projectId + variantId + docType=decision` |
+| `memory://{projectId}/runbooks?variantId={variantId}` | 运行手册知识库文档 | `projectId + variantId + docType=runbook` |
+| `memory://{projectId}/specs/done?variantId={variantId}` | 已完成需求知识库文档 | `projectId + variantId + docType=spec` |
+| `workspace://{projectId}/agents` | 工作空间 AGENTS 内容与项目上下文 | 按项目返回仓库、分支和生成内容 |
+
+知识库类 MCP resource 必须优先带 `variantId`，用于区分同一项目下不同长期分支的独有模块、契约和文档；不允许把其他分支或旧项目级索引结果混入选中分支的上下文。
 
 允许工具：
 
@@ -177,8 +218,9 @@ publish_repository_index
 MCP 安全边界：
 
 - 只能读取平台资源或写入平台表。
+- `X-MCP-Key` 只用于 MCP 入口，不替代 Web 登录 token，也不能访问 MCP 管理接口。
 - 不允许执行 Git、shell、clone、branch、文件系统写入或大模型调用。
-- `get_harness_template` 只返回平台内置 harness 模板包和项目初始化变量，必须校验 `req:project:query`。
+- `get_harness_template` 必须校验 `req:project:query`，返回项目、仓库、项目分支、workspace `AGENTS.md` 内容和每个仓库的 harness 初始化指令；该工具只读平台配置，不写仓库文件、不执行 Git 或 shell。
 - `register_harness_init_result` 只更新 `req_repository` 的 harness 字段，必须校验 `req:package:save`。
 - `publish_repository_index` 必须校验 `req:index:import`，优先接收 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
 - 报告上传、计划保存和执行资料类工具必须校验 `req:package:save`，并且只追加 `req_package_version`。

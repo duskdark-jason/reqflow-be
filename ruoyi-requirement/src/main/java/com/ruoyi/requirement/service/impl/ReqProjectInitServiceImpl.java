@@ -96,7 +96,9 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         ReqProjectInitResponse response = new ReqProjectInitResponse();
         response.setProject(project);
         response.setRepositories(repositories.stream().map(this::toRepositoryItem).collect(Collectors.toList()));
-        response.setVariants(variants.stream().map(variant -> toVariantItem(project, variant)).collect(Collectors.toList()));
+        response.setVariants(variants.stream()
+                .map(variant -> toVariantItem(project, variant, repositories, modules, indexModules, batches))
+                .collect(Collectors.toList()));
 
         ReqProjectInitModuleSummary moduleSummary = buildModuleSummary(modules, indexModules);
         ReqProjectInitIndexSummary indexSummary = buildIndexSummary(repositories, batches);
@@ -375,7 +377,8 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         return item;
     }
 
-    private ReqProjectInitVariantItem toVariantItem(ReqProject project, ReqVariant variant)
+    private ReqProjectInitVariantItem toVariantItem(ReqProject project, ReqVariant variant, List<ReqRepository> repositories,
+            List<ReqModule> modules, List<ReqIndexModule> indexModules, List<ReqRepositoryIndexBatch> batches)
     {
         ReqProjectInitVariantItem item = new ReqProjectInitVariantItem();
         item.setVariantId(variant.getVariantId());
@@ -388,10 +391,31 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         item.setBaselineBranch(variant.getBaselineBranch());
         item.setBranchPolicy(variant.getBranchPolicy());
         item.setMcpKey(firstNotEmpty(variant.getMcpKey(), buildMcpKey(project.getProjectCode(), variant.getVariantCode())));
+        enrichVariantKnowledge(item, variant, repositories, modules, indexModules, batches);
         item.setDescription(variant.getDescription());
         item.setStatus(variant.getStatus());
         item.setRemark(variant.getRemark());
         return item;
+    }
+
+    private void enrichVariantKnowledge(ReqProjectInitVariantItem item, ReqVariant variant, List<ReqRepository> repositories,
+            List<ReqModule> modules, List<ReqIndexModule> indexModules, List<ReqRepositoryIndexBatch> batches)
+    {
+        int manualModules = countDistinctModulesForVariant(modules, variant.getVariantId());
+        int indexedModules = countDistinctIndexModulesForVariant(indexModules, variant.getVariantId());
+        item.setManualModules(manualModules);
+        item.setIndexedModules(indexedModules);
+        item.setTotalModules(manualModules + indexedModules);
+
+        List<ReqRepositoryIndexBatch> branchBatches = safeList(batches).stream()
+                .filter(batch -> "imported".equals(batch.getStatus()) || StringUtils.isEmpty(batch.getStatus()))
+                .filter(batch -> StringUtils.isNotEmpty(variant.getBaselineBranch()) && variant.getBaselineBranch().equals(batch.getBranchName()))
+                .collect(Collectors.toList());
+        ReqProjectInitIndexSummary indexSummary = buildIndexSummary(repositories, branchBatches);
+        item.setIndexedRepositoryCount(indexSummary.getIndexedRepositoryCount());
+        item.setUnindexedRepositoryCount(indexSummary.getUnindexedRepositoryCount());
+        item.setLatestIndexedAt(indexSummary.getLatestIndexedAt());
+        item.setLatestCommit(indexSummary.getLatestCommit());
     }
 
     private void validateRequest(ReqProjectInitRequest request, boolean update)
@@ -494,12 +518,38 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         return moduleKeys.size();
     }
 
+    private int countDistinctModulesForVariant(List<ReqModule> modules, Long variantId)
+    {
+        Set<String> moduleKeys = new LinkedHashSet<>();
+        for (ReqModule module : safeList(modules))
+        {
+            if (variantId != null && variantId.equals(module.getVariantId()))
+            {
+                moduleKeys.add(firstNotEmpty(module.getModuleCode(), String.valueOf(module.getModuleId())));
+            }
+        }
+        return moduleKeys.size();
+    }
+
     private int countDistinctIndexModules(List<ReqIndexModule> modules)
     {
         Set<String> moduleKeys = new LinkedHashSet<>();
         for (ReqIndexModule module : safeList(modules))
         {
             moduleKeys.add(firstNotEmpty(module.getModuleCode(), String.valueOf(module.getIndexModuleId())));
+        }
+        return moduleKeys.size();
+    }
+
+    private int countDistinctIndexModulesForVariant(List<ReqIndexModule> modules, Long variantId)
+    {
+        Set<String> moduleKeys = new LinkedHashSet<>();
+        for (ReqIndexModule module : safeList(modules))
+        {
+            if (variantId != null && variantId.equals(module.getVariantId()))
+            {
+                moduleKeys.add(firstNotEmpty(module.getModuleCode(), String.valueOf(module.getIndexModuleId())));
+            }
         }
         return moduleKeys.size();
     }

@@ -193,6 +193,46 @@ class ReqProjectInitServiceImplTest
     }
 
     @Test
+    void loadsBranchLevelModuleAndIndexSummaries()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqModuleMapper moduleMapper = mock(ReqModuleMapper.class);
+        ReqIndexModuleMapper indexModuleMapper = mock(ReqIndexModuleMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                moduleMapper, indexModuleMapper, batchMapper);
+
+        when(projectMapper.selectReqProjectByProjectId(10L)).thenReturn(project(10L));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L, "FRONTEND"), repository(22L, "BACKEND")));
+        when(variantMapper.selectReqVariantList(any())).thenReturn(Arrays.asList(variant(31L, "main"), variant(32L, "customer/hlj")));
+        when(moduleMapper.selectReqModuleList(any())).thenReturn(Arrays.asList(module("shared", null), module("main-demand", 31L), module("hlj-only", 32L)));
+        when(indexModuleMapper.selectReqIndexModuleList(any())).thenReturn(Arrays.asList(indexModule("main-index", 31L), indexModule("hlj-index", 32L), indexModule("hlj-index", 32L)));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Arrays.asList(
+                batch(100L, 21L, "main111", "main"),
+                batch(99L, 22L, "hlj222", "customer/hlj")));
+
+        ReqProjectInitResponse response = service.selectProjectInit(10L);
+
+        ReqProjectInitVariantItem mainBranch = response.getVariants().get(0);
+        assertEquals(1, mainBranch.getManualModules());
+        assertEquals(1, mainBranch.getIndexedModules());
+        assertEquals(2, mainBranch.getTotalModules());
+        assertEquals("main111", mainBranch.getLatestCommit());
+        assertEquals(1, mainBranch.getIndexedRepositoryCount());
+        assertEquals(1, mainBranch.getUnindexedRepositoryCount());
+
+        ReqProjectInitVariantItem hljBranch = response.getVariants().get(1);
+        assertEquals(1, hljBranch.getManualModules());
+        assertEquals(1, hljBranch.getIndexedModules());
+        assertEquals(2, hljBranch.getTotalModules());
+        assertEquals("hlj222", hljBranch.getLatestCommit());
+        assertEquals(1, hljBranch.getIndexedRepositoryCount());
+        assertEquals(1, hljBranch.getUnindexedRepositoryCount());
+    }
+
+    @Test
     void rejectsPersonalAbsolutePathBeforeWritingAggregate()
     {
         ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
@@ -469,11 +509,26 @@ class ReqProjectInitServiceImplTest
         return variant;
     }
 
+    private ReqVariant variant(Long variantId, String branchName)
+    {
+        ReqVariant variant = variant(variantId);
+        variant.setBaselineBranch(branchName);
+        variant.setVariantCode(branchName.replaceAll("[^A-Za-z0-9]+", "_").replaceAll("^_+|_+$", "").toUpperCase());
+        return variant;
+    }
+
     private ReqModule module(String code)
     {
         ReqModule module = new ReqModule();
         module.setModuleCode(code);
         module.setStatus("0");
+        return module;
+    }
+
+    private ReqModule module(String code, Long variantId)
+    {
+        ReqModule module = module(code);
+        module.setVariantId(variantId);
         return module;
     }
 
@@ -485,6 +540,13 @@ class ReqProjectInitServiceImplTest
         return module;
     }
 
+    private ReqIndexModule indexModule(String code, Long variantId)
+    {
+        ReqIndexModule module = indexModule(code);
+        module.setVariantId(variantId);
+        return module;
+    }
+
     private ReqRepositoryIndexBatch batch(Long batchId, Long repoId, String commit)
     {
         ReqRepositoryIndexBatch batch = new ReqRepositoryIndexBatch();
@@ -493,6 +555,13 @@ class ReqProjectInitServiceImplTest
         batch.setCommitHash(commit);
         batch.setStatus("imported");
         batch.setCreateTime(new Date(batchId));
+        return batch;
+    }
+
+    private ReqRepositoryIndexBatch batch(Long batchId, Long repoId, String commit, String branchName)
+    {
+        ReqRepositoryIndexBatch batch = batch(batchId, repoId, commit);
+        batch.setBranchName(branchName);
         return batch;
     }
 }

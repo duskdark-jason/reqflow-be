@@ -73,5 +73,24 @@ SELECT '执行包保存', @req_package_id, 1, '#', '', 1, 0, 'F', '0', '0', 'req
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_package_id AND perms = 'req:package:save');
 
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT 'MCP管理', @req_parent_id, 80, 'mcp-key', 'requirement/mcpKey/index', 1, 0, 'C', '0', '0', 'req:mcp:key:list', 'lock', 'admin', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'mcp-key');
+
+SET @req_mcp_key_id = (SELECT menu_id FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'mcp-key' LIMIT 1);
+
+INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT 'MCP Key查询', @req_mcp_key_id, 1, '#', '', 1, 0, 'F', '0', '0', 'req:mcp:key:query', '#', 'admin', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_mcp_key_id AND perms = 'req:mcp:key:query');
+INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT 'MCP Key新增', @req_mcp_key_id, 2, '#', '', 1, 0, 'F', '0', '0', 'req:mcp:key:add', '#', 'admin', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_mcp_key_id AND perms = 'req:mcp:key:add');
+INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT 'MCP Key修改', @req_mcp_key_id, 3, '#', '', 1, 0, 'F', '0', '0', 'req:mcp:key:edit', '#', 'admin', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_mcp_key_id AND perms = 'req:mcp:key:edit');
+INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT 'MCP Key删除', @req_mcp_key_id, 4, '#', '', 1, 0, 'F', '0', '0', 'req:mcp:key:remove', '#', 'admin', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_mcp_key_id AND perms = 'req:mcp:key:remove');
+
+INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
 SELECT '使用统计', @req_parent_id, 90, 'req-statistics', 'requirement/statistics/index', 1, 0, 'C', '0', '0', 'req:stats:view', 'chart', 'admin', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_parent_id AND path = 'req-statistics');

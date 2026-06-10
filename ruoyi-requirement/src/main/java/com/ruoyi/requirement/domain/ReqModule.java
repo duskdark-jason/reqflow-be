@@ -18,6 +18,9 @@ public class ReqModule extends BaseEntity
     /** 项目ID */
     private Long projectId;
 
+    /** 项目分支ID */
+    private Long variantId;
+
     /** 上级模块ID */
     private Long parentId;
 
@@ -60,6 +63,16 @@ public class ReqModule extends BaseEntity
     public void setProjectId(Long projectId)
     {
         this.projectId = projectId;
+    }
+
+    public Long getVariantId()
+    {
+        return variantId;
+    }
+
+    public void setVariantId(Long variantId)
+    {
+        this.variantId = variantId;
     }
 
     public Long getParentId()
@@ -148,6 +161,7 @@ public class ReqModule extends BaseEntity
         return new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
             .append("moduleId", getModuleId())
             .append("projectId", getProjectId())
+            .append("variantId", getVariantId())
             .append("parentId", getParentId())
             .append("moduleName", getModuleName())
             .append("moduleCode", getModuleCode())

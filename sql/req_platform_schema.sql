@@ -58,9 +58,30 @@ CREATE TABLE IF NOT EXISTS req_variant (
   UNIQUE KEY uk_req_variant_mcp_key (mcp_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台项目分支';
 
+CREATE TABLE IF NOT EXISTS req_mcp_user_key (
+  key_id BIGINT NOT NULL AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  key_name VARCHAR(100) NOT NULL,
+  key_prefix VARCHAR(32) NOT NULL,
+  key_hash CHAR(64) NOT NULL,
+  status CHAR(1) NOT NULL DEFAULT '0',
+  last_used_time DATETIME DEFAULT NULL,
+  last_used_ip VARCHAR(128) DEFAULT NULL,
+  create_by VARCHAR(64) DEFAULT '',
+  create_time DATETIME DEFAULT NULL,
+  update_by VARCHAR(64) DEFAULT '',
+  update_time DATETIME DEFAULT NULL,
+  remark VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (key_id),
+  UNIQUE KEY uk_req_mcp_user_key_hash (key_hash),
+  KEY idx_req_mcp_user_key_user (user_id),
+  KEY idx_req_mcp_user_key_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='人员MCP访问Key';
+
 CREATE TABLE IF NOT EXISTS req_module (
   module_id BIGINT NOT NULL AUTO_INCREMENT,
   project_id BIGINT NOT NULL,
+  variant_id BIGINT DEFAULT NULL,
   parent_id BIGINT NOT NULL DEFAULT 0,
   module_name VARCHAR(100) NOT NULL,
   module_code VARCHAR(64) NOT NULL,
@@ -75,7 +96,8 @@ CREATE TABLE IF NOT EXISTS req_module (
   update_time DATETIME DEFAULT NULL,
   remark VARCHAR(500) DEFAULT NULL,
   PRIMARY KEY (module_id),
-  UNIQUE KEY uk_req_module_code (project_id, module_code)
+  UNIQUE KEY uk_req_module_code (project_id, variant_id, module_code),
+  KEY idx_req_module_project_variant (project_id, variant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求平台模块功能点';
 
 CREATE TABLE IF NOT EXISTS req_demand (
@@ -143,7 +165,8 @@ CREATE TABLE IF NOT EXISTS req_memory_index (
   update_time DATETIME DEFAULT NULL,
   PRIMARY KEY (memory_id),
   KEY idx_req_memory_project (project_id),
-  KEY idx_req_memory_repo (repo_id)
+  KEY idx_req_memory_repo (repo_id),
+  KEY idx_req_memory_project_variant (project_id, variant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='项目记忆索引';
 
 CREATE TABLE IF NOT EXISTS req_repository_index_batch (
@@ -198,7 +221,8 @@ CREATE TABLE IF NOT EXISTS req_index_module (
   PRIMARY KEY (index_module_id),
   KEY idx_req_index_module_project (project_id),
   KEY idx_req_index_module_repo (repo_id),
-  KEY idx_req_index_module_code (project_id, module_code)
+  KEY idx_req_index_module_code (project_id, module_code),
+  KEY idx_req_index_module_variant (project_id, variant_id, module_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='仓库索引模块知识';
 
 CREATE TABLE IF NOT EXISTS req_impact_item (

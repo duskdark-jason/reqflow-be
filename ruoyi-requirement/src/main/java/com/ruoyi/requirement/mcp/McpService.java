@@ -10,12 +10,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.requirement.domain.ReqDemand;
+import com.ruoyi.requirement.domain.ReqMemoryIndex;
+import com.ruoyi.requirement.domain.ReqPackageVersion;
+import com.ruoyi.requirement.domain.ReqProject;
 import com.ruoyi.requirement.domain.ReqRepository;
+import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.dto.ReqIndexImpactPayload;
 import com.ruoyi.requirement.dto.ReqIndexModulePayload;
 import com.ruoyi.requirement.dto.ReqRepositoryIndexImportRequest;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
+import com.ruoyi.requirement.mapper.ReqMemoryIndexMapper;
+import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
+import com.ruoyi.requirement.mapper.ReqVariantMapper;
 import com.ruoyi.requirement.service.IReqPackageService;
 import com.ruoyi.requirement.service.IReqRepositoryIndexService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
@@ -24,7 +31,10 @@ import com.ruoyi.requirement.service.ReqActivityLogService;
 public class McpService
 {
     @Autowired private ReqDemandMapper reqDemandMapper;
+    @Autowired private ReqProjectMapper projectMapper;
     @Autowired private ReqRepositoryMapper reqRepositoryMapper;
+    @Autowired private ReqVariantMapper variantMapper;
+    @Autowired private ReqMemoryIndexMapper memoryIndexMapper;
     @Autowired private IReqPackageService reqPackageService;
     @Autowired private IReqRepositoryIndexService repositoryIndexService;
     @Autowired private ReqActivityLogService activityLogService;
@@ -37,7 +47,7 @@ public class McpService
             if ("resources/read".equals(request.getMethod())) return McpResponse.success(request.getId(), resourcesRead(stringParam(request, "uri")));
             if ("prompts/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("prompts", Arrays.asList(prompt("generate_agent_requirement_package"), prompt("generate_development_plan"), prompt("generate_execution_prompt"), prompt("generate_review_prompt"))));
             if ("prompts/get".equals(request.getMethod())) return McpResponse.success(request.getId(), promptsGet(stringParam(request, "name")));
-            if ("tools/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("tools", Arrays.asList(tool("save_requirement_package"), tool("save_development_plan"), tool("upload_execution_report"), tool("upload_review_report"), tool("register_harness_init_result"), tool("publish_repository_index"))));
+            if ("tools/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("tools", Arrays.asList(tool("save_requirement_package"), tool("save_development_plan"), tool("upload_execution_report"), tool("upload_review_report"), tool("register_harness_init_result"), tool("get_harness_template"), tool("publish_repository_index"))));
             if ("tools/call".equals(request.getMethod())) return McpResponse.success(request.getId(), toolsCall(request));
             return McpResponse.error(request.getId(), "不支持的MCP方法：" + request.getMethod());
         }
@@ -50,11 +60,19 @@ public class McpService
     private Map<String, Object> resourcesList()
     {
         return Collections.singletonMap("resources", Arrays.asList(
-                resource("requirement://REQ-20260609-001", "需求样例"),
-                resource("requirement://REQ-20260609-001/context-manifest", "需求上下文清单"),
-                resource("project://1/overview", "项目概览"),
-                resource("variant://1/branch-policy", "项目分支策略"),
-                resource("workspace://1/agents", "工作空间AGENTS")));
+                resource("requirement://{demandNo}", "需求详情"),
+                resource("requirement://{demandNo}/draft-package", "需求草稿包"),
+                resource("requirement://{demandNo}/context-manifest", "需求上下文清单"),
+                resource("project://{projectId}/overview", "项目概览"),
+                resource("project://{projectId}/repositories", "项目仓库清单"),
+                resource("variant://{variantId}/overview", "项目分支概览"),
+                resource("variant://{variantId}/branch-policy", "项目分支策略"),
+                resource("memory://{projectId}/modules?variantId={variantId}", "分支模块知识库"),
+                resource("memory://{projectId}/contracts?variantId={variantId}", "分支接口契约知识库"),
+                resource("memory://{projectId}/decisions?variantId={variantId}", "分支决策知识库"),
+                resource("memory://{projectId}/runbooks?variantId={variantId}", "分支运行手册知识库"),
+                resource("memory://{projectId}/specs/done?variantId={variantId}", "分支已完成需求知识库"),
+                resource("workspace://{projectId}/agents", "工作空间AGENTS")));
     }
 
     private Map<String, Object> resourcesRead(String uri)
@@ -63,19 +81,154 @@ public class McpService
         result.put("uri", uri);
         if (uri != null && uri.startsWith("requirement://"))
         {
-            String demandNo = uri.substring("requirement://".length()).replace("/context-manifest", "");
-            ReqDemand demand = reqDemandMapper.selectReqDemandByDemandNo(demandNo);
-            result.put("content", demand);
-            if (demand != null)
-            {
-                activityLogService.record(currentUserId(), demand.getProjectId(), demand.getDemandId(), "mcp_read", "mcp", "读取需求资源：" + demandNo, null);
-            }
+            result.put("content", readRequirementResource(uri));
+        }
+        else if (uri != null && uri.startsWith("project://"))
+        {
+            result.put("content", readProjectResource(uri));
+        }
+        else if (uri != null && uri.startsWith("variant://"))
+        {
+            result.put("content", readVariantResource(uri));
+        }
+        else if (uri != null && uri.startsWith("memory://"))
+        {
+            result.put("content", readMemoryResource(uri));
+        }
+        else if (uri != null && uri.startsWith("workspace://"))
+        {
+            result.put("content", readWorkspaceResource(uri));
         }
         else
         {
             result.put("content", "resource not materialized in MVP-lite");
         }
         return result;
+    }
+
+    private Object readRequirementResource(String uri)
+    {
+        String body = uri.substring("requirement://".length());
+        String demandNo = body.contains("/") ? body.substring(0, body.indexOf('/')) : body;
+        String path = body.contains("/") ? body.substring(body.indexOf('/') + 1) : "";
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandNo(demandNo);
+        if (demand == null)
+        {
+            return null;
+        }
+        activityLogService.record(currentUserId(), demand.getProjectId(), demand.getDemandId(), "mcp_read", "mcp", "读取需求资源：" + demandNo, null);
+
+        String artifactType = requirementArtifactType(path);
+        if (artifactType == null)
+        {
+            return demand;
+        }
+        ReqPackageVersion packageVersion = reqPackageService.selectLatest(demand.getDemandId(), artifactType);
+        Map<String, Object> content = new HashMap<>();
+        content.put("demand", demand);
+        content.put("artifactType", artifactType);
+        content.put("packageVersion", packageVersion);
+        return content;
+    }
+
+    private Map<String, Object> readProjectResource(String uri)
+    {
+        String body = stripQuery(uri.substring("project://".length()));
+        Long projectId = leadingLong(body);
+        String path = pathAfterLeadingId(body);
+        ReqProject project = projectMapper.selectReqProjectByProjectId(projectId);
+
+        Map<String, Object> content = new HashMap<>();
+        content.put("project", project);
+        content.put("repositories", repositories(projectId));
+        if (!"repositories".equals(path))
+        {
+            content.put("variants", variants(projectId));
+        }
+        return content;
+    }
+
+    private Map<String, Object> readVariantResource(String uri)
+    {
+        String body = stripQuery(uri.substring("variant://".length()));
+        Long variantId = leadingLong(body);
+        String path = pathAfterLeadingId(body);
+        ReqVariant variant = variantMapper.selectReqVariantByVariantId(variantId);
+
+        Map<String, Object> content = new HashMap<>();
+        content.put("variant", variant);
+        if ("branch-policy".equals(path) && variant != null)
+        {
+            content.put("branchPolicy", variant.getBranchPolicy());
+        }
+        return content;
+    }
+
+    private Map<String, Object> readMemoryResource(String uri)
+    {
+        String body = uri.substring("memory://".length());
+        String pathBody = stripQuery(body);
+        Long projectId = leadingLong(pathBody);
+        String memoryPath = pathAfterLeadingId(pathBody);
+
+        ReqMemoryIndex query = new ReqMemoryIndex();
+        query.setProjectId(projectId);
+        query.setVariantId(longQueryParam(uri, "variantId"));
+        query.setDocType(memoryDocType(memoryPath));
+
+        Map<String, Object> content = new HashMap<>();
+        content.put("projectId", projectId);
+        content.put("variantId", query.getVariantId());
+        content.put("docType", query.getDocType());
+        content.put("documents", memoryIndexMapper.selectReqMemoryIndexList(query));
+        return content;
+    }
+
+    private Map<String, Object> readWorkspaceResource(String uri)
+    {
+        String body = stripQuery(uri.substring("workspace://".length()));
+        Long projectId = leadingLong(body);
+        ReqProject project = projectMapper.selectReqProjectByProjectId(projectId);
+        List<ReqRepository> repositories = repositories(projectId);
+        List<ReqVariant> variants = variants(projectId);
+
+        Map<String, Object> content = new HashMap<>();
+        content.put("project", project);
+        content.put("repositories", repositories);
+        content.put("variants", variants);
+        content.put("agents", workspaceAgentsContent(project, repositories, variants));
+        return content;
+    }
+
+    private List<ReqRepository> repositories(Long projectId)
+    {
+        ReqRepository query = new ReqRepository();
+        query.setProjectId(projectId);
+        return reqRepositoryMapper.selectReqRepositoryList(query);
+    }
+
+    private List<ReqVariant> variants(Long projectId)
+    {
+        ReqVariant query = new ReqVariant();
+        query.setProjectId(projectId);
+        return variantMapper.selectReqVariantList(query);
+    }
+
+    private String workspaceAgentsContent(ReqProject project, List<ReqRepository> repositories, List<ReqVariant> variants)
+    {
+        StringBuilder content = new StringBuilder();
+        content.append("# AGENTS.md\n\n");
+        content.append("## 项目\n");
+        if (project != null)
+        {
+            content.append("- 项目：").append(project.getProjectName()).append("（").append(project.getProjectCode()).append("）\n");
+        }
+        content.append("- 仓库数量：").append(repositories == null ? 0 : repositories.size()).append("\n");
+        content.append("- 分支数量：").append(variants == null ? 0 : variants.size()).append("\n\n");
+        content.append("## 分支知识库\n");
+        content.append("- 读取知识库时必须同时传入 projectId 与 variantId，避免不同分支的独有模块互相污染。\n");
+        content.append("- 分支初始化、模块索引和需求影响推荐均以项目分支为粒度。\n");
+        return content.toString();
     }
 
     private Map<String, Object> promptsGet(String name)
@@ -92,6 +245,11 @@ public class McpService
     {
         String name = stringParam(request, "name");
         Map<String, Object> arguments = request.getParams() == null ? Collections.emptyMap() : (Map<String, Object>) request.getParams().getOrDefault("arguments", Collections.emptyMap());
+        if ("get_harness_template".equals(name))
+        {
+            requirePermission("get_harness_template", "req:project:query");
+            return getHarnessTemplate(longArg(arguments, "projectId"));
+        }
         if ("register_harness_init_result".equals(name))
         {
             requirePermission("register_harness_init_result", "req:package:save");
@@ -133,6 +291,59 @@ public class McpService
         request.setPermissions(impactListArg(arguments, "permissions"));
         request.setDocuments(impactListArg(arguments, "documents"));
         return request;
+    }
+
+    private Map<String, Object> getHarnessTemplate(Long projectId)
+    {
+        if (projectId == null)
+        {
+            throw new IllegalArgumentException("项目不能为空");
+        }
+        ReqProject project = projectMapper.selectReqProjectByProjectId(projectId);
+        if (project == null)
+        {
+            throw new IllegalArgumentException("项目不存在");
+        }
+        List<ReqRepository> repositories = repositories(projectId);
+        List<ReqVariant> variants = variants(projectId);
+        List<Map<String, Object>> repositoryInstructions = new ArrayList<>();
+        for (ReqRepository repository : repositories)
+        {
+            Map<String, Object> item = new HashMap<>();
+            item.put("repository", repository);
+            item.put("content", harnessInstructionContent(repository, variants));
+            repositoryInstructions.add(item);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("project", project);
+        result.put("repositories", repositories);
+        result.put("variants", variants);
+        result.put("workspaceAgents", workspaceAgentsContent(project, repositories, variants));
+        result.put("repositoryHarnessInstructions", repositoryInstructions);
+        return result;
+    }
+
+    private String harnessInstructionContent(ReqRepository repository, List<ReqVariant> variants)
+    {
+        StringBuilder content = new StringBuilder();
+        content.append("# Harness 初始化指令\n\n");
+        content.append("## 目标仓库\n");
+        content.append("- 仓库：").append(repository.getRepoName()).append("\n");
+        content.append("- 类型：").append(repository.getRepoType()).append("\n");
+        content.append("- 远端：").append(repository.getRepoUrl()).append("\n");
+        content.append("- 默认分支：").append(repository.getDefaultBranch()).append("\n\n");
+        content.append("## 项目分支\n");
+        for (ReqVariant variant : safeList(variants))
+        {
+            content.append("- ").append(variant.getVariantName()).append("：").append(variant.getBaselineBranch()).append("\n");
+        }
+        content.append("\n## 初始化要求\n");
+        content.append("1. 进入目标仓库后先校验远端和当前分支。\n");
+        content.append("2. 下发或更新仓库 AGENTS.md、docs/ai-harness、docs/process、docs/templates 和 scripts。\n");
+        content.append("3. 按项目分支分别初始化模块与知识库索引，不能用主线结果代替其他分支。\n");
+        content.append("4. 运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init 后回写初始化结果。\n");
+        return content.toString();
     }
 
     @SuppressWarnings("unchecked")
@@ -219,6 +430,74 @@ public class McpService
         map.put("uri", uri);
         map.put("name", name);
         return map;
+    }
+
+    private String stripQuery(String text)
+    {
+        if (text == null) return "";
+        int index = text.indexOf('?');
+        return index < 0 ? text : text.substring(0, index);
+    }
+
+    private Long leadingLong(String text)
+    {
+        if (text == null || text.isEmpty())
+        {
+            throw new IllegalArgumentException("资源URI缺少ID");
+        }
+        int index = text.indexOf('/');
+        String value = index < 0 ? text : text.substring(0, index);
+        return Long.valueOf(value);
+    }
+
+    private String pathAfterLeadingId(String text)
+    {
+        if (text == null) return "";
+        int index = text.indexOf('/');
+        return index < 0 || index + 1 >= text.length() ? "" : text.substring(index + 1);
+    }
+
+    private Long longQueryParam(String uri, String key)
+    {
+        String value = queryParam(uri, key);
+        return value == null || value.isEmpty() ? null : Long.valueOf(value);
+    }
+
+    private String queryParam(String uri, String key)
+    {
+        if (uri == null) return null;
+        int index = uri.indexOf('?');
+        if (index < 0 || index + 1 >= uri.length()) return null;
+        String[] pairs = uri.substring(index + 1).split("&");
+        for (String pair : pairs)
+        {
+            String[] parts = pair.split("=", 2);
+            if (parts.length == 2 && key.equals(parts[0])) return parts[1];
+        }
+        return null;
+    }
+
+    private String memoryDocType(String path)
+    {
+        if ("modules".equals(path)) return "module";
+        if ("contracts".equals(path)) return "contract";
+        if ("decisions".equals(path)) return "decision";
+        if ("runbooks".equals(path)) return "runbook";
+        if ("specs/done".equals(path)) return "spec";
+        if ("domains".equals(path) || "domain".equals(path)) return "domain";
+        return path;
+    }
+
+    private String requirementArtifactType(String path)
+    {
+        if ("draft-package".equals(path)) return "requirement_draft";
+        if ("context-manifest".equals(path)) return "context_manifest";
+        return null;
+    }
+
+    private <T> List<T> safeList(List<T> list)
+    {
+        return list == null ? Collections.emptyList() : list;
     }
 
     private Map<String, Object> prompt(String name) { return Collections.singletonMap("name", name); }

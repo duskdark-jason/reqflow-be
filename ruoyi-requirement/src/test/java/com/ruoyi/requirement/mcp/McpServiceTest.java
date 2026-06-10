@@ -1,6 +1,8 @@
 package com.ruoyi.requirement.mcp;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -9,14 +11,27 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.ruoyi.requirement.domain.ReqDemand;
+import com.ruoyi.requirement.domain.ReqMemoryIndex;
+import com.ruoyi.requirement.domain.ReqPackageVersion;
+import com.ruoyi.requirement.domain.ReqProject;
 import com.ruoyi.requirement.domain.ReqRepository;
+import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.dto.ReqIndexImportResult;
 import com.ruoyi.requirement.dto.ReqRepositoryIndexImportRequest;
+import com.ruoyi.requirement.mapper.ReqDemandMapper;
+import com.ruoyi.requirement.mapper.ReqMemoryIndexMapper;
+import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
+import com.ruoyi.requirement.mapper.ReqVariantMapper;
 import com.ruoyi.requirement.service.IReqRepositoryIndexService;
+import com.ruoyi.requirement.service.IReqPackageService;
+import com.ruoyi.requirement.service.ReqActivityLogService;
 
 class McpServiceTest
 {
@@ -26,6 +41,91 @@ class McpServiceTest
         McpResponse response = new McpService().handle(request("tools/list", null));
 
         assertTrue(String.valueOf(response.getResult()).contains("publish_repository_index"));
+        assertTrue(String.valueOf(response.getResult()).contains("get_harness_template"));
+    }
+
+    @Test
+    void readsMaterializedProjectResource()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "projectMapper", projectMapper);
+        ReflectionTestUtils.setField(service, "reqRepositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+
+        ReqProject project = new ReqProject();
+        project.setProjectId(10L);
+        project.setProjectCode("REQFLOW");
+        project.setProjectName("需求平台");
+        when(projectMapper.selectReqProjectByProjectId(10L)).thenReturn(project);
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(new ReqRepository()));
+        when(variantMapper.selectReqVariantList(any())).thenReturn(Collections.singletonList(new ReqVariant()));
+
+        McpResponse response = service.handle(request("resources/read", params("uri", "project://10/overview")));
+
+        assertTrue(String.valueOf(response.getResult()).contains("REQFLOW"));
+        verify(projectMapper).selectReqProjectByProjectId(10L);
+        verify(repositoryMapper).selectReqRepositoryList(any(ReqRepository.class));
+        verify(variantMapper).selectReqVariantList(any(ReqVariant.class));
+    }
+
+    @Test
+    void readsMemoryResourceByProjectAndVariant()
+    {
+        ReqMemoryIndexMapper memoryIndexMapper = mock(ReqMemoryIndexMapper.class);
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "memoryIndexMapper", memoryIndexMapper);
+        when(memoryIndexMapper.selectReqMemoryIndexList(any())).thenReturn(Collections.singletonList(new ReqMemoryIndex()));
+
+        service.handle(request("resources/read", params("uri", "memory://10/modules?variantId=31")));
+
+        ArgumentCaptor<ReqMemoryIndex> captor = forClass(ReqMemoryIndex.class);
+        verify(memoryIndexMapper).selectReqMemoryIndexList(captor.capture());
+        assertEquals(10L, captor.getValue().getProjectId());
+        assertEquals(31L, captor.getValue().getVariantId());
+        assertEquals("module", captor.getValue().getDocType());
+    }
+
+    @Test
+    void readsLatestRequirementDraftPackage()
+    {
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        when(demandMapper.selectReqDemandByDemandNo("REQ-20260609-001")).thenReturn(demand(5L));
+        when(packageService.selectLatest(5L, "requirement_draft")).thenReturn(packageVersion("requirement_draft", "需求草稿内容"));
+
+        McpResponse response = service.handle(request("resources/read", params("uri", "requirement://REQ-20260609-001/draft-package")));
+
+        assertTrue(String.valueOf(response.getResult()).contains("需求草稿内容"));
+        verify(packageService).selectLatest(5L, "requirement_draft");
+    }
+
+    @Test
+    void readsLatestContextManifestPackage()
+    {
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        when(demandMapper.selectReqDemandByDemandNo("REQ-20260609-001")).thenReturn(demand(6L));
+        when(packageService.selectLatest(6L, "context_manifest")).thenReturn(packageVersion("context_manifest", "{\"demandNo\":\"REQ-20260609-001\"}"));
+
+        McpResponse response = service.handle(request("resources/read", params("uri", "requirement://REQ-20260609-001/context-manifest")));
+
+        assertTrue(String.valueOf(response.getResult()).contains("context_manifest"));
+        verify(packageService).selectLatest(6L, "context_manifest");
     }
 
     @Test
@@ -74,6 +174,60 @@ class McpServiceTest
     }
 
     @Test
+    void getHarnessTemplateToolReturnsWorkspaceAndRepositoryInstructions()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "projectMapper", projectMapper);
+        ReflectionTestUtils.setField(service, "reqRepositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+
+        ReqProject project = new ReqProject();
+        project.setProjectId(10L);
+        project.setProjectCode("REQFLOW");
+        project.setProjectName("需求平台");
+        ReqRepository repository = new ReqRepository();
+        repository.setRepoId(20L);
+        repository.setRepoName("reqflow-ui");
+        repository.setRepoType("FRONTEND");
+        repository.setRepoUrl("git@example.com:reqflow-ui.git");
+        repository.setDefaultBranch("main");
+        ReqVariant variant = new ReqVariant();
+        variant.setVariantId(31L);
+        variant.setVariantName("通用主线");
+        variant.setBaselineBranch("main");
+
+        when(projectMapper.selectReqProjectByProjectId(10L)).thenReturn(project);
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository));
+        when(variantMapper.selectReqVariantList(any())).thenReturn(Collections.singletonList(variant));
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("projectId", 10L);
+        McpResponse response = service.handle(request("tools/call", toolParams("get_harness_template", arguments)));
+
+        assertTrue(String.valueOf(response.getResult()).contains("# AGENTS.md"));
+        assertTrue(String.valueOf(response.getResult()).contains("reqflow-ui"));
+        verify(projectMapper).selectReqProjectByProjectId(10L);
+    }
+
+    @Test
+    void getHarnessTemplateToolRequiresProjectQueryPermission()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        McpService service = new TestableMcpService(false);
+        ReflectionTestUtils.setField(service, "projectMapper", projectMapper);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("projectId", 10L);
+        McpResponse response = service.handle(request("tools/call", toolParams("get_harness_template", arguments)));
+
+        assertTrue(String.valueOf(response.getError()).contains("req:project:query"));
+        verify(projectMapper, never()).selectReqProjectByProjectId(any());
+    }
+
+    @Test
     void registerHarnessInitResultRequiresPackageSavePermission()
     {
         ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
@@ -101,6 +255,39 @@ class McpServiceTest
         request.setMethod(method);
         request.setParams(params);
         return request;
+    }
+
+    private Map<String, Object> params(String key, Object value)
+    {
+        Map<String, Object> params = new HashMap<>();
+        params.put(key, value);
+        return params;
+    }
+
+    private Map<String, Object> toolParams(String name, Map<String, Object> arguments)
+    {
+        Map<String, Object> params = new HashMap<>();
+        params.put("name", name);
+        params.put("arguments", arguments);
+        return params;
+    }
+
+    private ReqDemand demand(Long demandId)
+    {
+        ReqDemand demand = new ReqDemand();
+        demand.setDemandId(demandId);
+        demand.setProjectId(10L);
+        demand.setDemandNo("REQ-20260609-001");
+        return demand;
+    }
+
+    private ReqPackageVersion packageVersion(String artifactType, String content)
+    {
+        ReqPackageVersion version = new ReqPackageVersion();
+        version.setArtifactType(artifactType);
+        version.setContent(content);
+        version.setVersionNo(2);
+        return version;
     }
 
     private static class TestableMcpService extends McpService

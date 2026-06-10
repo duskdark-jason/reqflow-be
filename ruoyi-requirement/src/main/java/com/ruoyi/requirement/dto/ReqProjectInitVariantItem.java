@@ -1,5 +1,7 @@
 package com.ruoyi.requirement.dto;
 
+import java.util.Date;
+
 public class ReqProjectInitVariantItem
 {
     private Long variantId;
@@ -12,6 +14,13 @@ public class ReqProjectInitVariantItem
     private String baselineBranch;
     private String branchPolicy;
     private String mcpKey;
+    private Integer totalModules;
+    private Integer indexedModules;
+    private Integer manualModules;
+    private Integer indexedRepositoryCount;
+    private Integer unindexedRepositoryCount;
+    private Date latestIndexedAt;
+    private String latestCommit;
     private String description;
     private String status;
     private String remark;
@@ -36,6 +45,20 @@ public class ReqProjectInitVariantItem
     public void setBranchPolicy(String branchPolicy) { this.branchPolicy = branchPolicy; }
     public String getMcpKey() { return mcpKey; }
     public void setMcpKey(String mcpKey) { this.mcpKey = mcpKey; }
+    public Integer getTotalModules() { return totalModules; }
+    public void setTotalModules(Integer totalModules) { this.totalModules = totalModules; }
+    public Integer getIndexedModules() { return indexedModules; }
+    public void setIndexedModules(Integer indexedModules) { this.indexedModules = indexedModules; }
+    public Integer getManualModules() { return manualModules; }
+    public void setManualModules(Integer manualModules) { this.manualModules = manualModules; }
+    public Integer getIndexedRepositoryCount() { return indexedRepositoryCount; }
+    public void setIndexedRepositoryCount(Integer indexedRepositoryCount) { this.indexedRepositoryCount = indexedRepositoryCount; }
+    public Integer getUnindexedRepositoryCount() { return unindexedRepositoryCount; }
+    public void setUnindexedRepositoryCount(Integer unindexedRepositoryCount) { this.unindexedRepositoryCount = unindexedRepositoryCount; }
+    public Date getLatestIndexedAt() { return latestIndexedAt; }
+    public void setLatestIndexedAt(Date latestIndexedAt) { this.latestIndexedAt = latestIndexedAt; }
+    public String getLatestCommit() { return latestCommit; }
+    public void setLatestCommit(String latestCommit) { this.latestCommit = latestCommit; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public String getStatus() { return status; }

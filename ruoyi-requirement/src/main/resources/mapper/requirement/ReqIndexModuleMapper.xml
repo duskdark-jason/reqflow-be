@@ -38,7 +38,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <where>
             <if test="projectId != null">and project_id = #{projectId}</if>
             <if test="repoId != null">and repo_id = #{repoId}</if>
-            <if test="variantId != null">and (variant_id = #{variantId} or variant_id is null)</if>
+            <if test="variantId != null">and variant_id = #{variantId}</if>
             <if test="moduleCode != null and moduleCode != ''">and module_code = #{moduleCode}</if>
             <if test="moduleName != null and moduleName != ''">and module_name like concat('%', #{moduleName}, '%')</if>
             <if test="status != null and status != ''">and status = #{status}</if>
