@@ -8,7 +8,7 @@
 
 - 分支：`feature/REQ-20260610-003-project-tabs-ui`
 - 已合入：`feature/REQ-20260610-004-mcp-public-url-config` 的后端配置提交，当前无冲突
-- 提交：`e516a08`（feat: 增加项目初始化动作token）；本次补充提交待回填
+- 提交：`e516a08`（feat: 增加项目初始化动作token）、`7820ec4`（feat: 收束需求提交分支初始化校验）
 - Review 阶段：未授权，未写 Review 报告，未将 spec 切换为 complete
 
 ## 修改内容
