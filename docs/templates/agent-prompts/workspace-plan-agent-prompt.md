@@ -28,8 +28,10 @@
 - 两边都创建或更新 `docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/`。
 - Git 任务分支另行使用 ASCII，例如 `feature/REQ-YYYYMMDD-001-ascii-task`。
 - 两边 `meta.md` 互相写清流程模式、需求 Key、平台关联远端、平台目标分支、授权状态、companion 仓库和 spec 路径。
+- 两边 `meta.md` 都必须写清影响模块、模块知识库动作、模块知识库文档和无需更新原因。影响模块应对齐前端菜单目录、子菜单、隐藏页签或后端能力。
 - 后端验收 ID 使用 `AC-BE-001`；前端验收 ID 使用 `AC-FE-001`。
 - 后端计划先锁定接口、权限、数据库和响应结构；前端计划引用后端契约或 companion spec。
+- 如果涉及菜单、页面、接口、权限、核心流程或数据口径，计划必须要求更新 `docs/ai-harness/modules/*.md`；模块文档要记录子菜单名称、功能接口和涉及文件。
 
 完成输出：
 

@@ -23,6 +23,13 @@
 - `application.yml`、`RuoYiApplication.java`、`SwaggerConfig.java`、`banner.txt`：调整后端可见系统名称、启动输出、Swagger 标题和 banner。
 - `docs/ai-harness/**`、`docs/db/**`、`docs/domains/**`：同步动作 token、初始化指令、索引导入、需求提交收束和品牌边界契约。
 
+## 模块知识库沉淀
+
+- 影响模块：需求管理/项目管理、需求管理/项目接入中心、需求管理/分支知识库详情、需求管理/需求列表、需求管理/MCP 管理。
+- 模块知识库动作：更新。
+- 模块知识库文档：`docs/ai-harness/modules/requirement-platform.md`。
+- 无需更新原因：不适用。
+
 ## 验收覆盖
 
 | 验收项 | 结果 |

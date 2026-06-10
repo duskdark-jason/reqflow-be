@@ -17,7 +17,7 @@ ruoyi:
 reqflow:
   mcp:
     # MCP 对外访问完整地址；为空时按请求头 Host / X-Forwarded-Host 自动推导
-    public-url:
+    public-url: http://127.0.0.1:8080/requirement/mcp
 
 # 开发环境配置
 server:

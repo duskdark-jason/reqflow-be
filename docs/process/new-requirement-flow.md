@@ -12,6 +12,7 @@
 - 属于后端、前端、数据库、权限、AI、报表、导出、任务调度还是跨端联调。
 - 是否影响已有接口、字段、状态、权限或数据口径。
 - 是否影响用户可见页面、导出、历史记录或异步进度。
+- 是否影响已有菜单目录、子菜单、隐藏页签、功能模块或模块知识库。
 
 如果需求不清晰，先补充需求说明，不要直接改代码。
 
@@ -38,6 +39,15 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 ```
 
 可以从 `../templates/spec-meta-template.md`、`../templates/requirement-template.md`、`../templates/agent-plan-template.md`、`../templates/execution-report-template.md` 和 `../templates/review-report-template.md` 复制；模板选择见 `../templates/README.md`。
+
+`meta.md` 必须在计划阶段记录影响模块和模块知识库动作：
+
+- 影响模块：填写菜单目录、子菜单、隐藏页签或后端能力名称，多个用顿号分隔。
+- 模块知识库动作：填写 `新增`、`更新` 或 `无需更新`。
+- 模块知识库文档：填写预计维护的 `docs/ai-harness/modules/*.md` 路径；无需更新时写“无”。
+- 无需更新原因：模块知识库动作是 `无需更新` 时必须填写。
+
+如果需求涉及数据库、SQL、Mapper、join、聚合、统计口径或分页粒度，`requirement.md` 或 `plan.md` 必须写清数据库影响范围；实现完成后，`execution-report.md` 必须记录相关 `sql/` 脚本或 `docs/db/` 文档路径。现有 `sql/` 目录保留为可执行 SQL 和迁移脚本目录，`docs/db/` 只维护表结构字典、表关系和数据口径说明。
 
 以下情况必须沉淀需求文档：
 
@@ -66,7 +76,7 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 | 业务领域 | `../domains/【领域名】/README.md` |
 | 接口字段 | `../ai-harness/contracts/` |
 | 页面或交互 | `../ai-harness/modules/`、`../ai-harness/contracts/` |
-| 数据库或统计 | `../db/`，如果项目存在 |
+| 数据库或统计 | `../db/README.md`、`../db/table-dictionary.md`、`../db/relationship.md`，如果项目存在 |
 | 重要决策 | `../ai-harness/decisions/` |
 
 ## 5. 更新 harness
@@ -76,9 +86,14 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 - `ai-harness/modules/*.md`：模块业务、入口文件、不变量。
 - `ai-harness/contracts/*.md`：接口字段、结果结构、前后端约定或 UI 状态。
 - `ai-harness/decisions/*.md`：长期有效的业务或技术决策。
+- `db/README.md`、`db/table-dictionary.md` 和 `db/relationship.md`：数据库表、字段、索引、SQL、Mapper、join、统计口径、分页粒度或数据迁移。
 - `domains/*/README.md`：业务领域当前入口。
 
-如果变更会影响长期理解，先更新文档再编码。若无需更新，完成说明中写明原因。
+模块文档必须优先按前端菜单对齐，写清一级菜单、子菜单或隐藏页签、功能说明、前端文件、API 封装、后端接口、权限标识和后端核心文件。纯后端能力也要说明它服务哪个菜单、MCP 能力或后台流程。
+
+数据库变更必须优先复用 `../templates/db-change-template.md`，在当前 spec 目录落地数据库变更说明；DDL、DML、迁移、清理脚本优先沉淀到稳定 `sql/` 路径，不能只写在对话或临时命令里。新增或修改表、字段、索引或约束时更新 `docs/db/table-dictionary.md`；仅查询口径、Mapper 或统计逻辑变更时，也要在 `execution-report.md` 说明是否更新 `docs/db/relationship.md`，以及无需 SQL 脚本的原因。若当前项目没有确认表结构来源，数据库相关需求必须先补齐证据或把字典标为推断/待确认，不能凭字段名相似直接当作确认结构开发。
+
+如果变更会影响长期理解，先更新文档再编码。若无需更新，必须在 `meta.md` 填写 `模块知识库动作：无需更新` 和无需更新原因，并在完成说明中写明原因。
 
 ## 6. 编码实现
 
@@ -117,6 +132,8 @@ Review Agent 刚写完 `review-report.md`、尚未返修时，运行 `sh scripts
 - 需求说明是否需要从 `specs/active/` 移到 `specs/done/`。
 - 是否有长期有效结论要沉淀到 `ai-harness/` 或 `domains/`。
 - 是否有重要决策要写入 `ai-harness/decisions/`。
+- 是否涉及数据库、SQL、Mapper 或数据口径；如涉及，`execution-report.md` 必须记录 `sql/` 或 `docs/db/` 路径。
+- `execution-report.md` 是否记录模块知识库动作、更新的模块文档路径和无需更新原因。
 
 完成说明必须包含：
 

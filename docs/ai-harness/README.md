@@ -22,9 +22,9 @@
 |---|---|
 | 任意修改 | `harness-index.json`、`change-checklist.md`、`verification.md` |
 | 需求平台 Key、项目接入初始化或 MCP 回写 | `../process/platform-key-workflow.md` |
-| 业务模块 | `modules/【模块名】.md` |
+| 业务模块、菜单或页面 | `modules/【菜单目录或模块名】.md` |
 | 接口、结果结构、UI 状态 | `contracts/【契约名】.md` |
-| 数据库、SQL、统计口径 | `../db/`，如果项目存在 |
+| 数据库、SQL、统计口径 | `../db/README.md`、`../db/table-dictionary.md`、`../db/relationship.md`，如果项目存在 |
 | 重要业务或技术决策 | `decisions/*.md` |
 
 ## 维护规则
@@ -37,5 +37,11 @@
 - 权限、菜单、路由或按钮行为。
 - 新模块、新页面、新报表、新导出或新异步工作流。
 - 构建、测试、联调或验收方式。
+
+模块文档必须尽量对齐前端菜单结构，写清一级菜单、子菜单或隐藏页签、用户动作、前端文件、API 封装、后端接口、权限标识和核心后端文件。纯后端能力也要说明它服务哪个菜单、MCP 能力或后台流程。
+
+项目接入初始化时，不能只保留 `modules/.gitkeep`；必须至少落地一个非模板模块文档，初始内容可以是菜单映射骨架，但必须包含当前项目的主菜单或主能力入口。
+
+如果项目存在 `docs/db/`，该目录必须至少包含 `README.md`、`table-dictionary.md` 和 `relationship.md`。现有 `sql/` 目录保留为可执行 SQL、迁移脚本和历史基线目录，不迁移到 `docs/db/`；`docs/db/` 只维护表结构字典、表关系、数据粒度和口径说明。数据库相关需求必须先读 `docs/db/README.md`，涉及表、字段、索引或约束时更新 `table-dictionary.md`；涉及 DDL、DML、迁移、清理 SQL、Mapper、join、聚合、统计口径或分页粒度时，同步更新 `relationship.md` 或在执行报告写明无需更新原因；完成态执行报告必须记录相关 `sql/` 或 `docs/db/` 路径。
 
 如果判断无需更新 harness，请在完成说明中写明原因。

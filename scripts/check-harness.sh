@@ -165,6 +165,10 @@ check_spec_meta() {
   check_pattern "$meta_file" 'Review 授权[：:][[:space:]]*(未授权|已授权|不适用)' "需求元信息缺少有效 Review 授权"
   check_pattern "$meta_file" '当前分支[：:]' "需求元信息缺少当前分支"
   check_pattern "$meta_file" 'companion 仓库[：:]' "需求元信息缺少 companion 仓库"
+  check_pattern "$meta_file" '影响模块[：:]' "需求元信息缺少影响模块"
+  check_pattern "$meta_file" '模块知识库动作[：:][[:space:]]*(新增|更新|无需更新)' "需求元信息缺少有效模块知识库动作"
+  check_pattern "$meta_file" '模块知识库文档[：:]' "需求元信息缺少模块知识库文档"
+  check_pattern "$meta_file" '无需更新原因[：:]' "需求元信息缺少模块知识库无需更新原因"
 }
 
 extract_spec_status() {
@@ -361,6 +365,72 @@ check_task_branch_commit_record() {
   fi
 }
 
+check_module_knowledge_record() {
+  spec_dir=$1
+  meta_file="$spec_dir/meta.md"
+  execution_file="$spec_dir/execution-report.md"
+
+  [ -f "$meta_file" ] || return
+
+  status=$(extract_spec_status "$meta_file")
+  action=$(extract_meta_field "$meta_file" "模块知识库动作")
+  module_docs_value=$(extract_meta_field "$meta_file" "模块知识库文档")
+  no_update_reason=$(extract_meta_field "$meta_file" "无需更新原因")
+
+  case "$action" in
+    新增|更新)
+      if ! printf '%s\n' "$module_docs_value" | grep -E 'docs/ai-harness/modules/[^[:space:]，,`]+\.md' >/dev/null 2>&1; then
+        fail "模块知识库动作为 $action 时必须在 meta.md 记录 docs/ai-harness/modules/*.md：$meta_file"
+      fi
+
+      module_doc_paths=$(printf '%s\n' "$module_docs_value" | grep -Eo 'docs/ai-harness/modules/[^[:space:]，,`]+\.md' || true)
+      for module_doc_path in $module_doc_paths; do
+        if [ ! -f "$REPO_ROOT/$module_doc_path" ]; then
+          fail "模块知识库文档不存在：$module_doc_path"
+        fi
+      done
+
+      if [ "$MODE" = "complete" ]; then
+        case "$status" in
+          review|repairing|complete)
+          if [ -f "$execution_file" ] &&
+             ! grep -E 'docs/ai-harness/modules/[^[:space:]，,`]+\.md' "$execution_file" >/dev/null 2>&1; then
+            fail "模块知识库动作为 $action 时执行报告必须记录模块文档路径：$execution_file"
+          fi
+            ;;
+        esac
+      fi
+      ;;
+    无需更新)
+      if [ -z "$no_update_reason" ]; then
+        fail "模块知识库动作为无需更新时必须记录具体原因：$meta_file"
+      fi
+      ;;
+  esac
+}
+
+spec_mentions_db_change() {
+  spec_dir=$1
+  requirement_file="$spec_dir/requirement.md"
+  plan_file="$spec_dir/plan.md"
+
+  grep -E '(数据库/SQL[：:][[:space:]]*是|新增.*(数据库|数据表|表结构|表字段|索引|约束|SQL)|修改.*(数据库|数据表|表结构|表字段|索引|约束|SQL|join|JOIN|聚合|统计口径|分页粒度|Mapper|MyBatis)|数据迁移|数据清理|DDL|DML|库表|表关系|Mapper XML|MyBatis|sql/|docs/db/)' "$requirement_file" "$plan_file" >/dev/null 2>&1
+}
+
+check_db_change_record() {
+  spec_dir=$1
+  execution_file="$spec_dir/execution-report.md"
+
+  [ "$MODE" = "complete" ] || return
+  [ -d "$REPO_ROOT/docs/db" ] || return
+  [ -f "$execution_file" ] || return
+  spec_mentions_db_change "$spec_dir" || return
+
+  if ! grep -E '(sql/|docs/db/)' "$execution_file" >/dev/null 2>&1; then
+    fail "需求涉及数据库变更、SQL、Mapper 或数据口径时，execution-report.md 必须记录 sql/ 或 docs/db/ 路径：$execution_file"
+  fi
+}
+
 check_one_spec() {
   spec_dir=$1
 
@@ -377,6 +447,9 @@ check_one_spec() {
     check_pattern "$spec_dir/execution-report.md" '命令|未开始|未执行' "执行报告缺少命令或状态说明"
     check_task_branch_commit_record "$spec_dir"
   fi
+
+  check_module_knowledge_record "$spec_dir"
+  check_db_change_record "$spec_dir"
 
   if [ -f "$spec_dir/review-report.md" ] && [ ! -f "$spec_dir/execution-report.md" ]; then
     fail "存在 Review 报告但缺少执行报告：$spec_dir/execution-report.md"
@@ -498,12 +571,22 @@ check_required_docs() {
     if grep -E '"role"[[:space:]]*:[[:space:]]*"(unknown)?"' "$index_file" >/dev/null 2>&1; then
       fail "harness 索引缺少有效仓库角色：$index_file"
     fi
+    module_doc=$(find "$REPO_ROOT/docs/ai-harness/modules" -maxdepth 1 -type f -name '*.md' -print 2>/dev/null | head -n 1)
+    if [ -z "$module_doc" ]; then
+      fail "项目 harness 初始化必须至少包含一个模块知识库文档：$REPO_ROOT/docs/ai-harness/modules/*.md"
+    fi
   fi
 
   if [ ! -f "$REPO_ROOT/docs/runbooks/local-run.md" ] &&
      [ ! -f "$REPO_ROOT/docs/runbooks/local-run.detected.md" ] &&
      [ ! -f "$REPO_ROOT/docs/runbooks/local-run-template.md" ]; then
     fail "缺少运行手册或运行手册模板：$REPO_ROOT/docs/runbooks/"
+  fi
+
+  if [ -d "$REPO_ROOT/docs/db" ]; then
+    check_file "$REPO_ROOT/docs/db/README.md"
+    check_file "$REPO_ROOT/docs/db/table-dictionary.md"
+    check_file "$REPO_ROOT/docs/db/relationship.md"
   fi
 }
 

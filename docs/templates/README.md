@@ -19,6 +19,9 @@
 | 模板 | 使用场景 |
 |---|---|
 | `db-change-template.md` | 新增 DDL、字段、索引或迁移脚本 |
+| `db-readme-template.md` | 项目初始化时生成 `docs/db/README.md` |
+| `db-table-dictionary-template.md` | 项目初始化时生成 `docs/db/table-dictionary.md` |
+| `db-relationship-template.md` | 项目初始化时生成 `docs/db/relationship.md` |
 | `e2e-smoke-template.md` | 可选沉淀 Playwright smoke 流程 |
 
 ## 辅助或旧版模板

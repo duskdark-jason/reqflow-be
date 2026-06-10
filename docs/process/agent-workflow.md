@@ -25,6 +25,8 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 - 输出 `requirement.md` 和 `plan.md`。
 - 用户选择方案、确认方向或同意建议时，只代表允许进入计划阶段；不得自动切换到执行阶段。
 - `plan.md` 必须足够明确，执行 agent 不需要再决定需求范围、接口字段、数据口径或验收标准。
+- `meta.md` 必须记录影响模块和模块知识库动作；影响模块应对齐前端菜单目录、子菜单、隐藏页签或后端能力。
+- 如果计划涉及菜单、页面、接口、权限、核心流程或数据口径，必须在 `plan.md` 中安排更新 `docs/ai-harness/modules/*.md`。
 - 如果存在不确定项，必须在计划阶段标记为阻断或假设，不能让执行阶段自行猜测。
 - Plan Agent 写完 `requirement.md` 和 `plan.md` 后必须停止，等待明确执行授权；不得修改业务代码、写 `execution-report.md` 或写 `review-report.md`。
 
@@ -35,6 +37,7 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 - 不自行扩展需求范围，不新增计划外接口、字段、依赖或架构。
 - 如果发现计划缺失、冲突或无法执行，停止并在 `execution-report.md` 写明阻断点。
 - 完成后写 `execution-report.md`，包含修改文件、验证命令、结果、未验证风险和与计划的偏差。
+- 完成后必须在 `execution-report.md` 记录模块知识库动作、模块文档路径和无需更新原因；新增或更新动作必须对应实际 `docs/ai-harness/modules/*.md` 文件。
 - L3 失败或跳过，或已选择 L4 但失败/跳过时，必须记录启动命令、执行目录、profile/env 或 mode、检查命令、错误摘要和补验环境；不得把当前 agent 环境问题写成用户环境问题。
 - Review Agent 产生 `RF-001` 形式的返修项后，执行 agent 必须按相同修复 ID 在 `execution-report.md` 的 `Review 返修记录` 中回填处理结果、修改文件和验证命令。
 - Execution Agent 不得把自己的实现直接写成 Review 完成，不得代替 Review Agent 输出 `review-report.md`。
@@ -68,12 +71,14 @@ draft requirement -> selected option -> approved plan -> execution authorized ->
 
 - `requirement.md` 未清楚前，不进入实现。
 - `plan.md` 未包含验收和验证前，不进入实现。
-- `meta.md` 必须记录当前状态、当前角色、执行模式、当前分支、执行授权、Review 授权和 companion 仓库；阶段变化时同步更新。
+- `meta.md` 必须记录当前状态、当前角色、执行模式、当前分支、执行授权、Review 授权、companion 仓库、影响模块、模块知识库动作、模块知识库文档和无需更新原因；阶段变化时同步更新。
 - `meta.md` 状态必须和文件阶段匹配：`planning` 不应已有执行或 Review 报告，`review` / `repairing` / `complete` 必须已有执行和 Review 报告。
 - `meta.md` 当前角色必须和状态匹配：`planning` 对应 Plan Agent，`executing` / `repairing` 对应 Execution Agent，`review` 对应 Review Agent；人工或用户接管时可写 `人工` / `用户`。
 - `executing` / `repairing` / `complete` 必须有 `执行授权：已授权`；`review` / `complete` 必须有 `Review 授权：已授权`。
 - `executing` / `repairing` / `complete` 必须使用任务分支模式，当前分支不得是 `main` 或 `master`。
 - `execution-report.md` 未列出验证证据前，不进入 review。
+- 模块知识库动作是 `新增` 或 `更新` 时，完成态前必须在 `execution-report.md` 记录 `docs/ai-harness/modules/*.md` 路径。
+- 模块知识库动作是 `无需更新` 时，完成态前必须在 `meta.md` 或 `execution-report.md` 说明原因。
 - `requirement.md` 中每个 `AC-*` 必须在 `plan.md`、`execution-report.md` 和 `review-report.md` 中形成闭环。
 - `review-report.md` 为 `阻断` 时，必须通过 `返修交接清单` 指向计划或执行阶段。
 - `review-report.md` 存在 `RF-*` 返修项时，执行 agent 必须在 `execution-report.md` 回填同 ID 的 `Review 返修记录`，再进入复审。
