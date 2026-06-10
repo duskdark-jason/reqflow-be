@@ -451,6 +451,39 @@ class ReqProjectInitServiceImplTest
         assertEquals(0, response.getModuleSummary().getIndexedModules());
     }
 
+    @Test
+    void keepsProjectInitUsableWhenActionTokenTableIsMissing()
+    {
+        ReqProjectMapper projectMapper = mock(ReqProjectMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqModuleMapper moduleMapper = mock(ReqModuleMapper.class);
+        ReqIndexModuleMapper indexModuleMapper = mock(ReqIndexModuleMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqProjectInitServiceImpl service = newService(projectMapper, repositoryMapper, variantMapper,
+                moduleMapper, indexModuleMapper, batchMapper, actionTokenService);
+
+        when(projectMapper.selectReqProjectByProjectId(10L)).thenReturn(project(10L));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L, "BACKEND")));
+        when(variantMapper.selectReqVariantList(any())).thenReturn(Collections.singletonList(variant(31L)));
+        when(moduleMapper.selectReqModuleList(any())).thenReturn(Collections.emptyList());
+        when(indexModuleMapper.selectReqIndexModuleList(any())).thenReturn(Collections.emptyList());
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.emptyList());
+        when(actionTokenService.createProjectInitInstruction(any(), any(), any())).thenThrow(new BadSqlGrammarException(
+                "selectReqActionTokenByTokenHash",
+                "select * from req_action_token",
+                new SQLException("Table 'ry-vue.req_action_token' doesn't exist", "42S02")));
+
+        ReqProjectInitResponse response = service.selectProjectInit(10L);
+
+        ReqProjectInitVariantItem branch = response.getVariants().get(0);
+        assertNotNull(branch.getInitInstruction());
+        assertEquals(IReqActionTokenService.ACTION_PROJECT_INIT, branch.getInitInstruction().getActionType());
+        assertTrue(branch.getInitInstruction().getContent().contains("mcpKey: REQFLOW:MAIN"));
+        assertTrue(branch.getInitInstruction().getContent().contains("req_platform_req003_action_token.sql"));
+    }
+
     private ReqProjectInitServiceImpl newService(ReqProjectMapper projectMapper, ReqRepositoryMapper repositoryMapper,
             ReqVariantMapper variantMapper, ReqModuleMapper moduleMapper, ReqIndexModuleMapper indexModuleMapper,
             ReqRepositoryIndexBatchMapper batchMapper)
