@@ -13,6 +13,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -49,12 +50,10 @@ class ReqMcpUserKeyServiceImplTest
 
         assertNotNull(result.getPlainKey());
         assertTrue(result.getPlainKey().startsWith("reqflow_mcp_"));
-        assertEquals("X-MCP-Key", result.getHeaderName());
-        assertTrue(result.getCodexConfig().contains(result.getPlainKey()));
-        assertNotNull(result.getCodexGlobalSkillPackage());
-        assertEquals("reqflow-mcp", result.getCodexGlobalSkillPackage().get("skillName"));
-        assertEquals("global", result.getCodexGlobalSkillPackage().get("installScope"));
-        assertPackageDoesNotContainPlainKey(result.getCodexGlobalSkillPackage(), result.getPlainKey());
+        assertNoCreateResultAccessor("getMcpAddress");
+        assertNoCreateResultAccessor("getHeaderName");
+        assertNoCreateResultAccessor("getCodexConfig");
+        assertNoCreateResultAccessor("getCodexGlobalSkillPackage");
         assertNotNull(result.getCodexSetupPackage());
         assertEquals("reqflow-codex-setup", result.getCodexSetupPackage().get("packageName"));
         assertEquals("global", result.getCodexSetupPackage().get("installScope"));
@@ -242,6 +241,14 @@ class ReqMcpUserKeyServiceImplTest
         assertFalse(packageText.contains(plainKey), packageText);
         assertFalse(packageText.contains("mkdir -p"), packageText);
         assertFalse(packageText.contains("$HOME/.codex"), packageText);
+    }
+
+    private void assertNoCreateResultAccessor(String methodName)
+    {
+        boolean exists = Arrays.stream(ReqMcpUserKeyCreateResult.class.getMethods())
+                .map(Method::getName)
+                .anyMatch(methodName::equals);
+        assertFalse(exists, methodName + " should not be exposed");
     }
 
     private SysUser enabledUser(Long userId, String userName)

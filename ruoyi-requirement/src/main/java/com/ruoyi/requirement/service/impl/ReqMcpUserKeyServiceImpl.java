@@ -25,7 +25,6 @@ import com.ruoyi.requirement.dto.ReqMcpUserKeyCreateResult;
 import com.ruoyi.requirement.dto.ReqMcpUserOption;
 import com.ruoyi.requirement.mapper.ReqMcpUserKeyMapper;
 import com.ruoyi.requirement.service.IReqMcpUserKeyService;
-import com.ruoyi.requirement.template.ReqflowCodexGlobalSkillTemplate;
 import com.ruoyi.requirement.template.ReqflowCodexSetupPackageTemplate;
 import com.ruoyi.system.service.ISysMenuService;
 import com.ruoyi.system.service.ISysUserService;
@@ -276,31 +275,8 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
         ReqMcpUserKeyCreateResult result = new ReqMcpUserKeyCreateResult();
         result.setKey(key);
         result.setPlainKey(plainKey);
-        result.setMcpAddress(mcpAddress);
-        result.setHeaderName(MCP_KEY_HEADER);
-        result.setCodexConfig(codexConfig(mcpAddress, plainKey));
-        result.setCodexGlobalSkillPackage(ReqflowCodexGlobalSkillTemplate.globalSkillPackage());
         result.setCodexSetupPackage(ReqflowCodexSetupPackageTemplate.setupPackage(mcpAddress));
         return result;
-    }
-
-    private String codexConfig(String mcpAddress, String plainKey)
-    {
-        return "{\n"
-                + "  \"mcpServers\": {\n"
-                + "    \"reqflow\": {\n"
-                + "      \"url\": \"" + escapeJson(mcpAddress) + "\",\n"
-                + "      \"headers\": {\n"
-                + "        \"" + MCP_KEY_HEADER + "\": \"" + escapeJson(plainKey) + "\"\n"
-                + "      }\n"
-                + "    }\n"
-                + "  }\n"
-                + "}";
-    }
-
-    private String escapeJson(String value)
-    {
-        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private static class GeneratedKey

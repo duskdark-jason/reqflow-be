@@ -197,7 +197,6 @@ requirement_develop
 | 路径 | 方法 | 权限 | 说明 |
 |---|---|---|---|
 | `/requirement/mcp/key/list` | GET | `req:mcp:key:list` | 分页查询人员 MCP Key，列表只返回 Key 前缀和绑定人员，不返回明文或哈希 |
-| `/requirement/mcp/key/config` | GET | `req:mcp:key:list`、`req:mcp:key:add` 或 `req:mcp:key:edit` | 查询 MCP 地址、请求头名、Codex 配置模板、全局 skill 包和 Codex 安装指令包 |
 | `/requirement/mcp/key/user-options` | GET | `req:mcp:key:list`、`req:mcp:key:add` 或 `req:mcp:key:edit` | 查询 MCP Key 可绑定的启用用户，只返回 `userId`、`userName`、`nickName`，不依赖 `system:user:list` |
 | `/requirement/mcp/key/{keyId}` | GET | `req:mcp:key:query` | 查询单个人员 MCP Key |
 | `/requirement/mcp/key` | POST | `req:mcp:key:add` | 为启用用户创建随机唯一 MCP Key，明文只在本次响应返回 |
@@ -207,11 +206,11 @@ requirement_develop
 
 人员 Key 使用 `req_mcp_user_key` 表保存，服务端只落库 SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。前端和列表接口不得展示 `keyHash`，明文 `plainKey` 只允许在创建和重置响应中出现一次；创建和重置接口的操作日志必须关闭响应保存，避免明文 Key 进入 `sys_oper_log`。
 
-`/requirement/mcp/key/config` 返回的 `mcpAddress` 与 `codexConfigTemplate.url` 优先读取后端配置项 `reqflow.mcp.public-url`。该配置项应填写完整 MCP 对外访问地址，例如 `https://reqflow.example.com/requirement/mcp`；为空时服务端才按 `X-Forwarded-Proto`、`X-Forwarded-Host`、`Host` 和 `context-path` 自动推导地址。部署在反向代理、HTTPS、非默认端口或非本机访问场景时，建议显式配置 `reqflow.mcp.public-url`，避免页面展示 `localhost` 或临时代理端口。
+`/requirement/mcp/key/config` 已删除，MCP 管理页不再常驻展示 MCP 地址、请求头名、Codex 配置模板、全局 skill 包或 Codex 安装指令包。
 
-`/requirement/mcp/key/config`、创建 Key 和重置 Key 响应均返回 `codexGlobalSkillPackage`。该字段是跨平台全局 Codex skill 包，不是单一操作系统安装命令；内容包含 `skillName=reqflow-mcp`、`installScope=global`、`installInstructions` 和 `files[]`。`files[]` 至少包含 `reqflow-mcp/SKILL.md`，其 frontmatter 必须有 `name` 和 `description`，触发条件覆盖 `actionToken`、`mcpServer: reqflow`、`mcpTool: reqflow.publish_repository_index`、`publish_repository_index` 和 `get_harness_template`。平台只返回包内容，不远程写用户本机文件；Codex 应按自身当前 skill 规范决定全局 skills 目录、创建或更新策略。
+创建 Key 和重置 Key 响应只单独返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 是一次性明文；`codexSetupPackage` 是推荐复制给 Codex 的安装指令包，包含 `packageName=reqflow-codex-setup`、`installScope=global`、`mcpServer`、`codexConfigTemplate`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。安装指令包不得包含人员明文 Key 或一次性 `actionToken`，配置完成后不得自动调用 `publish_repository_index` 或其他工具。
 
-`/requirement/mcp/key/config`、创建 Key 和重置 Key 响应均返回 `codexSetupPackage`。该字段是推荐复制给 Codex 的安装指令包，包含 `packageName=reqflow-codex-setup`、`installScope=global`、`mcpServer`、`codexConfigTemplate`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。安装指令包不得包含人员明文 Key 或一次性 `actionToken`，配置完成后不得自动调用 `publish_repository_index` 或其他工具。
+`codexSetupPackage` 内的 MCP 地址优先读取后端配置项 `reqflow.mcp.public-url`。该配置项应填写完整 MCP 对外访问地址，例如 `https://reqflow.example.com/requirement/mcp`；为空时服务端才按 `X-Forwarded-Proto`、`X-Forwarded-Host`、`Host` 和 `context-path` 自动推导地址。部署在反向代理、HTTPS、非默认端口或非本机访问场景时，建议显式配置 `reqflow.mcp.public-url`，避免安装包包含 `localhost` 或临时代理端口。
 
 MCP 管理菜单权限独立于需求提交权限。提需求人员角色默认不分配 `req:mcp:key:*`，管理员或平台维护人员可通过该菜单为开发人员、管理员等已启用且未删除用户创建 Key。Key 鉴权后使用绑定用户的当前菜单权限集合；绑定用户停用或删除后，即使 Key 本身仍为启用状态也必须拒绝鉴权。即使 Key 有效，调用 MCP 工具仍受 `req:package:save`、`req:index:import`、`req:project:query` 等权限限制。
 

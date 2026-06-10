@@ -1,8 +1,6 @@
 package com.ruoyi.web.controller.requirement;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,9 +21,6 @@ import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
 import com.ruoyi.requirement.service.IReqMcpUserKeyService;
-import com.ruoyi.requirement.service.impl.ReqMcpUserKeyServiceImpl;
-import com.ruoyi.requirement.template.ReqflowCodexGlobalSkillTemplate;
-import com.ruoyi.requirement.template.ReqflowCodexSetupPackageTemplate;
 
 /**
  * MCP人员Key管理Controller
@@ -47,20 +42,6 @@ public class ReqMcpKeyController extends BaseController
         startPage();
         List<ReqMcpUserKey> list = reqMcpUserKeyService.selectReqMcpUserKeyList(reqMcpUserKey);
         return getDataTable(list);
-    }
-
-    @PreAuthorize("@ss.hasAnyPermi('req:mcp:key:list,req:mcp:key:add,req:mcp:key:edit')")
-    @GetMapping("/config")
-    public AjaxResult config(HttpServletRequest request)
-    {
-        String mcpAddress = mcpAddress(request);
-        Map<String, Object> data = new HashMap<>();
-        data.put("mcpAddress", mcpAddress);
-        data.put("headerName", ReqMcpUserKeyServiceImpl.MCP_KEY_HEADER);
-        data.put("codexConfigTemplate", codexConfigTemplate(mcpAddress));
-        data.put("codexGlobalSkillPackage", ReqflowCodexGlobalSkillTemplate.globalSkillPackage());
-        data.put("codexSetupPackage", ReqflowCodexSetupPackageTemplate.setupPackage(mcpAddress));
-        return success(data);
     }
 
     @PreAuthorize("@ss.hasAnyPermi('req:mcp:key:list,req:mcp:key:add,req:mcp:key:edit')")
@@ -147,8 +128,4 @@ public class ReqMcpKeyController extends BaseController
         return ("http".equalsIgnoreCase(scheme) && port == 80) || ("https".equalsIgnoreCase(scheme) && port == 443);
     }
 
-    private String codexConfigTemplate(String mcpAddress)
-    {
-        return ReqflowCodexSetupPackageTemplate.codexConfigTemplate(mcpAddress);
-    }
 }

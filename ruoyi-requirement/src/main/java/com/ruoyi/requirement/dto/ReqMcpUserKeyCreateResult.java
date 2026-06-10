@@ -12,14 +12,6 @@ public class ReqMcpUserKeyCreateResult
 
     private String plainKey;
 
-    private String mcpAddress;
-
-    private String headerName;
-
-    private String codexConfig;
-
-    private Map<String, Object> codexGlobalSkillPackage;
-
     private Map<String, Object> codexSetupPackage;
 
     public ReqMcpUserKey getKey()
@@ -40,46 +32,6 @@ public class ReqMcpUserKeyCreateResult
     public void setPlainKey(String plainKey)
     {
         this.plainKey = plainKey;
-    }
-
-    public String getMcpAddress()
-    {
-        return mcpAddress;
-    }
-
-    public void setMcpAddress(String mcpAddress)
-    {
-        this.mcpAddress = mcpAddress;
-    }
-
-    public String getHeaderName()
-    {
-        return headerName;
-    }
-
-    public void setHeaderName(String headerName)
-    {
-        this.headerName = headerName;
-    }
-
-    public String getCodexConfig()
-    {
-        return codexConfig;
-    }
-
-    public void setCodexConfig(String codexConfig)
-    {
-        this.codexConfig = codexConfig;
-    }
-
-    public Map<String, Object> getCodexGlobalSkillPackage()
-    {
-        return codexGlobalSkillPackage;
-    }
-
-    public void setCodexGlobalSkillPackage(Map<String, Object> codexGlobalSkillPackage)
-    {
-        this.codexGlobalSkillPackage = codexGlobalSkillPackage;
     }
 
     public Map<String, Object> getCodexSetupPackage()
