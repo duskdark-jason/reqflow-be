@@ -8,10 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -21,6 +24,7 @@ import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
 import com.ruoyi.requirement.dto.ReqMcpUserKeyCreateResult;
+import com.ruoyi.requirement.dto.ReqMcpUserOption;
 import com.ruoyi.requirement.mapper.ReqMcpUserKeyMapper;
 import com.ruoyi.system.service.ISysMenuService;
 import com.ruoyi.system.service.ISysUserService;
@@ -73,6 +77,76 @@ class ReqMcpUserKeyServiceImplTest
         request.setKeyName("停用人员");
 
         assertThrows(ServiceException.class, () -> service.createKey(request, "admin", "http://localhost:8080/requirement/mcp"));
+    }
+
+    @Test
+    void rejectsDeletedUserWhenAuthenticatingKey()
+    {
+        ReqMcpUserKeyMapper mapper = mock(ReqMcpUserKeyMapper.class);
+        ISysUserService userService = mock(ISysUserService.class);
+        ReqMcpUserKeyServiceImpl service = newService(mapper, userService, mock(ISysMenuService.class));
+
+        String plainKey = "reqflow_mcp_deleted_user_key";
+        ReqMcpUserKey stored = new ReqMcpUserKey();
+        stored.setKeyId(102L);
+        stored.setUserId(14L);
+        stored.setKeyHash(service.hashKeyForTest(plainKey));
+        stored.setStatus("0");
+        SysUser deleted = enabledUser(14L, "deleted_user");
+        deleted.setDelFlag("2");
+        when(mapper.selectReqMcpUserKeyByKeyHash(stored.getKeyHash())).thenReturn(stored);
+        when(userService.selectUserById(14L)).thenReturn(deleted);
+
+        assertThrows(ServiceException.class, () -> service.authenticate(plainKey, "127.0.0.1"));
+        verify(mapper, never()).updateLastUsed(102L, "127.0.0.1");
+    }
+
+    @Test
+    void rejectsUserRebindWhenUpdatingKey()
+    {
+        ReqMcpUserKeyMapper mapper = mock(ReqMcpUserKeyMapper.class);
+        ISysUserService userService = mock(ISysUserService.class);
+        ReqMcpUserKeyServiceImpl service = newService(mapper, userService, mock(ISysMenuService.class));
+
+        ReqMcpUserKey exists = new ReqMcpUserKey();
+        exists.setKeyId(99L);
+        exists.setUserId(12L);
+        exists.setKeyName("开发人员Codex");
+        exists.setStatus("0");
+        when(mapper.selectReqMcpUserKeyByKeyId(99L)).thenReturn(exists);
+
+        ReqMcpUserKey update = new ReqMcpUserKey();
+        update.setKeyId(99L);
+        update.setUserId(13L);
+        update.setKeyName("换绑尝试");
+        update.setStatus("0");
+        when(userService.selectUserById(13L)).thenReturn(enabledUser(13L, "other_user"));
+
+        assertThrows(ServiceException.class, () -> service.updateReqMcpUserKey(update));
+        verify(mapper, never()).updateReqMcpUserKey(any());
+    }
+
+    @Test
+    void selectsOnlyEnabledNotDeletedUserOptions()
+    {
+        ISysUserService userService = mock(ISysUserService.class);
+        ReqMcpUserKeyServiceImpl service = newService(mock(ReqMcpUserKeyMapper.class), userService, mock(ISysMenuService.class));
+        SysUser enabled = enabledUser(12L, "developer");
+        SysUser disabled = enabledUser(13L, "disabled");
+        disabled.setStatus("1");
+        SysUser deleted = enabledUser(14L, "deleted");
+        deleted.setDelFlag("2");
+        when(userService.selectUserList(any(SysUser.class))).thenReturn(Arrays.asList(enabled, disabled, deleted));
+
+        List<ReqMcpUserOption> options = service.selectUserOptions("dev");
+
+        assertEquals(1, options.size());
+        assertEquals(12L, options.get(0).getUserId());
+        assertEquals("developer", options.get(0).getUserName());
+        ArgumentCaptor<SysUser> queryCaptor = forClass(SysUser.class);
+        verify(userService).selectUserList(queryCaptor.capture());
+        assertEquals("dev", queryCaptor.getValue().getUserName());
+        assertEquals("0", queryCaptor.getValue().getStatus());
     }
 
     @Test

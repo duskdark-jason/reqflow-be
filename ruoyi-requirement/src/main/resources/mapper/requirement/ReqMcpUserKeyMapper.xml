@@ -90,7 +90,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <update id="updateReqMcpUserKey" parameterType="ReqMcpUserKey">
         update req_mcp_user_key
         <set>
-            <if test="userId != null">user_id = #{userId},</if>
             <if test="keyName != null and keyName != ''">key_name = #{keyName},</if>
             <if test="keyPrefix != null and keyPrefix != ''">key_prefix = #{keyPrefix},</if>
             <if test="keyHash != null and keyHash != ''">key_hash = #{keyHash},</if>

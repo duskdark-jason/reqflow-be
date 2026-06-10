@@ -153,15 +153,16 @@ harness_init_result
 |---|---|---|---|
 | `/requirement/mcp/key/list` | GET | `req:mcp:key:list` | 分页查询人员 MCP Key，列表只返回 Key 前缀和绑定人员，不返回明文或哈希 |
 | `/requirement/mcp/key/config` | GET | `req:mcp:key:list`、`req:mcp:key:add` 或 `req:mcp:key:edit` | 查询 MCP 地址、请求头名和 Codex 配置模板 |
+| `/requirement/mcp/key/user-options` | GET | `req:mcp:key:list`、`req:mcp:key:add` 或 `req:mcp:key:edit` | 查询 MCP Key 可绑定的启用用户，只返回 `userId`、`userName`、`nickName`，不依赖 `system:user:list` |
 | `/requirement/mcp/key/{keyId}` | GET | `req:mcp:key:query` | 查询单个人员 MCP Key |
 | `/requirement/mcp/key` | POST | `req:mcp:key:add` | 为启用用户创建随机唯一 MCP Key，明文只在本次响应返回 |
-| `/requirement/mcp/key` | PUT | `req:mcp:key:edit` | 修改 Key 名称、状态和备注；停用后不能继续用于 MCP 鉴权 |
+| `/requirement/mcp/key` | PUT | `req:mcp:key:edit` | 修改 Key 名称、状态和备注；不允许变更绑定用户，停用后不能继续用于 MCP 鉴权 |
 | `/requirement/mcp/key/{keyId}/regenerate` | POST | `req:mcp:key:edit` | 重置 Key 并返回一次性明文，旧 Key 立即失效 |
 | `/requirement/mcp/key/{keyIds}` | DELETE | `req:mcp:key:remove` | 删除一个或多个人员 MCP Key |
 
-人员 Key 使用 `req_mcp_user_key` 表保存，服务端只落库 SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。前端和列表接口不得展示 `keyHash`，明文 `plainKey` 只允许在创建和重置响应中出现一次。
+人员 Key 使用 `req_mcp_user_key` 表保存，服务端只落库 SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。前端和列表接口不得展示 `keyHash`，明文 `plainKey` 只允许在创建和重置响应中出现一次；创建和重置接口的操作日志必须关闭响应保存，避免明文 Key 进入 `sys_oper_log`。
 
-MCP 管理菜单权限独立于需求提交权限。提需求人员角色默认不分配 `req:mcp:key:*`，管理员或平台维护人员可通过该菜单为开发人员、管理员等已启用用户创建 Key。Key 鉴权后使用绑定用户的当前菜单权限集合，因此即使 Key 有效，调用 MCP 工具仍受 `req:package:save`、`req:index:import`、`req:project:query` 等权限限制。
+MCP 管理菜单权限独立于需求提交权限。提需求人员角色默认不分配 `req:mcp:key:*`，管理员或平台维护人员可通过该菜单为开发人员、管理员等已启用且未删除用户创建 Key。Key 鉴权后使用绑定用户的当前菜单权限集合；绑定用户停用或删除后，即使 Key 本身仍为启用状态也必须拒绝鉴权。即使 Key 有效，调用 MCP 工具仍受 `req:package:save`、`req:index:import`、`req:project:query` 等权限限制。
 
 ## MCP 接口
 

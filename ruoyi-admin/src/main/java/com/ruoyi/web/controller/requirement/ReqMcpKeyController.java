@@ -54,6 +54,13 @@ public class ReqMcpKeyController extends BaseController
         return success(data);
     }
 
+    @PreAuthorize("@ss.hasAnyPermi('req:mcp:key:list,req:mcp:key:add,req:mcp:key:edit')")
+    @GetMapping("/user-options")
+    public AjaxResult userOptions(String userName)
+    {
+        return success(reqMcpUserKeyService.selectUserOptions(userName));
+    }
+
     @PreAuthorize("@ss.hasPermi('req:mcp:key:query')")
     @GetMapping(value = "/{keyId}")
     public AjaxResult getInfo(@PathVariable("keyId") Long keyId)
@@ -62,7 +69,7 @@ public class ReqMcpKeyController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('req:mcp:key:add')")
-    @Log(title = "MCP人员Key", businessType = BusinessType.INSERT)
+    @Log(title = "MCP人员Key", businessType = BusinessType.INSERT, isSaveResponseData = false)
     @PostMapping
     public AjaxResult add(@RequestBody ReqMcpUserKey reqMcpUserKey, HttpServletRequest request)
     {
@@ -79,7 +86,7 @@ public class ReqMcpKeyController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('req:mcp:key:edit')")
-    @Log(title = "MCP人员Key重置", businessType = BusinessType.UPDATE)
+    @Log(title = "MCP人员Key重置", businessType = BusinessType.UPDATE, isSaveResponseData = false)
     @PostMapping("/{keyId}/regenerate")
     public AjaxResult regenerate(@PathVariable("keyId") Long keyId, HttpServletRequest request)
     {

@@ -8,7 +8,9 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
 import com.ruoyi.requirement.dto.ReqMcpUserKeyCreateResult;
+import com.ruoyi.requirement.dto.ReqMcpUserOption;
 import com.ruoyi.requirement.mapper.ReqMcpUserKeyMapper;
 import com.ruoyi.requirement.service.IReqMcpUserKeyService;
 import com.ruoyi.system.service.ISysMenuService;
@@ -63,6 +66,23 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
     }
 
     @Override
+    public List<ReqMcpUserOption> selectUserOptions(String userName)
+    {
+        SysUser query = new SysUser();
+        query.setUserName(userName);
+        query.setStatus(UserConstants.NORMAL);
+        List<SysUser> users = userService.selectUserList(query);
+        if (users == null)
+        {
+            return Collections.emptyList();
+        }
+        return users.stream()
+                .filter(this::isEnabledUser)
+                .map(this::toUserOption)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public ReqMcpUserKeyCreateResult createKey(ReqMcpUserKey reqMcpUserKey, String operator, String mcpAddress)
     {
@@ -96,10 +116,16 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
         {
             throw new ServiceException("Key名称不能为空");
         }
-        if (reqMcpUserKey.getUserId() != null)
+        ReqMcpUserKey exists = mcpUserKeyMapper.selectReqMcpUserKeyByKeyId(reqMcpUserKey.getKeyId());
+        if (exists == null)
         {
-            validateUser(reqMcpUserKey.getUserId());
+            throw new ServiceException("MCP Key不存在");
         }
+        if (reqMcpUserKey.getUserId() != null && !Objects.equals(reqMcpUserKey.getUserId(), exists.getUserId()))
+        {
+            throw new ServiceException("MCP Key不允许换绑用户");
+        }
+        reqMcpUserKey.setUserId(null);
         return mcpUserKeyMapper.updateReqMcpUserKey(reqMcpUserKey);
     }
 
@@ -165,11 +191,27 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
             throw new ServiceException("绑定用户不能为空");
         }
         SysUser user = userService.selectUserById(userId);
-        if (user == null || !UserConstants.NORMAL.equals(user.getStatus()))
+        if (!isEnabledUser(user))
         {
             throw new ServiceException("绑定用户不存在或已停用");
         }
         return user;
+    }
+
+    private boolean isEnabledUser(SysUser user)
+    {
+        return user != null
+                && UserConstants.NORMAL.equals(user.getStatus())
+                && UserConstants.NORMAL.equals(user.getDelFlag());
+    }
+
+    private ReqMcpUserOption toUserOption(SysUser user)
+    {
+        ReqMcpUserOption option = new ReqMcpUserOption();
+        option.setUserId(user.getUserId());
+        option.setUserName(user.getUserName());
+        option.setNickName(user.getNickName());
+        return option;
     }
 
     private Set<String> permissionsForUser(SysUser user)

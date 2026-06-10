@@ -73,7 +73,7 @@
 - 影响面推荐接收到 `variant_id` 时必须校验项目分支属于当前项目，并使用项目分支 `baseline_branch` 作为索引分支过滤条件。
 - 模块知识库接收到 `variant_id` 时必须严格过滤该项目分支，不再兼容混入 `variant_id is null` 的旧项目级索引模块。
 - MCP 读取 `memory://{projectId}/...?...variantId={variantId}` 时必须按 `req_memory_index.project_id + req_memory_index.variant_id + doc_type` 查询；分支知识库缺少 `variant_id` 会导致同项目不同长期分支的模块、契约或决策文档混用。
-- MCP 人员 Key 只允许匹配 `status='0'` 且绑定用户也为启用状态；停用 Key 或停用用户都不能继续鉴权。Key 明文不得落库、不得出现在列表响应或日志中。
+- MCP 人员 Key 只允许匹配 `status='0'` 且绑定用户也为启用、未删除状态；停用 Key、停用用户或已删除用户都不能继续鉴权。Key 明文不得落库、不得出现在列表响应或操作日志中。
 
 ## 开发指导
 
