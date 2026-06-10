@@ -10,7 +10,7 @@
 - 安装包使用占位 Key，不包含人员明文 `plainKey` 或一次性 `actionToken`。
 - 保留 `codexGlobalSkillPackage` 兼容字段。
 
-提交：当前任务分支提交，最终 hash 见完成说明。
+提交：`da6d77c feat: 提供codex安装指令包`。
 
 ## 修改文件
 
