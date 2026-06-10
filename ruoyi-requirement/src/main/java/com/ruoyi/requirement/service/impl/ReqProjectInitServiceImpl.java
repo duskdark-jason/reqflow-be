@@ -427,19 +427,13 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         instruction.setPrompt("请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。");
         instruction.setCopyLabel("复制兼容初始化指令");
         instruction.setContent("请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。"
+                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化（兼容模式）。"
                 + "\nmcpServer: reqflow"
                 + "\ntoolName: publish_repository_index"
                 + "\nmcpTool: reqflow.publish_repository_index"
                 + "\ntargetMethod: publish_repository_index"
                 + "\nmcpKey: " + firstNotEmpty(mcpKey, "-")
-                + "\n调用要求："
-                + "\n1. 在接入项目的 Codex 会话中确认已加载名为 reqflow 的 MCP server。"
-                + "\n2. 优先调用 mcp__reqflow.get_harness_template 读取模板包；若当前库尚未支持 actionToken，请用平台页面或接口提供的 projectId 读取。"
-                + "\n3. 按模板包写入或合并本地 harness 文件，不能只发布仓库索引。"
-                + "\n4. 在每个目标子仓库运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。"
-                + "\n5. 当前兼容路径可通过 mcp__reqflow.publish_repository_index 传入 arguments.mcpKey、remoteUrl、branchName、commitHash、indexVersion 和结构化索引列表。"
-                + "\n6. 当前数据库未创建 req_action_token，请先执行 sql/req_platform_req003_action_token.sql 后重新复制 actionToken 指令；新流程应使用 arguments.actionToken，不再把 mcpKey 当作动作凭证。"
-                + "\n7. 完成后调用 mcp__reqflow.register_harness_init_result 回写 harnessStatus 和 harnessCommit。");
+                + "\n要求：当前数据库未创建 req_action_token，请先执行 sql/req_platform_req003_action_token.sql 后重新复制 actionToken 指令；兼容模式仅可临时使用 arguments.mcpKey，不要把 mcpKey 当作 X-MCP-Key。");
         return instruction;
     }
 

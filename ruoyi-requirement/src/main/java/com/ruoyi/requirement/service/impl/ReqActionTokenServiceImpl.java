@@ -197,6 +197,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
     private String projectInitInstructionContent(String prompt, String targetMethod, String actionToken, Long projectId, Long variantId)
     {
         return prompt
+                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。"
                 + "\nmcpServer: " + PROJECT_INIT_MCP_SERVER
                 + "\ntoolName: " + PROJECT_INIT_TOOL_NAME
                 + "\nmcpTool: " + PROJECT_INIT_MCP_SERVER + "." + PROJECT_INIT_TOOL_NAME
@@ -204,14 +205,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
                 + "\nprojectId: " + projectId
                 + "\nvariantId: " + variantId
                 + "\nactionToken: " + actionToken
-                + "\n调用要求："
-                + "\n1. 在接入项目的 Codex 会话中确认已加载名为 reqflow 的 MCP server，并能看到 mcp__reqflow.get_harness_template、mcp__reqflow.publish_repository_index 和 mcp__reqflow.register_harness_init_result。"
-                + "\n2. 先调用 mcp__reqflow.get_harness_template，传入 arguments.projectId，读取 reqflow MCP 项目接入初始化技能、workspaceFiles 和 repositoryHarnessInstructions。"
-                + "\n3. 按 get_harness_template 返回内容写入或合并本地 harness 文件，包括 workspace 根 AGENTS.md 和每个子仓库的 docs/ai-harness、docs/process、scripts/check-*.sh。"
-                + "\n4. 在每个目标子仓库运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。"
-                + "\n5. 再调用 mcp__reqflow.publish_repository_index，传入 arguments.actionToken、remoteUrl、branchName、commitHash、indexVersion 和结构化索引列表。"
-                + "\n6. actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。"
-                + "\n7. 最后调用 mcp__reqflow.register_harness_init_result，回写 harnessStatus 和 harnessCommit。";
+                + "\n要求：actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。";
     }
 
     private static class GeneratedToken

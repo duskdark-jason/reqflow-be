@@ -1,6 +1,7 @@
 package com.ruoyi.requirement.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -44,15 +45,15 @@ class ReqActionTokenServiceImplTest
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
         assertTrue(instruction.getContent().contains("toolName: publish_repository_index"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));
+        assertTrue(instruction.getContent().contains("reqflow-mcp"));
         assertTrue(instruction.getContent().contains("actionToken 是 publish_repository_index 的 arguments.actionToken"));
-        assertTrue(instruction.getContent().contains("get_harness_template"));
-        assertTrue(instruction.getContent().contains("写入或合并本地 harness 文件"));
-        assertTrue(instruction.getContent().contains("sh scripts/check-docs.sh"));
-        assertTrue(instruction.getContent().contains("sh scripts/check-harness.sh init"));
         assertTrue(instruction.getContent().contains("publish_repository_index"));
-        assertTrue(instruction.getContent().contains("register_harness_init_result"));
         assertTrue(instruction.getContent().contains("需求平台"));
         assertTrue(instruction.getContent().contains("main"));
+        assertFalse(instruction.getContent().contains("调用要求："));
+        assertFalse(instruction.getContent().contains("\n1."));
+        assertFalse(instruction.getContent().contains("写入或合并本地 harness 文件"));
+        assertFalse(instruction.getContent().contains("register_harness_init_result"));
 
         ArgumentCaptor<ReqActionToken> captor = forClass(ReqActionToken.class);
         verify(mapper).insertReqActionToken(captor.capture());

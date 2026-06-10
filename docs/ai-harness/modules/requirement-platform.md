@@ -43,7 +43,7 @@
 - 项目、仓库、项目分支和模块知识必须按项目分支隔离；不能把其他分支或旧项目级模块默认混入当前分支。
 - 新增或编辑需求时，后端必须校验 `projectId + variantId` 属于同一项目，且项目分支已完成模块知识和仓库索引初始化。
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。
-- 项目初始化指令必须明确包含 `mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，确保接入项目能定位到指定 MCP server 的指定 tool。
+- 项目初始化默认复制指令只保留短动态上下文，必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，确保接入项目能触发全局 skill 并定位到指定 MCP server 的指定 tool。
 - `/requirement/mcp` 必须支持 MCP `initialize -> notifications/initialized -> tools/list` lifecycle；新增 tool 时必须同步 `tools/list` 的描述和 `inputSchema`。
 - `/requirement/mcp` 的协议级错误必须返回标准 JSON-RPC `error.code/error.message`，不能同时带 `result:null`；`tools/call` 内的业务错误必须返回 MCP tool result，并设置 `isError=true`。
 - 项目接入初始化由平台存储和下发 harness 模板，后端不直接执行 Git、shell 或写用户本地文件。
@@ -59,7 +59,7 @@
 - 全局 `reqflow-mcp` skill 模板的 `SKILL.md` frontmatter 必须保持合法 YAML；`name` 和 `description` 使用双引号包裹，描述中不得出现未转义的 `: `，避免 Codex 启动扫描时跳过该 skill。
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
-- 项目接入初始化指令调整时，必须保证 agent 能先识别 reqflow MCP skill，调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
+- 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
 - MCP 下发的完整 harness 模板由后端 `ruoyi-requirement/src/main/resources/harness-template/` 保存并随包发布；`files.txt` 是下发清单，必须与 workspace 根目录 `harness-template/` 的流程、模板和脚本保持一致。
 - 索引表迁移不完整时，`publish_repository_index` 必须返回指向 `sql/req_platform_req007_index_tables.sql` 的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
 - 菜单权限调整时，必须同时检查 `sql/req_platform_menu.sql`、Controller `@PreAuthorize` 和前端按钮权限。

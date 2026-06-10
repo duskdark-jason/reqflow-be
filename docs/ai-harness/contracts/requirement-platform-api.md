@@ -53,13 +53,13 @@
   "token": "reqflow_action_xxx",
   "tokenPrefix": "reqflow_action_xxx",
   "prompt": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。",
-  "content": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。\nmcpServer: reqflow\ntoolName: publish_repository_index\nmcpTool: reqflow.publish_repository_index\ntargetMethod: publish_repository_index\nprojectId: 1\nvariantId: 2\nactionToken: reqflow_action_xxx\n调用要求：\n1. 在接入项目的 Codex 会话中确认已加载名为 reqflow 的 MCP server，并能看到 mcp__reqflow.get_harness_template、mcp__reqflow.publish_repository_index 和 mcp__reqflow.register_harness_init_result。\n2. 先调用 mcp__reqflow.get_harness_template，传入 arguments.projectId，读取 reqflow MCP 项目接入初始化技能、workspaceFiles 和 repositoryHarnessInstructions。\n3. 按 get_harness_template 返回内容写入或合并本地 harness 文件，包括 workspace 根 AGENTS.md 和每个子仓库的 docs/ai-harness、docs/process、scripts/check-*.sh。\n4. 在每个目标子仓库运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。\n5. 再调用 mcp__reqflow.publish_repository_index，传入 arguments.actionToken、remoteUrl、branchName、commitHash、indexVersion 和结构化索引列表。\n6. actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。\n7. 最后调用 mcp__reqflow.register_harness_init_result，回写 harnessStatus 和 harnessCommit。",
+  "content": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。\n请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。\nmcpServer: reqflow\ntoolName: publish_repository_index\nmcpTool: reqflow.publish_repository_index\ntargetMethod: publish_repository_index\nprojectId: 1\nvariantId: 2\nactionToken: reqflow_action_xxx\n要求：actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。",
   "copyLabel": "复制初始化指令",
   "expireTime": null
 }
 ```
 
-`initInstruction.content` 必须保留 `mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index` 三个机器可读字段，避免接入项目在存在多个 MCP server 或同名能力描述时无法定位到需求平台工具。`projectId` 用于先读取 `get_harness_template`，`actionToken` 是项目分支动作 token，只能作为 `publish_repository_index` 的 `arguments.actionToken` 传入，不能写入 `X-MCP-Key` 请求头。
+`initInstruction.content` 是给接入项目复制的短动态上下文，不再重复完整执行步骤。内容必须保留 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，避免接入项目在存在多个 MCP server 或同名能力描述时无法定位到需求平台工具。`projectId` 用于先读取 `get_harness_template`，`actionToken` 是项目分支动作 token，只能作为 `publish_repository_index` 的 `arguments.actionToken` 传入，不能写入 `X-MCP-Key` 请求头；完整初始化顺序由全局 `reqflow-mcp` skill 承接。
 
 初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成兼容字段，前端主展示以 `initInstruction` 为准。
 
@@ -87,7 +87,7 @@ Codex 落地初始化结果时，不能只保留 `docs/ai-harness/modules/.gitke
 
 多仓 workspace 初始化必须同时下发 workspace 根目录 `AGENTS.md` 和各子仓库 `AGENTS.md`。workspace 入口只做分流和通用护栏；业务规则、验证命令和契约仍落到对应子仓库 `docs/ai-harness`、`docs/process` 和 `docs/specs`。
 
-Codex 的执行顺序必须是：确认 reqflow MCP 已加载 -> 调用 `get_harness_template` -> 写入或合并本地 harness 文件 -> 在每个目标子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init` -> 调用 `publish_repository_index` -> 调用 `register_harness_init_result`。`publish_repository_index` 不负责写调用方本地文件，不能作为初始化第一步。
+全局 `reqflow-mcp` skill 的执行顺序必须是：确认 reqflow MCP 已加载 -> 调用 `get_harness_template` -> 写入或合并本地 harness 文件 -> 在每个目标子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init` -> 调用 `publish_repository_index` -> 调用 `register_harness_init_result`。`publish_repository_index` 不负责写调用方本地文件，不能作为初始化第一步。
 
 Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requirement/project/{projectId}/harness-init-result` 回写结果，内容包括仓库远端、当前分支、写入文件清单、校验命令、校验结果、失败原因和是否需要人工确认。
 
