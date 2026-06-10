@@ -10,7 +10,7 @@
 - skill 包使用跨平台安装说明，由 Codex 按自身当前 skill 规范决定全局 skills 目录和写入方式，不绑定 macOS/Linux shell 命令。
 - 已清理本地 `docs/specs/active/2026-06-10-REQ-005-MCP协议握手与工具暴露修复` 空目录；当前 active 仅保留 `.gitkeep` 和 REQ-008 目录。
 
-提交：当前任务分支提交，最终 hash 见完成说明。
+提交：`0e21aee feat: 提供全局 reqflow MCP skill 包`
 
 ## 修改文件
 
@@ -38,7 +38,7 @@
 ## 接口、数据库、权限和页面影响
 
 - 接口/API：是，`/requirement/mcp/key/config`、创建 Key、重置 Key 响应新增 `codexGlobalSkillPackage`。
-- 数据库/SQL：否。
+- 数据库/SQL：否；未新增或修改 `sql/`、`docs/db/` 文件。
 - 权限：否，沿用 `req:mcp:key:*`。
 - 页面：是，前端 companion 仓库同步展示和复制全局 Skill 包。
 
