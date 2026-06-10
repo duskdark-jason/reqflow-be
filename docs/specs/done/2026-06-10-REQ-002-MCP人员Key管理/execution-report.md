@@ -55,6 +55,10 @@
 | L0 | `sh scripts/check-docs.sh` | 通过，输出“文档检查通过” |
 | L3 数据库 | `jshell` 连接本地 `ry-vue` 执行 `sql/req_platform_req006_mcp_user_key.sql` | 迁移前 MCP 菜单 0 条；执行 8 条语句后 MCP 菜单/按钮 5 条，菜单 id 2028 |
 
+## 提交记录
+
+- 提交：e65c94d `fix: 修复 MCP Key 管理安全边界`
+
 ## 未执行项
 
 - L3/L4 HTTP 运行态联调未执行：本轮未启动后端服务，尚未通过登录态和 `X-MCP-Key` 调真实 `/requirement/mcp` 接口。当前已完成单元、编译、打包、文档检查和本地数据库菜单迁移验证。
