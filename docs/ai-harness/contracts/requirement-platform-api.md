@@ -67,7 +67,7 @@
 
 ## Harness 模板与初始化下发
 
-需求平台内置保存一份团队统一的需求平台驱动 harness 模板，作为项目接入时的初始化资产。模板包至少包含：
+需求平台内置保存一份团队统一的需求平台驱动 harness 模板，作为项目接入时的初始化资产。后端可发布模板存储在 `ruoyi-requirement/src/main/resources/harness-template/`，`files.txt` 是 MCP 下发文件清单；workspace 根目录的 `harness-template/` 是平台自身建设和离线接入时的源模板副本。模板包至少包含：
 
 - 子仓库 `AGENTS.md` 模板。
 - workspace 根目录 `AGENTS.md` 模板。
@@ -81,7 +81,7 @@
 
 - `reqflowMcpSkill`：可嵌入 `AGENTS.md` 的 reqflow MCP 项目接入初始化技能文本，触发条件覆盖 `actionToken`、`mcpServer: reqflow`、`mcpTool: reqflow.publish_repository_index` 和项目接入初始化。
 - `workspaceFiles`：workspace 根目录文件清单，当前至少包含根 `AGENTS.md`，写入模式为合并已有规则。
-- `repositoryHarnessInstructions`：每个仓库一项，包含 `repository`、自然语言 `content` 和可落地的 `files`。`files` 至少包含子仓库 `AGENTS.md`、`docs/README.md`、`docs/process/platform-key-workflow.md`、`docs/ai-harness/README.md`、`docs/ai-harness/harness-index.json`、一个非模板 `docs/ai-harness/modules/*.md` 以及 `scripts/check-docs.sh`、`scripts/check-harness.sh`。
+- `repositoryHarnessInstructions`：每个仓库一项，包含 `repository`、自然语言 `content` 和可落地的 `files`。`files` 必须基于 `src/main/resources/harness-template/files.txt` 下发完整 `docs/**` 和 `scripts/**` 模板，至少包含子仓库 `AGENTS.md`、完整 `docs/process/**`、`docs/templates/**`、`docs/ai-harness/**`、一个非模板 `docs/ai-harness/modules/*.md`、`scripts/check-docs.sh`、`scripts/check-harness.sh` 和对应测试脚本。
 
 Codex 落地初始化结果时，不能只保留 `docs/ai-harness/modules/.gitkeep`；必须基于项目主菜单、子菜单、隐藏页签或主后端能力生成至少一个 `docs/ai-harness/modules/*.md` 模块知识库文档，记录功能接口、权限标识和涉及文件。纯后端服务没有前端菜单时，应按 companion 前端菜单、MCP 能力或后台任务建立对应关系。
 

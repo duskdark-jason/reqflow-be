@@ -1,5 +1,8 @@
 package com.ruoyi.requirement.mcp;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +35,9 @@ import com.ruoyi.requirement.service.ReqActivityLogService;
 @Service
 public class McpService
 {
+    private static final String HARNESS_TEMPLATE_ROOT = "harness-template/";
+    private static final String HARNESS_TEMPLATE_FILE_INDEX = HARNESS_TEMPLATE_ROOT + "files.txt";
+
     @Autowired private ReqDemandMapper reqDemandMapper;
     @Autowired private ReqProjectMapper projectMapper;
     @Autowired private ReqRepositoryMapper reqRepositoryMapper;
@@ -306,19 +312,43 @@ public class McpService
 
     private String workspaceAgentsContent(ReqProject project, List<ReqRepository> repositories, List<ReqVariant> variants)
     {
-        StringBuilder content = new StringBuilder();
-        content.append("# AGENTS.md\n\n");
-        content.append("## 项目\n");
+        String content = readTemplateResource("WORKSPACE_AGENTS.snippet.md");
+        content = content.replaceAll("(?s)```text\\n.*?```",
+                java.util.regex.Matcher.quoteReplacement("```text\n" + workspaceRepositoryBlock(repositories) + "```"));
+        content = removeTemplatePlaceholders(content);
+        StringBuilder header = new StringBuilder();
+        header.append("# AGENTS.md\n\n");
+        header.append("## 项目信息\n");
         if (project != null)
         {
-            content.append("- 项目：").append(project.getProjectName()).append("（").append(project.getProjectCode()).append("）\n");
+            header.append("- 项目：").append(project.getProjectName()).append("（").append(project.getProjectCode()).append("）\n");
         }
-        content.append("- 仓库数量：").append(repositories == null ? 0 : repositories.size()).append("\n");
-        content.append("- 分支数量：").append(variants == null ? 0 : variants.size()).append("\n\n");
-        content.append("## 分支知识库\n");
-        content.append("- 读取知识库时必须同时传入 projectId 与 variantId，避免不同分支的独有模块互相污染。\n");
-        content.append("- 分支初始化、模块索引和需求影响推荐均以项目分支为粒度。\n");
-        return content.toString();
+        header.append("- 仓库数量：").append(repositories == null ? 0 : repositories.size()).append("\n");
+        header.append("- 分支数量：").append(variants == null ? 0 : variants.size()).append("\n\n");
+        header.append("## 分支知识库\n");
+        header.append("- 读取知识库时必须同时传入 projectId 与 variantId，避免不同分支的独有模块互相污染。\n");
+        header.append("- 分支初始化、模块索引和需求影响推荐均以项目分支为粒度。\n\n");
+        String body = content.replaceFirst("^# AGENTS\\.md 工作空间入口\\n\\n", "");
+        return header.append(body).toString();
+    }
+
+    private String workspaceRepositoryBlock(List<ReqRepository> repositories)
+    {
+        StringBuilder builder = new StringBuilder();
+        for (ReqRepository repository : safeList(repositories))
+        {
+            builder.append(firstNotEmpty(repository.getRepoName(), "repository"))
+                    .append("/   # ")
+                    .append(firstNotEmpty(repository.getRepoType(), "UNKNOWN"))
+                    .append("，默认分支 ")
+                    .append(firstNotEmpty(repository.getDefaultBranch(), "main"))
+                    .append("\n");
+        }
+        if (builder.length() == 0)
+        {
+            builder.append("repository/   # 待平台配置仓库\n");
+        }
+        return builder.toString();
     }
 
     private Map<String, Object> promptsGet(String name)
@@ -464,13 +494,20 @@ public class McpService
         String slug = repositorySlug(repository);
         List<Map<String, Object>> files = new ArrayList<>();
         files.add(harnessFile("AGENTS.md", repositoryAgentsContent(repository), "merge-if-exists"));
-        files.add(harnessFile("docs/README.md", repositoryDocsReadmeContent(repository), "create-or-merge"));
-        files.add(harnessFile("docs/process/platform-key-workflow.md", repositoryPlatformWorkflowContent(), "create-or-merge"));
-        files.add(harnessFile("docs/ai-harness/README.md", repositoryHarnessReadmeContent(repository), "create-or-merge"));
-        files.add(harnessFile("docs/ai-harness/harness-index.json", repositoryHarnessIndexContent(repository, variants), "create-or-merge"));
+        for (String path : harnessTemplateFilePaths())
+        {
+            if (!path.startsWith("docs/") && !path.startsWith("scripts/"))
+            {
+                continue;
+            }
+            if ("docs/ai-harness/harness-index.json".equals(path))
+            {
+                files.add(harnessFile(path, repositoryHarnessIndexContent(repository, variants), "create-or-merge"));
+                continue;
+            }
+            files.add(harnessFile(path, repositoryTemplateContent(path), templateWriteMode(path)));
+        }
         files.add(harnessFile("docs/ai-harness/modules/" + slug + "-overview.md", repositoryModuleContent(repository), "create-if-missing"));
-        files.add(harnessFile("scripts/check-docs.sh", checkDocsScriptContent(), "create-if-missing"));
-        files.add(harnessFile("scripts/check-harness.sh", checkHarnessScriptContent(), "create-if-missing"));
         return files;
     }
 
@@ -492,8 +529,17 @@ public class McpService
 
     private String repositoryAgentsContent(ReqRepository repository)
     {
-        return "# AGENTS.md\n\n"
-                + "## Reqflow MCP 项目接入初始化\n\n"
+        String content = readTemplateResource("AGENTS.snippet.md");
+        content = content.replace("【用 3 到 5 句话说明项目类型、主要用户、核心业务和技术栈。】",
+                "本仓库已接入需求平台 harness，由需求平台下发流程、模板和检查脚本。"
+                        + "当前仓库类型为 " + firstNotEmpty(repository.getRepoType(), "UNKNOWN")
+                        + "，默认分支为 " + firstNotEmpty(repository.getDefaultBranch(), "main")
+                        + "。请以平台登记远端和当前仓库事实为准补充业务上下文。");
+        content = content.replace("`【构建文件路径，如 pom.xml / package.json / pyproject.toml】`", "按仓库实际构建文件补充");
+        content = content.replace("`【配置文件路径】`", "按仓库实际配置文件补充");
+        content = removeTemplatePlaceholders(content);
+        return content
+                + "\n## Reqflow MCP 项目接入初始化\n\n"
                 + reqflowProjectInitSkillContent()
                 + "\n## 当前仓库\n\n"
                 + "- 仓库：" + firstNotEmpty(repository.getRepoName(), "未命名仓库") + "\n"
@@ -502,31 +548,50 @@ public class McpService
                 + "- 默认分支：" + firstNotEmpty(repository.getDefaultBranch(), "main") + "\n";
     }
 
-    private String repositoryDocsReadmeContent(ReqRepository repository)
+    private List<String> harnessTemplateFilePaths()
     {
-        return "# 文档入口\n\n"
-                + "本目录由 reqflow 项目接入初始化生成，用于保存 agent 可复用的流程、harness 和业务上下文。\n\n"
-                + "- 仓库类型：" + firstNotEmpty(repository.getRepoType(), "UNKNOWN") + "\n"
-                + "- 先读：`docs/ai-harness/README.md`、`docs/process/platform-key-workflow.md`。\n";
+        String index = readTemplateResource(HARNESS_TEMPLATE_FILE_INDEX);
+        List<String> paths = new ArrayList<>();
+        for (String line : index.split("\\R"))
+        {
+            String path = line.trim();
+            if (!path.isEmpty() && !path.startsWith("#"))
+            {
+                paths.add(path);
+            }
+        }
+        return paths;
     }
 
-    private String repositoryPlatformWorkflowContent()
+    private String repositoryTemplateContent(String path)
     {
-        return "# 需求平台 Key 工作流\n\n"
-                + "## 项目接入初始化\n\n"
-                + "1. 确认当前 Git 远端和平台登记远端一致。\n"
-                + "2. 按 `get_harness_template` 返回的文件清单写入或合并本地 harness。\n"
-                + "3. 运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
-                + "4. 调用 `mcp__reqflow.publish_repository_index`，`actionToken` 必须放在 `arguments.actionToken`。\n"
-                + "5. 调用 `mcp__reqflow.register_harness_init_result` 回写初始化结果。\n";
+        String content = readTemplateResource(HARNESS_TEMPLATE_ROOT + path);
+        if (isRuntimeInitializedDoc(path))
+        {
+            return removeTemplatePlaceholders(content);
+        }
+        return content;
     }
 
-    private String repositoryHarnessReadmeContent(ReqRepository repository)
+    private boolean isRuntimeInitializedDoc(String path)
     {
-        return "# AI Harness\n\n"
-                + "本目录保存 agent 理解仓库所需的长期上下文。项目接入初始化后，至少维护一个非模板模块文档。\n\n"
-                + "- 仓库：" + firstNotEmpty(repository.getRepoName(), "未命名仓库") + "\n"
-                + "- 模块文档：`docs/ai-harness/modules/`\n";
+        return !path.contains("/templates/")
+                && !"docs/runbooks/local-run-template.md".equals(path)
+                && (path.endsWith(".md") || path.endsWith(".json"));
+    }
+
+    private String templateWriteMode(String path)
+    {
+        if (path.endsWith("/.gitkeep") || path.endsWith(".gitkeep"))
+        {
+            return "create-if-missing";
+        }
+        return "create-or-merge";
+    }
+
+    private String removeTemplatePlaceholders(String content)
+    {
+        return content == null ? "" : content.replaceAll("【[^】]+】", "按项目实际补充");
     }
 
     private String repositoryHarnessIndexContent(ReqRepository repository, List<ReqVariant> variants)
@@ -534,12 +599,36 @@ public class McpService
         List<ReqVariant> safeVariants = safeList(variants);
         StringBuilder builder = new StringBuilder();
         builder.append("{\n");
+        builder.append("  \"schemaVersion\": 1,\n");
+        builder.append("  \"template\": false,\n");
+        builder.append("  \"harnessVersion\": \"2026-06-09\",\n");
         builder.append("  \"initialized\": true,\n");
-        builder.append("  \"templateVersion\": \"reqflow-v1\",\n");
-        builder.append("  \"repoName\": \"").append(escapeJson(firstNotEmpty(repository.getRepoName(), ""))).append("\",\n");
-        builder.append("  \"repoType\": \"").append(escapeJson(firstNotEmpty(repository.getRepoType(), ""))).append("\",\n");
-        builder.append("  \"remoteUrl\": \"").append(escapeJson(firstNotEmpty(repository.getRepoUrl(), ""))).append("\",\n");
-        builder.append("  \"platformKeyWorkflow\": \"docs/process/platform-key-workflow.md\",\n");
+        builder.append("  \"repository\": {\n");
+        builder.append("    \"name\": \"").append(escapeJson(firstNotEmpty(repository.getRepoName(), ""))).append("\",\n");
+        builder.append("    \"role\": \"").append(escapeJson(firstNotEmpty(repository.getRepoType(), "repository"))).append("\",\n");
+        builder.append("    \"workspace\": \"\",\n");
+        builder.append("    \"remoteUrl\": \"").append(escapeJson(firstNotEmpty(repository.getRepoUrl(), ""))).append("\",\n");
+        builder.append("    \"companionRepositories\": []\n");
+        builder.append("  },\n");
+        builder.append("  \"entrypoints\": {\n");
+        builder.append("    \"workflow\": \"docs/process/agent-workflow.md\",\n");
+        builder.append("    \"platformKeyWorkflow\": \"docs/process/platform-key-workflow.md\",\n");
+        builder.append("    \"verification\": \"docs/ai-harness/verification.md\",\n");
+        builder.append("    \"localRun\": \"docs/runbooks/local-run-template.md\",\n");
+        builder.append("    \"localRunTemplate\": \"docs/runbooks/local-run-template.md\",\n");
+        builder.append("    \"localRunDetected\": \"docs/runbooks/local-run.detected.md\",\n");
+        builder.append("    \"localRunConfirmed\": \"docs/runbooks/local-run.md\",\n");
+        builder.append("    \"activeSpecs\": \"docs/specs/active\"\n");
+        builder.append("  },\n");
+        builder.append("  \"commands\": {\n");
+        builder.append("    \"init\": \"sh scripts/check-docs.sh && sh scripts/check-harness.sh init\",\n");
+        builder.append("    \"review\": \"sh scripts/check-harness.sh review\",\n");
+        builder.append("    \"complete\": \"sh scripts/check-harness.sh complete\"\n");
+        builder.append("  },\n");
+        builder.append("  \"customization\": {\n");
+        builder.append("    \"customerBranches\": [],\n");
+        builder.append("    \"taskBranchPrefix\": \"feature\"\n");
+        builder.append("  },\n");
         builder.append("  \"variants\": [");
         for (int i = 0; i < safeVariants.size(); i++)
         {
@@ -561,27 +650,6 @@ public class McpService
                 + "- 服务范围：项目接入初始化阶段生成的初始模块知识，后续应按真实菜单、接口或后台任务补充。\n\n"
                 + "## 初始化验收\n\n"
                 + "- 本文件不是模板占位，后续需求应把接口、权限、页面或数据口径继续沉淀到本文件或同目录模块文档。\n";
-    }
-
-    private String checkDocsScriptContent()
-    {
-        return "#!/bin/sh\n"
-                + "set -eu\n"
-                + "if find docs AGENTS.md -type f 2>/dev/null | xargs grep -n '/Users/' 2>/dev/null; then\n"
-                + "  echo '检查失败：文档中包含本机绝对路径' >&2\n"
-                + "  exit 1\n"
-                + "fi\n"
-                + "echo '文档检查通过'\n";
-    }
-
-    private String checkHarnessScriptContent()
-    {
-        return "#!/bin/sh\n"
-                + "set -eu\n"
-                + "test -f AGENTS.md\n"
-                + "test -f docs/ai-harness/harness-index.json\n"
-                + "find docs/ai-harness/modules -type f -name '*.md' | grep . >/dev/null\n"
-                + "echo 'Harness 检查通过（init 模式）'\n";
     }
 
     private String reqflowProjectInitSkillContent()
@@ -607,6 +675,23 @@ public class McpService
     private String escapeJson(String value)
     {
         return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private String readTemplateResource(String path)
+    {
+        String resourcePath = path.startsWith(HARNESS_TEMPLATE_ROOT) ? path : HARNESS_TEMPLATE_ROOT + path;
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resourcePath))
+        {
+            if (inputStream == null)
+            {
+                throw new IllegalStateException("Harness 模板资源不存在：" + resourcePath);
+            }
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException("读取 Harness 模板资源失败：" + resourcePath, e);
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -360,8 +360,15 @@ class McpServiceTest
         assertTrue(resultText.contains("repositoryHarnessInstructions"), resultText);
         assertTrue(resultText.contains("files"), resultText);
         assertTrue(resultText.contains("docs/ai-harness/harness-index.json"), resultText);
+        assertTrue(resultText.contains("\"template\": false"), resultText);
+        assertTrue(resultText.contains("\"initialized\": true"), resultText);
         assertTrue(resultText.contains("docs/ai-harness/modules/reqflow-ui-overview.md"), resultText);
+        assertTrue(resultText.contains("docs/process/agent-workflow.md"), resultText);
+        assertTrue(resultText.contains("docs/process/new-requirement-flow.md"), resultText);
+        assertTrue(resultText.contains("docs/templates/review-report-template.md"), resultText);
         assertTrue(resultText.contains("scripts/check-harness.sh"), resultText);
+        assertTrue(resultText.contains("scripts/test-check-harness.sh"), resultText);
+        assertTrue(resultText.contains("自动 Review、返修和复审循环"), resultText);
         assertTrue(resultText.contains("publish_repository_index"), resultText);
         assertTrue(resultText.contains("register_harness_init_result"), resultText);
         verify(projectMapper).selectReqProjectByProjectId(10L);
