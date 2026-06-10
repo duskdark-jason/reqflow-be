@@ -160,9 +160,9 @@ check_spec_meta() {
   check_pattern "$meta_file" '需求 Key[：:]' "需求元信息缺少需求 Key"
   check_pattern "$meta_file" '平台关联远端[：:]' "需求元信息缺少平台关联远端"
   check_pattern "$meta_file" '平台目标分支[：:]' "需求元信息缺少平台目标分支"
+  check_pattern "$meta_file" '执行模式[：:][[:space:]]*(不适用|普通模式|任务分支模式)' "需求元信息缺少有效执行模式"
   check_pattern "$meta_file" '执行授权[：:][[:space:]]*(未授权|已授权|不适用)' "需求元信息缺少有效执行授权"
   check_pattern "$meta_file" 'Review 授权[：:][[:space:]]*(未授权|已授权|不适用)' "需求元信息缺少有效 Review 授权"
-  check_pattern "$meta_file" '主分支修改授权[：:][[:space:]]*(不适用|未授权|已授权)' "需求元信息缺少有效主分支修改授权"
   check_pattern "$meta_file" '当前分支[：:]' "需求元信息缺少当前分支"
   check_pattern "$meta_file" 'companion 仓库[：:]' "需求元信息缺少 companion 仓库"
 }
@@ -199,10 +199,10 @@ check_spec_state() {
 
   status=$(extract_spec_status "$meta_file")
   role=$(extract_spec_role "$meta_file")
+  execution_mode=$(extract_meta_field "$meta_file" "执行模式")
   branch=$(extract_meta_field "$meta_file" "当前分支")
   execution_auth=$(extract_meta_field "$meta_file" "执行授权")
   review_auth=$(extract_meta_field "$meta_file" "Review 授权")
-  main_auth=$(extract_meta_field "$meta_file" "主分支修改授权")
 
   case "$status:$role" in
     "planning:Plan Agent"|"planning:用户"|"planning:人工"|"executing:Execution Agent"|"executing:用户"|"executing:人工"|"review:Review Agent"|"review:用户"|"review:人工"|"repairing:Execution Agent"|"repairing:用户"|"repairing:人工"|"complete:Execution Agent"|"complete:Review Agent"|"complete:用户"|"complete:人工")
@@ -246,6 +246,15 @@ check_spec_state() {
       if [ "$execution_auth" != "已授权" ]; then
         fail "meta 状态为 $status 时必须记录执行授权：已授权：$meta_file"
       fi
+      if [ "$execution_mode" != "任务分支模式" ]; then
+        fail "meta 状态为 $status 时必须记录执行模式：任务分支模式：$meta_file"
+      fi
+      if printf '%s\n' "$branch" | grep -E '^(main|master|未创建|无)?$' >/dev/null 2>&1; then
+        fail "meta 状态为 $status 时当前分支必须是任务分支，不能是 $branch：$meta_file"
+      fi
+      if printf '%s' "$branch" | LC_ALL=C grep '[^ -~]' >/dev/null 2>&1; then
+        fail "任务分支必须使用 ASCII：$meta_file"
+      fi
       ;;
   esac
 
@@ -253,15 +262,6 @@ check_spec_state() {
     review|complete)
       if [ "$review_auth" != "已授权" ]; then
         fail "meta 状态为 $status 时必须记录 Review 授权：已授权：$meta_file"
-      fi
-      ;;
-  esac
-
-  case "$status" in
-    executing|repairing|complete)
-      if printf '%s\n' "$branch" | grep -E '^(main|master)$' >/dev/null 2>&1 &&
-         [ "$main_auth" != "已授权" ]; then
-        fail "当前分支为 $branch 且进入 $status 时必须记录主分支修改授权：已授权：$meta_file"
       fi
       ;;
   esac
@@ -343,7 +343,7 @@ check_repair_handoff() {
   done
 }
 
-check_isolated_commit_record() {
+check_task_branch_commit_record() {
   spec_dir=$1
   meta_file="$spec_dir/meta.md"
   execution_file="$spec_dir/execution-report.md"
@@ -351,13 +351,13 @@ check_isolated_commit_record() {
   [ -f "$meta_file" ] || return
   [ -f "$execution_file" ] || return
 
-  if ! grep -E '执行模式[：:][[:space:]]*隔离开发模式' "$meta_file" >/dev/null 2>&1; then
+  if ! grep -E '执行模式[：:][[:space:]]*任务分支模式' "$meta_file" >/dev/null 2>&1; then
     return
   fi
 
   if ! grep -E '(commit|提交)[：:][[:space:]]*[^[:space:]]+' "$execution_file" >/dev/null 2>&1 ||
      grep -E '(commit|提交)[：:][[:space:]]*(无|未提交|未执行|N/A|n/a|none|None)[[:space:]]*$' "$execution_file" >/dev/null 2>&1; then
-    fail "隔离开发模式必须在 execution-report.md 记录阶段性 commit：$execution_file"
+    fail "任务分支模式必须在 execution-report.md 记录 commit：$execution_file"
   fi
 }
 
@@ -375,7 +375,7 @@ check_one_spec() {
 
   if [ -f "$spec_dir/execution-report.md" ]; then
     check_pattern "$spec_dir/execution-report.md" '命令|未开始|未执行' "执行报告缺少命令或状态说明"
-    check_isolated_commit_record "$spec_dir"
+    check_task_branch_commit_record "$spec_dir"
   fi
 
   if [ -f "$spec_dir/review-report.md" ] && [ ! -f "$spec_dir/execution-report.md" ]; then

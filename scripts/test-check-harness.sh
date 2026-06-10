@@ -111,7 +111,7 @@ make_root() {
   printf '%s\n' '# workflow' > "$root/docs/process/agent-workflow.md"
   printf '%s\n' '# platform key workflow' > "$root/docs/process/platform-key-workflow.md"
   printf '%s\n' '# local run' > "$root/docs/runbooks/local-run.md"
-  printf '%s\n' '# meta' '' '- 状态：executing' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：未授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+  printf '%s\n' '# meta' '' '- 状态：executing' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
   printf '%s\n' '# requirement' '' '- AC-001: demo' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/requirement.md"
   printf '%s\n' '# plan' '' '- AC-001: L0 L1 L2 L3' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/plan.md"
 }
@@ -166,11 +166,11 @@ rm "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 expect_fail "$root" complete "missing spec meta" "缺少文件"
 
 make_root "$root"
-printf '%s\n' '# meta' '' '- 状态：unknown' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：未授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# meta' '' '- 状态：unknown' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 expect_fail "$root" complete "invalid spec status" "状态"
 
 make_root "$root"
-printf '%s\n' '# meta' '' '- 状态：planning' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：未授权' '- Review 授权：未授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# meta' '' '- 状态：planning' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：未授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 expect_fail "$root" complete "status role mismatch" "状态和当前角色不匹配"
 
 make_root "$root"
@@ -182,14 +182,14 @@ printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' > "$root/d
 expect_fail "$root" review "review without execution report" "缺少执行报告"
 
 make_root "$root"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：待定' '' '- AC-001：未验证' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
-printf '%s\n' '# meta' '' '- 状态：review' '- 当前角色：Review Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# meta' '' '- 状态：review' '- 当前角色：Review Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 expect_fail "$root" review "invalid review conclusion" "Review 结论必须"
 
 make_root "$root"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
-printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 expect_fail "$root" complete "complete without review report" "缺少 Review 报告"
 
 make_root "$root"
@@ -198,42 +198,42 @@ printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-0
 expect_fail "$root" complete "environment claim without runtime evidence" "环境断言"
 
 make_root "$root"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '旧结论：环境不可达 是错误结论，已由实测覆盖。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '旧结论：环境不可达 是错误结论，已由实测覆盖。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
-printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete >"$OUT_FILE" 2>&1
 
 make_root "$root"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '## 运行态证据' '' '- 执行目录：/workspace/repo' '- 启动命令：sh run.sh' '- profile/env/mode：test' '- 检查命令：curl http://localhost:8080/health' '- 原始错误摘要：connection refused' '- 是否代表用户环境：否，仅代表当前执行 agent 环境' '' '当前执行 agent 所在环境实测：环境不可达。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '## 运行态证据' '' '- 执行目录：/workspace/repo' '- 启动命令：sh run.sh' '- profile/env/mode：test' '- 检查命令：curl http://localhost:8080/health' '- 原始错误摘要：connection refused' '- 是否代表用户环境：否，仅代表当前执行 agent 环境' '' '当前执行 agent 所在环境实测：环境不可达。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
-printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete >"$OUT_FILE" 2>&1
 
 make_root "$root"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '## 运行态证据' '' '- 执行目录：/workspace/repo' '- 启动命令：sh run.sh' '- profile/env/mode：test' '- 检查命令：curl http://localhost:8080/health' '- console/network 错误摘要：connection refused' '- 是否代表用户环境：否，仅代表当前执行 agent 环境' '' '当前执行 agent 所在环境实测：环境不可达。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '## 运行态证据' '' '- 执行目录：/workspace/repo' '- 启动命令：sh run.sh' '- profile/env/mode：test' '- 检查命令：curl http://localhost:8080/health' '- console/network 错误摘要：connection refused' '- 是否代表用户环境：否，仅代表当前执行 agent 环境' '' '当前执行 agent 所在环境实测：环境不可达。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
-printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete >"$OUT_FILE" 2>&1
 
 make_root "$root"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：阻断' '' '## 返修交接清单' '' '| 修复 ID | 严重级别 | 关联验收 ID | 问题 | 修复要求 | 验证要求 |' '|---|---|---|---|---|---|' '| RF-001 | 阻断 | AC-001 | demo | fix | sh test.sh |' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
-printf '%s\n' '# meta' '' '- 状态：review' '- 当前角色：Review Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# meta' '' '- 状态：review' '- 当前角色：Review Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" review >"$OUT_FILE" 2>&1
 expect_fail "$root" complete "blocking review without repair" "Review 结论仍为阻断"
 
 make_root "$root"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
-printf '%s\n' '# meta' '' '- 状态：planning' '- 当前角色：Plan Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：未授权' '- Review 授权：未授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# meta' '' '- 状态：planning' '- 当前角色：Plan Agent' '- 执行模式：不适用' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：未授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 expect_fail "$root" complete "planning state with execution report" "planning"
 
 make_root "$root"
 mkdir -p "$root/docs/specs/active/broken"
 printf '%s\n' '# requirement' '' '- AC-999: broken' > "$root/docs/specs/active/broken/requirement.md"
 printf '%s\n' '# plan' '' '- AC-999: L0' > "$root/docs/specs/active/broken/plan.md"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
-printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete --spec docs/specs/active/2026-06-09-REQ-001-演示需求 >"$OUT_FILE" 2>&1
 
 make_root "$root"
@@ -247,11 +247,11 @@ expect_fail "$root" complete "spec directory without stable requirement id" "REQ
 make_root "$root"
 printf '%s\n' '# execution' '' '## 执行结论' '' '- 状态：已完成' '- 分支：feature/demo' '- commit：无' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
-printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行模式：隔离开发模式' '- 执行授权：已授权' '- Review 授权：已授权' '- 主分支修改授权：不适用' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
-expect_fail "$root" complete "isolated mode without commit record" "隔离开发模式"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+expect_fail "$root" complete "task branch mode without commit record" "任务分支模式"
 
 make_root "$root"
-printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
 if sh "$CHECK_SCRIPT" "$root" complete --spec docs/specs/active/2026-06-09-REQ-001-演示需求 >"$OUT_FILE" 2>&1; then
   echo "expected target spec complete check to fail"

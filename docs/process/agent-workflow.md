@@ -68,11 +68,11 @@ draft requirement -> selected option -> approved plan -> execution authorized ->
 
 - `requirement.md` 未清楚前，不进入实现。
 - `plan.md` 未包含验收和验证前，不进入实现。
-- `meta.md` 必须记录当前状态、当前角色、执行模式、当前分支、执行授权、Review 授权、主分支修改授权和 companion 仓库；阶段变化时同步更新。
+- `meta.md` 必须记录当前状态、当前角色、执行模式、当前分支、执行授权、Review 授权和 companion 仓库；阶段变化时同步更新。
 - `meta.md` 状态必须和文件阶段匹配：`planning` 不应已有执行或 Review 报告，`review` / `repairing` / `complete` 必须已有执行和 Review 报告。
 - `meta.md` 当前角色必须和状态匹配：`planning` 对应 Plan Agent，`executing` / `repairing` 对应 Execution Agent，`review` 对应 Review Agent；人工或用户接管时可写 `人工` / `用户`。
 - `executing` / `repairing` / `complete` 必须有 `执行授权：已授权`；`review` / `complete` 必须有 `Review 授权：已授权`。
-- 当前分支为 `main` 或 `master` 且状态进入 `executing` / `repairing` / `complete` 时，必须有 `主分支修改授权：已授权`；否则应先创建任务分支或 worktree。
+- `executing` / `repairing` / `complete` 必须使用任务分支模式，当前分支不得是 `main` 或 `master`。
 - `execution-report.md` 未列出验证证据前，不进入 review。
 - `requirement.md` 中每个 `AC-*` 必须在 `plan.md`、`execution-report.md` 和 `review-report.md` 中形成闭环。
 - `review-report.md` 为 `阻断` 时，必须通过 `返修交接清单` 指向计划或执行阶段。
@@ -101,6 +101,6 @@ sh scripts/check-harness.sh           # 等同 complete
 - 普通模式下不自动提交。
 - 普通模式不等于允许在主分支实现；当前分支为 `main` 或 `master` 时，除只读分析和明确的小文档修正外，不得开始功能开发。
 - “选这个方案”“可以”“按这个方向”不等于创建分支、改代码、commit 或 Review 授权。
-- 用户明确要求创建分支或 worktree 执行任务时，执行 agent 必须在隔离分支内按计划阶段提交。
-- merge、push、rebase、删除 worktree 或删除远端分支仍需用户明确确认。
+- 用户明确要求执行新需求时，Execution Agent 必须先从目标基线分支创建 ASCII 任务分支；不使用 worktree。
+- 任务分支上的修改完成并通过验证后直接 commit；merge、push、rebase 或删除远端分支仍需用户明确确认。
 - 多仓联调时，相关仓库应使用相同中文 spec 目录名，并使用相同 ASCII 任务分支名，便于追踪。

@@ -19,9 +19,9 @@
 
 - 用户描述问题、选择方案、确认方向或同意建议，只代表允许进入需求说明和计划阶段。
 - Plan Agent 可以据此完善 `requirement.md` 和 `plan.md`，但必须在计划完成后停止，不得自动开始实现。
-- 开始实现必须有明确执行授权，例如“开始执行”“按计划实现”“允许改代码”或“创建分支/worktree 执行”。
+- 开始实现必须有明确执行授权，例如“开始执行”“按计划实现”“允许改代码”或“创建任务分支执行”。
 - 进入 Review 必须有明确 Review 授权或独立 Review 请求；Execution Agent 不得把自己的实现直接写成 Review 完成。
-- 当前分支为 `main` 或 `master` 时，除只读分析和明确的小文档修正外，不得开始功能实现；如确需主分支修改，必须获得明确授权并写入 `meta.md`。
+- 新需求执行不使用 worktree，必须从目标基线分支创建 ASCII 任务分支；当前分支为 `main` 或 `master` 时，除只读分析和明确的小文档修正外，不得开始功能实现。
 - 当前需求平台自身建设阶段，可以不通过 MCP 回写设计文档，但必须在本地 `docs/specs` 按阶段记录；后期平台自举接入后，默认改走需求平台 Key 流程。
 
 ## 2. 创建需求说明
@@ -54,7 +54,7 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 - 审查阶段：由 Review Agent 只读审查并写 `review-report.md`，结论为 `通过`、`有条件通过` 或 `阻断`。
 - 返修阶段：Review Agent 产生 `RF-*` 后停止交接；Execution Agent 返修并在 `execution-report.md` 回填同 ID 的 `Review 返修记录`；Review Agent 再复审。
 - 任一阶段发现计划缺失、契约冲突或验证无法执行，必须回到计划阶段补齐文件。
-- 阶段切换必须更新 `meta.md`，并记录执行授权、Review 授权和主分支修改授权状态。
+- 阶段切换必须更新 `meta.md`，并记录执行模式、执行授权和 Review 授权状态。
 
 ## 4. 阅读上下文
 
@@ -88,7 +88,7 @@ docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
 - 不改变接口返回结构，除非需求明确要求。
 - 涉及数据聚合时必须确认数据粒度。
 - 未获得执行授权时，不得改业务代码、写执行报告或推进到 Review。
-- 如需创建分支、worktree、commit、merge 或 rebase，先按 `git-workflow.md` 执行确认流程。
+- 如需创建分支、commit、merge 或 rebase，先按 `git-workflow.md` 执行确认流程。
 
 ## 7. 验证
 

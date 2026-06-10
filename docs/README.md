@@ -18,7 +18,7 @@
 
 涉及多 agent 协作时，先读 `process/agent-workflow.md`。
 
-涉及分支、worktree、commit、merge 或 rebase 时，先读 `process/git-workflow.md`。
+涉及分支、commit、merge 或 rebase 时，先读 `process/git-workflow.md`。
 
 涉及代码实现细则时，先读 `process/code-guidelines.md`。
 

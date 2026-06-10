@@ -58,7 +58,7 @@ YYYY-MM-DD-REQ-001-中文需求标题.md
 ## 检查命令
 
 - `meta.md` 的状态必须是 `planning`、`executing`、`review`、`repairing` 或 `complete`。
-- `meta.md` 必须记录流程模式、需求 Key、平台关联远端、平台目标分支、执行授权、Review 授权和主分支修改授权。
+- `meta.md` 必须记录流程模式、需求 Key、平台关联远端、平台目标分支、执行模式、执行授权和 Review 授权。
 - `meta.md` 状态必须和文件阶段匹配；准备关闭指定需求时，先把状态更新为 `complete`。
 - `meta.md` 当前角色必须和状态匹配：Plan Agent 只负责 `planning`，Execution Agent 负责 `executing` / `repairing`，Review Agent 负责 `review`；人工接管时写 `人工` 或 `用户`。
 - `requirement.md` 中的每个 `AC-*` 验收 ID 必须在 `plan.md` 中出现；当 `execution-report.md` 或 `review-report.md` 存在时，也必须覆盖同一批验收 ID。
