@@ -77,6 +77,7 @@
 - 项目初始化保存同样必须拒绝个人本机绝对路径；`req_repository.local_path_hint` 不属于初始化向导保存内容，初始化接口会清空该字段。
 - 影响面推荐接收到 `variant_id` 时必须校验项目分支属于当前项目，并使用项目分支 `baseline_branch` 作为索引分支过滤条件。
 - 模块知识库接收到 `variant_id` 时必须严格过滤该项目分支，不再兼容混入 `variant_id is null` 的旧项目级索引模块。
+- 新增或修改需求时必须校验 `req_demand.project_id + req_demand.variant_id` 指向已初始化完成的项目分支：`req_variant.project_id` 必须等于需求项目，分支未停用，项目有效仓库不能为空，所选分支至少有一条 `req_module` 或 `req_index_module` 知识，并且每个有效仓库都有该分支 `baseline_branch` 对应的 `req_repository_index_batch.status='imported'` 批次。
 - MCP 读取 `memory://{projectId}/...?...variantId={variantId}` 时必须按 `req_memory_index.project_id + req_memory_index.variant_id + doc_type` 查询；分支知识库缺少 `variant_id` 会导致同项目不同长期分支的模块、契约或决策文档混用。
 - MCP 人员 Key 只允许匹配 `status='0'` 且绑定用户也为启用、未删除状态；停用 Key、停用用户或已删除用户都不能继续鉴权。Key 明文不得落库、不得出现在列表响应或操作日志中。
 - MCP 动作 Token 只允许匹配 `status='0'` 且未过期记录；明文只出现在本次初始化指令响应中，服务端落库和列表只能保存哈希、前缀和上下文。`project_init` 动作必须校验 `target_method='publish_repository_index'` 后才能用于索引导入。

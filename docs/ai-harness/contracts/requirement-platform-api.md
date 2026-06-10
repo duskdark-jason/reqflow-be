@@ -108,6 +108,8 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 
 新增需求时后端生成 `demandNo`，格式为 `REQ-yyyyMMdd-序号`，并将状态设为 `submitted`。
 
+新增和修改需求时，`projectId + variantId` 必须指向同一项目下已启用且初始化完成的项目分支；未初始化完成的分支不得作为需求提交目标。分支初始化完成口径为：项目存在有效代码仓库，所选分支存在模块知识（人工模块或索引模块），且所有有效仓库都已有该分支真实 `baselineBranch` 的 `imported` 索引批次。该校验必须在后端服务层兜底，不能只依赖前端下拉过滤。
+
 允许的状态流转：
 
 ```text

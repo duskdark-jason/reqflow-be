@@ -4,9 +4,11 @@
 
 已新增统一动作 token 模型和服务，项目初始化上下文会为每个项目分支返回 `initInstruction`，复制内容包含简短提示词、目标 MCP 方法和加密唯一 `actionToken`。索引导入新增 `actionToken + remoteUrl` 解析路径，并保留旧 `mcpKey + remoteUrl` 兼容。后端用户可见品牌已调整为“统一需求流转平台”。
 
+本次补充增加需求提交收束点：需求新增和修改时，后端按所选 `projectId + variantId` 校验分支归属、分支模块知识和该真实分支的仓库索引覆盖；未初始化完成的项目分支即使绕过前端也不能写入 `req_demand`。
+
 - 分支：`feature/REQ-20260610-003-project-tabs-ui`
 - 已合入：`feature/REQ-20260610-004-mcp-public-url-config` 的后端配置提交，当前无冲突
-- 提交：`e516a08`（feat: 增加项目初始化动作token）
+- 提交：`e516a08`（feat: 增加项目初始化动作token）；本次补充提交待回填
 - Review 阶段：未授权，未写 Review 报告，未将 spec 切换为 complete
 
 ## 修改内容
@@ -15,10 +17,11 @@
 - `ReqProjectInitVariantItem`、`ReqProjectInitServiceImpl`：项目初始化上下文的分支行返回 `initInstruction`，同时保留 `mcpKey` 兼容字段。
 - `ReqRepositoryIndexImportRequest`、`ReqRepositoryIndexServiceImpl`：索引导入支持 `actionToken`，校验动作类型和目标方法后解析项目、分支与仓库。
 - `ReqActionTokenServiceImplTest`、`ReqProjectInitServiceImplTest`、`ReqRepositoryIndexServiceImplTest`：覆盖 token 生成解析、指令字段和 actionToken 索引导入。
+- `ReqDemandServiceImpl`、`ReqDemandServiceImplTest`：新增需求提交分支初始化完成校验，覆盖未初始化分支拒绝和已初始化分支允许保存。
 - `sql/req_platform_req003_action_token.sql`、`sql/req_platform_schema.sql`：新增 `req_action_token` 建表结构。
 - `sql/req_platform_req003_brand_cleanup.sql`：提供可执行的用户可见若依数据清理 SQL。
 - `application.yml`、`RuoYiApplication.java`、`SwaggerConfig.java`、`banner.txt`：调整后端可见系统名称、启动输出、Swagger 标题和 banner。
-- `docs/ai-harness/**`、`docs/domains/**`：同步动作 token、初始化指令、索引导入和品牌边界契约。
+- `docs/ai-harness/**`、`docs/db/**`、`docs/domains/**`：同步动作 token、初始化指令、索引导入、需求提交收束和品牌边界契约。
 
 ## 验收覆盖
 
@@ -30,6 +33,7 @@
 | AC-BE-004 | 通过。人员 `X-MCP-Key` 仍负责认证和权限，`actionToken` 仅负责动作上下文定位，接口契约已明确二者不能互相替代。 |
 | AC-BE-005 | 通过。后端用户可见系统名称、启动输出、Swagger、banner 和清理 SQL 已调整为统一需求流转平台语义。 |
 | AC-BE-006 | 通过。后端 harness 和领域文档已同步指令 token、品牌清理边界、`actionToken + remoteUrl` 优先路径和旧 `mcpKey` 兼容策略。 |
+| AC-BE-007 | 通过。新增/修改需求会拒绝未初始化完成的项目分支；服务测试覆盖拒绝和允许两条路径。 |
 
 ## 验证记录
 
@@ -39,7 +43,8 @@
 | L0 | `sh scripts/check-docs.sh` | 通过。 |
 | L0 | `sh scripts/check-harness.sh init` | 通过。 |
 | L2 | `mvn -pl ruoyi-requirement -am -Dtest=ReqActionTokenServiceImplTest,ReqProjectInitServiceImplTest,ReqRepositoryIndexServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过；25 个测试，0 失败。 |
-| L2 | `mvn -pl ruoyi-requirement -am test` | 通过；48 个测试，0 失败。 |
+| L2 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过；3 个测试，0 失败。 |
+| L2 | `mvn -pl ruoyi-requirement -am test` | 通过；51 个测试，0 失败。 |
 | L2 | `mvn -pl ruoyi-admin -am -DskipTests package` | 通过；admin 可打包。 |
 
 ## 运行态证据

@@ -22,8 +22,9 @@
 3. 初始化指令 DTO：扩展 `ReqProjectInitVariantItem`，增加 `initInstruction` 或 `instructions` 字段，包含 `actionType`、`token`、`prompt`、`content`、`copyLabel`、`expireTime`，覆盖 AC-BE-001。
 4. 项目初始化上下文集成：修改 `ReqProjectInitServiceImpl`，为每个项目分支生成或读取初始化动作 token，并构造复制指令内容，覆盖 AC-BE-001、AC-BE-002。
 5. MCP 解析入口：扩展独立 token 解析服务并接入 `McpService` 需要的上下文解析点；`publish_repository_index` 保持 `mcpKey + remoteUrl` 兼容，并增加 `token + remoteUrl` 兼容，覆盖 AC-BE-003、AC-BE-004。
-6. 品牌清理：修改 `application.yml`、Swagger 配置、启动输出、banner、SQL 初始化数据中用户可见的若依品牌，保留底层包名和框架兼容项，覆盖 AC-BE-005。
-7. Harness 更新：同步 `docs/ai-harness/contracts/requirement-platform-api.md`、`docs/db/relationship.md`、`docs/domains/requirement-platform/README.md`，覆盖 AC-BE-006。
+6. 需求提交收束：修改 `ReqDemandServiceImpl`，新增和修改需求时校验目标项目分支已初始化完成，覆盖 AC-BE-007。
+7. 品牌清理：修改 `application.yml`、Swagger 配置、启动输出、banner、SQL 初始化数据中用户可见的若依品牌，保留底层包名和框架兼容项，覆盖 AC-BE-005。
+8. Harness 更新：同步 `docs/ai-harness/contracts/requirement-platform-api.md`、`docs/db/relationship.md`、`docs/domains/requirement-platform/README.md`，覆盖 AC-BE-006、AC-BE-007。
 
 ## 文件改动范围
 
@@ -40,6 +41,8 @@
 | 新增 | `ruoyi-requirement/src/test/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImplTest.java` | token 服务单元测试 |
 | 修改 | `ruoyi-requirement/src/test/java/com/ruoyi/requirement/service/impl/ReqProjectInitServiceImplTest.java` | 项目初始化上下文返回指令字段测试 |
 | 修改 | `ruoyi-requirement/src/test/java/com/ruoyi/requirement/service/impl/ReqRepositoryIndexServiceImplTest.java` | `token + remoteUrl` 索引导入兼容测试 |
+| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 需求提交分支初始化完成校验 |
+| 修改 | `ruoyi-requirement/src/test/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImplTest.java` | 需求提交分支初始化校验测试 |
 | 新增 | `sql/req_platform_req003_action_token.sql` | token 表 SQL 迁移 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | token 上下文解析和兼容入口 |
 | 修改 | `ruoyi-admin/src/main/resources/application.yml`、`ruoyi-admin/src/main/resources/banner.txt` | 系统名称和启动可见信息 |
@@ -60,9 +63,11 @@
 7. 修改 `ReqProjectInitVariantItem` 和 `ReqProjectInitServiceImpl` 注入 token 服务，构造初始化指令并保持 `mcpKey` 兼容。
 8. 在 `ReqRepositoryIndexServiceImplTest` 写 `importsByActionTokenAndRemoteUrl`，断言 token 解析出的项目和分支可替代 `mcpKey` 定位上下文。
 9. 修改 `ReqRepositoryIndexImportRequest` 和 `ReqRepositoryIndexServiceImpl`，增加 `actionToken` 入参解析，保留旧 `mcpKey` 路径。
-10. 清理用户可见品牌：更新 `application.yml` 的系统名称、Swagger 标题、启动输出、banner 和 SQL 中面向新安装环境的若依菜单或示例组织文案。
-11. 更新后端 harness 和领域文档，明确 token 不替代人员 Key，`X-MCP-Key` 仍负责认证。
-12. 运行 L2、L1、L0 验证，并按运行态条件执行 L3 冒烟。
+10. 在 `ReqDemandServiceImplTest` 写未初始化分支拒绝提交和已初始化分支允许提交测试，确认服务层不依赖前端过滤。
+11. 修改 `ReqDemandServiceImpl`，按所选 `projectId + variantId` 校验分支归属、分支模块知识和真实分支仓库索引覆盖。
+12. 清理用户可见品牌：更新 `application.yml` 的系统名称、Swagger 标题、启动输出、banner 和 SQL 中面向新安装环境的若依菜单或示例组织文案。
+13. 更新后端 harness 和领域文档，明确 token 不替代人员 Key，`X-MCP-Key` 仍负责认证。
+14. 运行 L2、L1、L0 验证，并按运行态条件执行 L3 冒烟。
 
 ## 验证计划
 
@@ -82,6 +87,7 @@
 | AC-BE-004 | MCP 解析入口 | 单元测试、权限冒烟 |
 | AC-BE-005 | 品牌清理 | 文案搜索、启动输出检查 |
 | AC-BE-006 | Harness 更新 | `sh scripts/check-docs.sh` 和 harness 完成态检查 |
+| AC-BE-007 | 需求提交收束 | `ReqDemandServiceImplTest`、接口冒烟 |
 
 ## 执行约束
 
