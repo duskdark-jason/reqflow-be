@@ -56,6 +56,7 @@
 - MCP tools 新增或改名时，必须同步人员权限校验、接口契约、`tools/list` schema、前端文案和平台初始化指令。
 - MCP 管理 Key 创建或重置结果调整时，必须同步前端 MCP 管理页。页面不再提供配置查询入口；创建和重置响应只单独返回一次性 `plainKey` 与 `codexSetupPackage`。`codexSetupPackage.installCommands` 是主复制入口，提供 macOS/Linux 和 Windows PowerShell 代码块命令模板；模板使用 `${REQFLOW_MCP_KEY}` 占位，前端只在当前结果弹窗中用一次性 `plainKey` 渲染。长 JSON 安装包仅作为高级配置/调试信息保留。
 - `/requirement/codex/install.sh` 和 `/requirement/codex/install.ps1` 是匿名可读安装脚本端点，脚本内容不得内置人员 Key，不得自动调用 reqflow MCP tools，只写入本机 Codex MCP 配置和全局 `reqflow-mcp` skill。
+- 全局 `reqflow-mcp` skill 模板的 `SKILL.md` frontmatter 必须保持合法 YAML；`name` 和 `description` 使用双引号包裹，描述中不得出现未转义的 `: `，避免 Codex 启动扫描时跳过该 skill。
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
 - 项目接入初始化指令调整时，必须保证 agent 能先识别 reqflow MCP skill，调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。

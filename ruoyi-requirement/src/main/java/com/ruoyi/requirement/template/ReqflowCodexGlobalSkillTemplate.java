@@ -47,8 +47,8 @@ public final class ReqflowCodexGlobalSkillTemplate
     public static String skillContent()
     {
         return "---\n"
-                + "name: reqflow-mcp\n"
-                + "description: Use this skill whenever the user provides a Reqflow project-init instruction, actionToken, mcpServer: reqflow, mcpTool: reqflow.publish_repository_index, publish_repository_index, get_harness_template, harness initialization, or project onboarding request. It helps Codex identify and call the reqflow MCP tools in the required order instead of only configuring the MCP server.\n"
+                + "name: \"" + SKILL_NAME + "\"\n"
+                + "description: \"Use when the user provides a Reqflow project-init instruction, actionToken, mcpServer reqflow, mcpTool reqflow.publish_repository_index, publish_repository_index, get_harness_template, harness initialization, or project onboarding request.\"\n"
                 + "---\n\n"
                 + "# Reqflow MCP Project Initialization\n\n"
                 + "Use this skill when a request involves Reqflow MCP project onboarding, repository index publishing, or harness initialization.\n\n"

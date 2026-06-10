@@ -17,7 +17,8 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("[mcp_servers.reqflow]"));
         assertTrue(script.contains("X-MCP-Key"));
         assertTrue(script.contains("reqflow-mcp/SKILL.md"));
-        assertTrue(script.contains("name: reqflow-mcp"));
+        assertTrue(script.contains("name: \"reqflow-mcp\""));
+        assertTrue(script.contains("description: \"Use when"));
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));
         assertFalse(script.contains("reqflow_mcp_test_secret"));
     }
@@ -32,7 +33,8 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("[mcp_servers.reqflow]"));
         assertTrue(script.contains("X-MCP-Key"));
         assertTrue(script.contains("reqflow-mcp/SKILL.md"));
-        assertTrue(script.contains("name: reqflow-mcp"));
+        assertTrue(script.contains("name: \"reqflow-mcp\""));
+        assertTrue(script.contains("description: \"Use when"));
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));
         assertFalse(script.contains("reqflow_mcp_test_secret"));
     }

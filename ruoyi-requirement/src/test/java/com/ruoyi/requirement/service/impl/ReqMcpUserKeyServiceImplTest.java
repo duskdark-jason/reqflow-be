@@ -235,7 +235,7 @@ class ReqMcpUserKeyServiceImplTest
     {
         String packageText = String.valueOf(skillPackage);
         assertTrue(packageText.contains("SKILL.md"), packageText);
-        assertTrue(packageText.contains("name: reqflow-mcp"), packageText);
+        assertTrue(packageText.contains("name: \"reqflow-mcp\""), packageText);
         assertTrue(packageText.contains("mcp__reqflow.get_harness_template"), packageText);
         assertTrue(packageText.contains("mcp__reqflow.publish_repository_index"), packageText);
         assertTrue(packageText.contains("mcp__reqflow.register_harness_init_result"), packageText);
