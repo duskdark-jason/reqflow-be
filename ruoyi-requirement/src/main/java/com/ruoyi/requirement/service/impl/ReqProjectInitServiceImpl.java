@@ -439,7 +439,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
                 + "\nmcpTool: reqflow.publish_repository_index"
                 + "\ntargetMethod: publish_repository_index"
                 + "\nmcpKey: " + firstNotEmpty(mcpKey, "-")
-                + "\n要求：当前数据库未创建 req_action_token，请先执行 sql/req_platform_req003_action_token.sql 后重新复制 actionToken 指令；兼容模式仅可临时使用 arguments.mcpKey，不要把 mcpKey 当作 X-MCP-Key。");
+                + "\n要求：当前数据库未创建 req_action_token，请先执行 docs/db/sql/req_platform_req003_action_token.sql 后重新复制 actionToken 指令；兼容模式仅可临时使用 arguments.mcpKey，不要把 mcpKey 当作 X-MCP-Key。");
         return instruction;
     }
 

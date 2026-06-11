@@ -26,12 +26,12 @@
 ## 数据库变更沉淀
 
 - 数据库影响：【有/无】
-- SQL 脚本路径：【sql/xxx.sql / 无】
+- SQL 脚本路径：【docs/db/sql/xxx.sql / 无】
 - 数据库文档路径：【docs/db/table-dictionary.md、docs/db/relationship.md / 无】
 - 数据库变更说明：【当前 spec 下的 db-change.md / 无】
 - 无需更新原因：【数据库影响为无，或仅说明无需 SQL/docs 变更的原因】
 
-如果 `requirement.md` 或 `plan.md` 明确涉及数据库、SQL、Mapper、join、统计口径或分页粒度，本节必须记录相关 `sql/` 或 `docs/db/` 路径。
+如果 `requirement.md` 或 `plan.md` 明确涉及数据库、SQL、Mapper、join、统计口径或分页粒度，本节必须记录相关 `docs/db/sql/` 或 `docs/db/` 路径。
 
 ## 代码注释处理
 

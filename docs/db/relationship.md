@@ -1,6 +1,6 @@
 # 需求管理平台数据库关系说明
 
-表结构字典、主键、索引和关键字段说明维护在 `table-dictionary.md`；本文件只维护关系、数据粒度、必要过滤、聚合风险和开发指导。可执行 SQL、迁移脚本和菜单脚本仍保留在仓库根目录 `sql/`。
+表结构字典、主键、索引和关键字段说明维护在 `table-dictionary.md`；本文件只维护关系、数据粒度、必要过滤、聚合风险和开发指导。可执行 SQL、迁移脚本和菜单脚本统一维护在 `docs/db/sql/`。
 
 ## 表与业务含义
 
@@ -76,7 +76,7 @@
 - 当前需求表没有逻辑删除字段，删除操作会物理删除基础数据；需求主流程暂不提供需求删除接口。
 - 菜单权限依赖 RuoYi `sys_menu.perms`，按钮权限必须与 Controller `@PreAuthorize` 保持一致。
 - 索引导入必须拒绝个人本机绝对路径，平台只保存 Git 远端、分支、commit、项目分支或真实分支、相对路径和结构化影响面。
-- 索引导入写入前必须确认 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item` 三张索引表已初始化；缺表时返回平台库初始化错误并指向 `sql/req_platform_req007_index_tables.sql`，不得写入部分批次或影响面。
+- 索引导入写入前必须确认 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item` 三张索引表已初始化；缺表时返回平台库初始化错误并指向 `docs/db/sql/req_platform_req007_index_tables.sql`，不得写入部分批次或影响面。
 - 项目初始化保存同样必须拒绝个人本机绝对路径；`req_repository.local_path_hint` 不属于初始化向导保存内容，初始化接口会清空该字段。
 - 影响面推荐接收到 `variant_id` 时必须校验项目分支属于当前项目，并使用项目分支 `baseline_branch` 作为索引分支过滤条件。
 - 模块知识库接收到 `variant_id` 时必须严格过滤该项目分支，不再兼容混入 `variant_id is null` 的旧项目级索引模块。

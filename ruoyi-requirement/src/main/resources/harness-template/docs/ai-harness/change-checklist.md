@@ -16,7 +16,7 @@
 - [ ] 修改权限范围、机构范围、时间范围或逻辑删除条件。
 - [ ] 如果项目存在 `docs/db/`，已读取 `docs/db/README.md`、`docs/db/table-dictionary.md` 和 `docs/db/relationship.md`。
 - [ ] 数据库变更已在当前 spec 目录填写数据库变更说明，或说明无需单独 SQL/迁移说明的原因。
-- [ ] DDL、DML、迁移或清理脚本已沉淀到稳定 `sql/` 路径，并在执行报告记录路径。
+- [ ] DDL、DML、迁移或清理脚本已沉淀到稳定 `docs/db/sql/` 路径，并在执行报告记录路径。
 - [ ] Mapper、join、聚合、分页粒度或统计口径变化已同步 `docs/db/relationship.md`，或在执行报告说明无需更新原因。
 
 ## 页面与交互

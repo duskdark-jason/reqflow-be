@@ -5,7 +5,7 @@
 1. 核对现状：确认索引表 SQL、后端缺表 guard、MCP 业务错误和本地数据库状态。
 2. TDD Red：更新默认初始化指令和兼容初始化指令测试，断言短指令字段完整且不包含 1-7 步长流程。
 3. Green：修改 `ReqActionTokenServiceImpl` 和 `ReqProjectInitServiceImpl` 的指令内容生成。
-4. 数据库核对：用本地配置连接 `ry-vue`，确认 `req_repository_index_batch`、`req_index_module`、`req_impact_item` 是否存在；缺失时执行 `sql/req_platform_req007_index_tables.sql` 并复查。
+4. 数据库核对：用本地配置连接 `ry-vue`，确认 `req_repository_index_batch`、`req_index_module`、`req_impact_item` 是否存在；缺失时执行 `docs/db/sql/req_platform_req007_index_tables.sql` 并复查。
 5. 文档同步：更新 `docs/ai-harness/modules/requirement-platform.md` 和相关契约说明，记录默认指令短化边界。
 6. 写执行报告，记录 Red/Green、数据库核对、迁移结果、影响范围和验证命令。
 7. 验证并提交任务分支。

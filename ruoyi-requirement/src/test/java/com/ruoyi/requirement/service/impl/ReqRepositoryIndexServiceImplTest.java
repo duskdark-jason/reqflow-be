@@ -149,7 +149,7 @@ class ReqRepositoryIndexServiceImplTest
 
         assertTrue(exception.getMessage().contains("平台索引表未初始化"));
         assertTrue(exception.getMessage().contains("req_repository_index_batch"));
-        assertTrue(exception.getMessage().contains("sql/req_platform_req007_index_tables.sql"));
+        assertTrue(exception.getMessage().contains("docs/db/sql/req_platform_req007_index_tables.sql"));
         verify(repositoryMapper, never()).selectReqRepositoryByRepoId(any());
         verify(batchMapper, never()).insertReqRepositoryIndexBatch(any());
         verifyNoInteractions(moduleMapper, impactMapper);

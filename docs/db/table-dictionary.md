@@ -1,10 +1,10 @@
 # 需求管理平台表结构字典
 
-本文件维护需求平台自有表的结构字典。可执行 DDL、迁移 SQL、菜单 SQL 和历史基线仍保留在仓库根目录 `sql/`；本文件只记录长期可读的表用途、关键字段、键约束和维护注意事项。
+本文件维护需求平台自有表的结构字典。可执行 DDL、迁移 SQL、菜单 SQL 和历史基线统一维护在 `docs/db/sql/`；本文件只记录长期可读的表用途、关键字段、键约束和维护注意事项。
 
 ## 维护范围
 
-- 主要来源：`sql/req_platform_schema.sql`、`sql/req_platform_req*.sql`。
+- 主要来源：`docs/db/sql/req_platform_schema.sql`、`docs/db/sql/req_platform_req*.sql`。
 - RuoYi 系统表如 `sys_user`、`sys_menu` 只记录需求平台用到的关联点，不在本字典完整展开。
 - 新增或修改表、字段、索引、约束、状态枚举或数据保留语义时，同步更新本文件。
 
@@ -83,11 +83,11 @@
 | 系统表 | 使用位置 | 注意事项 |
 |---|---|---|
 | `sys_user` | `req_mcp_user_key.user_id`、需求创建人、活动用户 | 查询用户显示信息时避免因角色表 join 放大行数。 |
-| `sys_menu` | 需求平台菜单、按钮权限和 MCP Key 菜单 | 菜单 SQL 保留在 `sql/req_platform_menu.sql` 和增量 SQL 中，权限标识需与 Controller 注解一致。 |
+| `sys_menu` | 需求平台菜单、按钮权限和 MCP Key 菜单 | 菜单 SQL 保留在 `docs/db/sql/req_platform_menu.sql` 和增量 SQL 中，权限标识需与 Controller 注解一致。 |
 
 ## 更新检查
 
 - 表、字段、索引或约束变化：更新本文件。
 - 关系、join、聚合、分页粒度或过滤条件变化：更新 `relationship.md`。
-- 可执行 DDL、DML、迁移或修复脚本：保留在 `sql/`，并在当前 spec 的 `execution-report.md` 记录路径。索引表缺失时先执行 `sql/req_platform_req007_index_tables.sql` 补齐 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。
+- 可执行 DDL、DML、迁移或修复脚本：保留在 `docs/db/sql/`，并在当前 spec 的 `execution-report.md` 记录路径。索引表缺失时先执行 `docs/db/sql/req_platform_req007_index_tables.sql` 补齐 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。
 - 只改文档不改 SQL 时：在 `execution-report.md` 写明数据库影响为文档更新，无执行脚本。

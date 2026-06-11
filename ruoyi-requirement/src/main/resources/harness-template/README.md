@@ -63,7 +63,7 @@ cp harness-template/WORKSPACE_AGENTS.snippet.md ./AGENTS.md
 5. 为核心业务模块复制 `docs/ai-harness/templates/module-template.md`。
 6. 为前后端接口、任务结果或关键 UI 状态复制 `docs/ai-harness/templates/contract-template.md`。
 7. 新需求使用 `docs/specs/active/REQ-001-中文需求标题/` 目录，并按 `docs/templates/README.md` 复制主流程模板；Git 任务分支另用 ASCII 名称。
-8. 如果项目存在数据库、Mapper、SQL 或统计口径维护需求，创建 `docs/db/README.md`、`docs/db/table-dictionary.md` 和 `docs/db/relationship.md`；纯前端或无数据库项目可以不创建 `docs/db/`。现有 `sql/` 或迁移目录保留为可执行脚本目录，不迁移到 `docs/db/`。如果仓库没有 DDL、迁移脚本、schema 导出或可信数据库字典，只生成“暂无确认表结构来源/暂无确认关系来源”的待补齐骨架，并记录已扫描路径。
+8. 如果项目存在数据库、Mapper、SQL 或统计口径维护需求，创建 `docs/db/README.md`、`docs/db/table-dictionary.md` 和 `docs/db/relationship.md`；纯前端或无数据库项目可以不创建 `docs/db/`。可执行 SQL、迁移脚本、菜单脚本和历史基线统一放入 `docs/db/sql/`。如果仓库没有 DDL、迁移脚本、schema 导出或可信数据库字典，只生成“暂无确认表结构来源/暂无确认关系来源”的待补齐骨架，并记录已扫描路径。
 9. 初始化阶段运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`，确认没有个人路径、旧路径、未替换占位符和缺失的基础 harness 文件。
 
 ## local-run 生成流程
