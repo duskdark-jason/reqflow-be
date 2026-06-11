@@ -67,7 +67,7 @@
 
 ## Harness 模板与初始化下发
 
-需求平台内置保存一份团队统一的需求平台驱动 harness 模板，作为项目接入时的初始化资产。后端可发布模板存储在 `ruoyi-requirement/src/main/resources/harness-template/`，`files.txt` 是 MCP 下发文件清单；workspace 根目录的 `harness-template/` 是平台自身建设和离线接入时的源模板副本。模板包至少包含：
+需求平台内置保存一份团队统一的需求平台驱动 harness 模板，作为项目接入时的初始化资产。后端可发布模板存储在 `ruoyi-requirement/src/main/resources/harness-template/`，`files.txt` 是 MCP 下发文件清单；workspace 根目录不再保留离线模板副本。模板包至少包含：
 
 - 子仓库 `AGENTS.md` 模板。
 - workspace 根目录 `AGENTS.md` 模板。
