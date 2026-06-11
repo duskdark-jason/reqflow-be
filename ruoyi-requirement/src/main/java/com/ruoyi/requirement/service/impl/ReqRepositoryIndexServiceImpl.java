@@ -49,8 +49,10 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     {
         validateRequired(request);
         validateNoPersonalAbsolutePath(request);
+        // 发布索引是写路径，不能像页面查询那样降级为空；缺表时必须提示执行迁移，避免用户误以为初始化成功。
         assertIndexTablesReady();
 
+        // actionToken/mcpKey 会把请求补齐到平台登记的项目分支，兼容路径仍支持显式 projectId/repoId。
         ReqVariant branchVariant = resolveRequestContext(request);
         resolveRepository(request);
         if (branchVariant == null)
@@ -127,6 +129,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_repository_index_batch"))
             {
+                // 只读列表允许旧环境降级为空，项目初始化页面会把它解释为“尚未发布索引”。
                 return Collections.emptyList();
             }
             throw e;
@@ -144,6 +147,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module"))
             {
+                // 模块索引表缺失时不吞掉写入失败；这里只服务查询页的兼容展示。
                 return Collections.emptyList();
             }
             throw e;
@@ -172,6 +176,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             return;
         }
+        // 影响面推荐必须锁定项目分支，否则不同客户线的模块、权限和表关系会互相污染。
         ReqVariant variant = variantMapper.selectReqVariantByVariantId(query.getVariantId());
         if (variant == null)
         {
@@ -243,6 +248,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             return;
         }
+        // 初始化发布不是简单打点：必须带模块知识，后续需求编排才有可检索的页面/接口/权限归属。
         if (safeList(request.getModules()).isEmpty())
         {
             throw new ServiceException("项目初始化索引必须包含模块知识库，请先按前端页面、菜单或后端主能力分析生成 modules。");
@@ -260,6 +266,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             if (StringUtils.isEmpty(impact.getModuleCode()) || !moduleCodes.contains(impact.getModuleCode()))
             {
+                // 影响面必须挂到本次模块，否则后续按模块查影响范围时会出现孤儿接口或孤儿权限。
                 throw new ServiceException("项目初始化影响面必须归属到本次 modules 中的 moduleCode");
             }
         }
@@ -267,6 +274,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
 
     private void validateNoPersonalAbsolutePath(ReqRepositoryIndexImportRequest request)
     {
+        // 索引会成为团队共享知识库，任何本机绝对路径都会让其他工作空间无法复用。
         checkPath(request.getRemoteUrl());
         checkPath(request.getMcpKey());
         checkPath(request.getActionToken());
@@ -399,6 +407,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     {
         if (StringUtils.isNotEmpty(request.getActionToken()))
         {
+            // actionToken 优先级最高，它把一次初始化动作绑定到确定的项目、分支和目标 MCP 方法。
             return resolveBranchByActionToken(request.getActionToken(), request);
         }
         if (StringUtils.isEmpty(request.getMcpKey()))
@@ -455,6 +464,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         ReqRepository repository;
         if (StringUtils.isNotEmpty(request.getMcpKey()) || StringUtils.isNotEmpty(request.getActionToken()))
         {
+            // 初始化指令侧只信任平台登记的远端地址，不允许调用方自己传 repoId 指向其他仓库。
             ReqRepository query = new ReqRepository();
             query.setProjectId(request.getProjectId());
             query.setRepoUrl(request.getRemoteUrl());

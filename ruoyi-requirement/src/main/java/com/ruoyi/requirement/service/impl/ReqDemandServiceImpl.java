@@ -151,6 +151,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException(BRANCH_NOT_INITIALIZED_MESSAGE);
         }
 
+        // 需求只能提交到完成初始化的项目分支：必须有可用仓库、模块知识和每个仓库的索引批次。
         List<ReqRepository> repositories = loadReadyRepositories(projectId);
         if (repositories.isEmpty())
         {
@@ -205,6 +206,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module"))
             {
+                // 缺索引表等价于未完成初始化，不能放行需求提交。
                 return false;
             }
             throw e;
@@ -225,6 +227,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_repository_index_batch"))
             {
+                // 缺批次表时没有可靠证据证明仓库已索引，按未初始化处理。
                 return Collections.emptyList();
             }
             throw e;

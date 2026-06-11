@@ -48,6 +48,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         String prompt = "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。";
         ReqActionInstruction instruction = createInstruction(ACTION_PROJECT_INIT, project.getProjectId(), variant.getVariantId(),
                 null, PROJECT_INIT_TOOL_NAME, prompt, "复制初始化指令", operator);
+        // 项目初始化指令必须绑定项目分支，后续 publish_repository_index 才能自动校验远端和分支归属。
         instruction.setContent(projectInitInstructionContent(prompt, instruction.getTargetMethod(), instruction.getToken(),
                         project.getProjectId(), variant.getVariantId())
                 + "\n项目：" + firstNotEmpty(project.getProjectName(), project.getProjectCode())
@@ -100,6 +101,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         {
             throw new ServiceException("动作Token不存在或已停用");
         }
+        // 解析成功后记录使用时间，便于后续审计初始化指令是否被实际消费。
         if (token.getTokenId() != null)
         {
             actionTokenMapper.updateLastUsed(token.getTokenId());
@@ -140,6 +142,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
             String hash = hashToken(plainToken);
             if (actionTokenMapper.selectReqActionTokenByTokenHash(hash) == null)
             {
+                // 动作 Token 与 MCP Key 一样只保存哈希，明文只出现在复制指令中。
                 return new GeneratedToken(plainToken, hash);
             }
         }

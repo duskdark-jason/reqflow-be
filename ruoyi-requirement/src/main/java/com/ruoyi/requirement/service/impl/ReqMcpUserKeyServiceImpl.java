@@ -126,6 +126,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
         {
             throw new ServiceException("MCP Key不允许换绑用户");
         }
+        // Key 代表一个用户的 MCP 身份，允许改名称/状态，但不能通过编辑把权限边界换到另一个用户。
         reqMcpUserKey.setUserId(null);
         return mcpUserKeyMapper.updateReqMcpUserKey(reqMcpUserKey);
     }
@@ -172,6 +173,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
         {
             throw new ServiceException("MCP Key不存在或已停用");
         }
+        // MCP 调用复用 RuoYi 用户权限模型，工具权限仍由菜单权限判定，而不是 Key 自带超级权限。
         SysUser user = validateUser(stored.getUserId());
         Set<String> permissions = permissionsForUser(user);
         LoginUser loginUser = new LoginUser(user.getUserId(), user.getDeptId(), user, permissions);
@@ -233,6 +235,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
             String hash = hashKey(plainKey);
             if (mcpUserKeyMapper.selectReqMcpUserKeyByKeyHash(hash) == null)
             {
+                // 明文 Key 只在创建/重置响应中返回一次，数据库只保存前缀和哈希用于校验与展示。
                 return new GeneratedKey(plainKey, hash);
             }
         }
@@ -275,6 +278,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
         ReqMcpUserKeyCreateResult result = new ReqMcpUserKeyCreateResult();
         result.setKey(key);
         result.setPlainKey(plainKey);
+        // 前端展示的是可复制安装包，不再暴露长期全局配置面，降低手工拼接 MCP 配置的出错概率。
         result.setCodexSetupPackage(ReqflowCodexSetupPackageTemplate.setupPackage(mcpAddress));
         return result;
     }

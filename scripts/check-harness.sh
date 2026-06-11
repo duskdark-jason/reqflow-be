@@ -431,6 +431,18 @@ check_db_change_record() {
   fi
 }
 
+check_code_comment_record() {
+  spec_dir=$1
+  execution_file="$spec_dir/execution-report.md"
+
+  [ "$MODE" = "complete" ] || return
+  [ -f "$execution_file" ] || return
+
+  check_pattern "$execution_file" '代码注释处理' "执行报告缺少代码注释处理"
+  check_pattern "$execution_file" '注释动作[：:][[:space:]]*(新增|更新|无需新增)' "执行报告缺少有效代码注释动作"
+  check_pattern "$execution_file" '处理说明[：:]' "执行报告缺少代码注释处理说明"
+}
+
 check_one_spec() {
   spec_dir=$1
 
@@ -450,6 +462,7 @@ check_one_spec() {
 
   check_module_knowledge_record "$spec_dir"
   check_db_change_record "$spec_dir"
+  check_code_comment_record "$spec_dir"
 
   if [ -f "$spec_dir/review-report.md" ] && [ ! -f "$spec_dir/execution-report.md" ]; then
     fail "存在 Review 报告但缺少执行报告：$spec_dir/execution-report.md"

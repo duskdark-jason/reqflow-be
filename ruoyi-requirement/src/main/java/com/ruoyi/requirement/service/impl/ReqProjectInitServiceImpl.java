@@ -153,6 +153,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
             ReqProjectInitModuleSummary moduleSummary, ReqProjectInitIndexSummary indexSummary)
     {
         ReqProjectInitChecklist checklist = new ReqProjectInitChecklist();
+        // 初始化完成不是单字段状态：项目、仓库、分支、模块知识和仓库索引都齐备后，需求才能落到该分支。
         boolean projectReady = project != null && StringUtils.isNotEmpty(project.getProjectName()) && StringUtils.isNotEmpty(project.getProjectCode());
         boolean repositoryReady = safeList(repositories).stream().anyMatch(this::isReadyRepository);
         boolean variantReady = safeList(variants).stream().anyMatch(this::isReadyVariant);
@@ -213,6 +214,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
             }
             repositories.add(repository);
         }
+        // 维护页是全量保存语义：前端删掉的仓库要从平台同步删除，避免后续初始化包继续下发旧仓库。
         if (keepIds.isEmpty())
         {
             repositoryMapper.deleteReqRepositoryByProjectId(projectId);
@@ -246,6 +248,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
             }
             variants.add(variant);
         }
+        // 项目分支也是全量保存语义，删除旧分支会阻止需求继续提交到已废弃的客户线。
         if (keepIds.isEmpty())
         {
             variantMapper.deleteReqVariantByProjectId(projectId);
@@ -300,6 +303,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         {
             if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module"))
             {
+                // 项目维护页允许旧库先展示基础信息；真正发布索引时会强制要求索引表存在。
                 return Collections.emptyList();
             }
             throw e;
@@ -319,6 +323,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         {
             if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_repository_index_batch"))
             {
+                // 兼容未执行索引表迁移的旧环境，页面显示为未索引，而不是让项目详情整体不可用。
                 return Collections.emptyList();
             }
             throw e;
@@ -422,6 +427,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
     private ReqActionInstruction buildMigrationPendingInstruction(String mcpKey)
     {
         ReqActionInstruction instruction = new ReqActionInstruction();
+        // req_action_token 缺失时只给临时兼容指令，文案必须提醒先补迁移，避免把 mcpKey 继续当长期认证方案。
         instruction.setActionType(IReqActionTokenService.ACTION_PROJECT_INIT);
         instruction.setTargetMethod("publish_repository_index");
         instruction.setPrompt("请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。");
@@ -446,6 +452,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         item.setIndexedModules(indexedModules);
         item.setTotalModules(manualModules + indexedModules);
 
+        // 索引批次按真实 Git 分支匹配，避免不同客户线共用同一项目时互相借用初始化结果。
         List<ReqRepositoryIndexBatch> branchBatches = safeList(batches).stream()
                 .filter(batch -> "imported".equals(batch.getStatus()) || StringUtils.isEmpty(batch.getStatus()))
                 .filter(batch -> StringUtils.isNotEmpty(variant.getBaselineBranch()) && variant.getBaselineBranch().equals(batch.getBranchName()))
@@ -521,6 +528,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
     {
         if (value == null) return;
         String normalized = value.replace('\\', '/').trim();
+        // 平台只保存团队共享配置，不能把某个执行者的本机目录写进可下发的初始化资料。
         if (normalized.startsWith("~")
                 || normalized.startsWith("/Users/")
                 || normalized.startsWith("/home/")
@@ -608,6 +616,7 @@ public class ReqProjectInitServiceImpl implements IReqProjectInitService
         {
             return "";
         }
+        // variantCode 需要稳定且 ASCII，可用于 MCP key、索引归属和后续任务分支上下文。
         String code = branchName.trim().replaceAll("[^A-Za-z0-9]+", "_").replaceAll("^_+|_+$", "").toUpperCase();
         return StringUtils.isEmpty(code) ? "BRANCH_" + Integer.toHexString(branchName.hashCode()).toUpperCase() : code;
     }

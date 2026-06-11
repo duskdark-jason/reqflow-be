@@ -313,6 +313,7 @@ public class McpService
     private String workspaceAgentsContent(ReqProject project, List<ReqRepository> repositories, List<ReqVariant> variants)
     {
         String content = readTemplateResource("WORKSPACE_AGENTS.snippet.md");
+        // workspace AGENTS 只负责入口导航，仓库清单必须来自平台登记信息，避免初始化 agent 按本机目录猜测仓库结构。
         content = content.replaceAll("(?s)```text\\n.*?```",
                 java.util.regex.Matcher.quoteReplacement("```text\n" + workspaceRepositoryBlock(repositories) + "```"));
         content = removeTemplatePlaceholders(content);
@@ -379,6 +380,7 @@ public class McpService
         Map<String, Object> arguments = request.getParams() == null ? Collections.emptyMap() : (Map<String, Object>) request.getParams().getOrDefault("arguments", Collections.emptyMap());
         if ("get_harness_template".equals(name))
         {
+            // 模板读取是只读能力，只允许具备项目查看权限的用户拿到初始化包，不在平台侧替用户写仓库文件。
             requirePermission("get_harness_template", "req:project:query");
             return toolResult(getHarnessTemplate(longArg(arguments, "projectId")));
         }
@@ -396,6 +398,7 @@ public class McpService
         }
         if ("publish_repository_index".equals(name))
         {
+            // 仓库索引发布会写入模块/影响面知识库，权限必须独立于普通文档保存能力校验。
             requirePermission("publish_repository_index", "req:index:import");
             return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(toIndexRequest(arguments), "mcp", currentUsername(), currentUserId())));
         }
@@ -408,6 +411,7 @@ public class McpService
     private ReqRepositoryIndexImportRequest toIndexRequest(Map<String, Object> arguments)
     {
         ReqRepositoryIndexImportRequest request = new ReqRepositoryIndexImportRequest();
+        // actionToken 是新的安全入口；projectId/repoId/mcpKey 保留为兼容字段，由服务层统一解析归属。
         request.setProjectId(longArg(arguments, "projectId"));
         request.setRepoId(longArg(arguments, "repoId"));
         request.setMcpKey(stringArg(arguments, "mcpKey"));
@@ -440,6 +444,7 @@ public class McpService
         List<ReqRepository> repositories = repositories(projectId);
         List<ReqVariant> variants = variants(projectId);
         List<Map<String, Object>> repositoryInstructions = new ArrayList<>();
+        // 返回 workspace 入口和每个仓库的文件包，调用方负责在真实工作空间合并，平台不执行 shell 或 Git 操作。
         for (ReqRepository repository : repositories)
         {
             Map<String, Object> item = new HashMap<>();
@@ -496,12 +501,14 @@ public class McpService
         files.add(harnessFile("AGENTS.md", repositoryAgentsContent(repository), "merge-if-exists"));
         for (String path : harnessTemplateFilePaths())
         {
+            // 初始化包只下发 docs/ 与 scripts/，避免把模板根目录的说明文件覆盖到业务仓库。
             if (!path.startsWith("docs/") && !path.startsWith("scripts/"))
             {
                 continue;
             }
             if ("docs/ai-harness/harness-index.json".equals(path))
             {
+                // harness-index 必须按目标仓库重写 template/initialized/远端/分支信息，不能直接复制模板索引。
                 files.add(harnessFile(path, repositoryHarnessIndexContent(repository, variants), "create-or-merge"));
                 continue;
             }
@@ -568,6 +575,7 @@ public class McpService
         String content = readTemplateResource(HARNESS_TEMPLATE_ROOT + path);
         if (isRuntimeInitializedDoc(path))
         {
+            // 初始化后的运行文档要去掉占位符；模板目录自身仍保留占位符，供后续需求复制填写。
             return removeTemplatePlaceholders(content);
         }
         return content;
@@ -646,6 +654,7 @@ public class McpService
     {
         String repoName = firstNotEmpty(repository.getRepoName(), "仓库");
         String repoType = firstNotEmpty(repository.getRepoType(), "UNKNOWN");
+        // 模块骨架必须是非模板文件，确保项目初始化后至少有一个可继续细化的模块知识库入口。
         return "# " + repoName + "前端页面功能索引\n\n"
                 + "## 业务目的\n\n"
                 + "本文件是项目接入初始化阶段生成的非模板模块知识库骨架。初始化 agent 必须先扫描当前仓库的前端路由、菜单配置、页面组件和 API 封装，"

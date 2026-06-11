@@ -121,6 +121,17 @@ write_module_doc() {
     '| 后端入口 | `DemoController` | 演示接口 |' > "$file"
 }
 
+append_code_comment_record() {
+  file=$1
+  printf '%s\n' \
+    '' \
+    '## 代码注释处理' \
+    '' \
+    '- 注释动作：无需新增' \
+    '- 注释文件：无' \
+    '- 处理说明：测试夹具逻辑直接，无复杂业务分支或外部约束，因此未新增代码注释' >> "$file"
+}
+
 make_root() {
   root=$1
   rm -rf "$root"
@@ -236,24 +247,33 @@ printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agen
 expect_fail "$root" complete "complete without review report" "缺少 Review 报告"
 
 make_root "$root"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
+expect_fail "$root" complete "complete without code comment record" "代码注释处理"
+
+make_root "$root"
 printf '%s\n' '# execution' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '当前执行 agent 实测：环境不可达。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
 expect_fail "$root" complete "environment claim without runtime evidence" "环境断言"
 
 make_root "$root"
 printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '旧结论：环境不可达 是错误结论，已由实测覆盖。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+append_code_comment_record "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
 printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete >"$OUT_FILE" 2>&1
 
 make_root "$root"
 printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '## 运行态证据' '' '- 执行目录：/workspace/repo' '- 启动命令：sh run.sh' '- profile/env/mode：test' '- 检查命令：curl http://localhost:8080/health' '- 原始错误摘要：connection refused' '- 是否代表用户环境：否，仅代表当前执行 agent 环境' '' '当前执行 agent 所在环境实测：环境不可达。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+append_code_comment_record "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
 printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete >"$OUT_FILE" 2>&1
 
 make_root "$root"
 printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '## 运行态证据' '' '- 执行目录：/workspace/repo' '- 启动命令：sh run.sh' '- profile/env/mode：test' '- 检查命令：curl http://localhost:8080/health' '- console/network 错误摘要：connection refused' '- 是否代表用户环境：否，仅代表当前执行 agent 环境' '' '当前执行 agent 所在环境实测：环境不可达。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+append_code_comment_record "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
 printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete >"$OUT_FILE" 2>&1
@@ -273,6 +293,7 @@ expect_fail "$root" complete "conditional review without final pass" "Review 结
 
 make_root "$root"
 printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' '## Review 返修记录' '' '| 修复 ID | 关联验收 ID | 处理结果 | 修改文件 | 验证命令 | 结果 |' '|---|---|---|---|---|---|' '| RF-001 | AC-001 | 已修复 | demo.md | sh test.sh | 通过 |' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+append_code_comment_record "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：有条件通过' '' '## 返修交接清单' '' '| 修复 ID | 严重级别 | 关联验收 ID | 问题 | 修复要求 | 验证要求 |' '|---|---|---|---|---|---|' '| RF-001 | 重要 | AC-001 | demo | fix | sh test.sh |' '' '## 复审记录' '' '| 修复 ID | 执行处理结果 | 复审结论 | 复审证据 |' '|---|---|---|---|' '| RF-001 | 已修复 | 通过 | sh test.sh |' '' '- 最终结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
 printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete >"$OUT_FILE" 2>&1
@@ -287,6 +308,7 @@ mkdir -p "$root/docs/specs/active/broken"
 printf '%s\n' '# requirement' '' '- AC-999: broken' > "$root/docs/specs/active/broken/requirement.md"
 printf '%s\n' '# plan' '' '- AC-999: L0' > "$root/docs/specs/active/broken/plan.md"
 printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+append_code_comment_record "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
 printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete --spec docs/specs/active/2026-06-09-REQ-001-演示需求 >"$OUT_FILE" 2>&1
@@ -331,6 +353,7 @@ printf '%s\n' '# relationship' > "$root/docs/db/relationship.md"
 printf '%s\n' '# requirement' '' '- AC-001: demo' '- 数据库/SQL：是，新增 req_demo 表。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/requirement.md"
 printf '%s\n' '# plan' '' '- AC-001: L0 L1 L2 L3' '- 新增 SQL 脚本并同步表关系。' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/plan.md"
 printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- SQL 脚本：sql/req_demo.sql' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
+append_code_comment_record "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/review-report.md"
 printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/2026-06-09-REQ-001-演示需求/meta.md"
 sh "$CHECK_SCRIPT" "$root" complete >"$OUT_FILE" 2>&1
