@@ -11,6 +11,7 @@ public final class ReqDemandStatusTransition
 {
     private static final Set<String> ALLOWED = new HashSet<>(Arrays.asList(
             "draft->submitted",
+            "submitted->plan_ready",
             "submitted->plan_pending",
             "plan_pending->plan_ready",
             "plan_ready->confirmed",

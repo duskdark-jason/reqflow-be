@@ -16,6 +16,7 @@ import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.requirement.domain.ReqDemand;
+import com.ruoyi.requirement.dto.ReqActionInstruction;
 import com.ruoyi.requirement.service.IReqDemandService;
 
 @RestController
@@ -57,6 +58,7 @@ public class ReqDemandController extends BaseController
     public AjaxResult edit(@RequestBody ReqDemand reqDemand)
     {
         reqDemand.setUpdateBy(getUsername());
+        reqDemand.setCreatorId(getUserId());
         return toAjax(reqDemandService.updateReqDemand(reqDemand));
     }
 
@@ -66,5 +68,13 @@ public class ReqDemandController extends BaseController
     public AjaxResult updateStatus(@PathVariable Long demandId, @PathVariable String status)
     {
         return toAjax(reqDemandService.updateReqDemandStatus(demandId, status, getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasPermi('req:demand:query')")
+    @GetMapping("/{demandId}/plan-instruction")
+    public AjaxResult planInstruction(@PathVariable Long demandId)
+    {
+        ReqActionInstruction instruction = reqDemandService.createRequirementPlanInstruction(demandId, getUsername());
+        return success(instruction);
     }
 }

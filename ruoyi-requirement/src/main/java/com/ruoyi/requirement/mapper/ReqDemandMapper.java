@@ -13,7 +13,6 @@ public interface ReqDemandMapper
     int insertReqDemand(ReqDemand reqDemand);
     int updateReqDemand(ReqDemand reqDemand);
     int updateReqDemandStatus(@Param("demandId") Long demandId, @Param("status") String status, @Param("updateBy") String updateBy);
-    int selectTodayDemandCount();
     Long selectDemandCount();
     List<Map<String, Object>> selectProjectRank();
 }

@@ -1,7 +1,5 @@
 package com.ruoyi.requirement.service.impl;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -16,10 +14,12 @@ import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
+import com.ruoyi.requirement.dto.ReqActionInstruction;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 import com.ruoyi.requirement.service.IReqDemandService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
 
@@ -43,6 +43,9 @@ public class ReqDemandServiceImpl implements IReqDemandService
     @Autowired
     private ReqActivityLogService activityLogService;
 
+    @Autowired
+    private IReqActionTokenService actionTokenService;
+
     @Override
     public ReqDemand selectReqDemandByDemandId(Long demandId)
     {
@@ -60,16 +63,13 @@ public class ReqDemandServiceImpl implements IReqDemandService
     {
         validateDemandTargetInitialized(reqDemand.getProjectId(), reqDemand.getVariantId());
         reqDemand.setDemandNo(nextDemandNo());
-        reqDemand.setStatus("submitted");
-        if (reqDemand.getCreatorId() == null)
-        {
-            reqDemand.setCreatorId(currentUserId());
-        }
+        reqDemand.setStatus("draft");
+        reqDemand.setCreatorId(currentUserId());
         int rows = reqDemandMapper.insertReqDemand(reqDemand);
         if (rows > 0)
         {
             activityLogService.record(reqDemand.getCreatorId(), reqDemand.getProjectId(), reqDemand.getDemandId(),
-                    "demand_submitted", "web", "提交需求：" + reqDemand.getTitle(), null);
+                    "demand_created", "web", "创建需求：" + reqDemand.getTitle(), null);
         }
         return rows;
     }
@@ -86,12 +86,22 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("需求不存在");
         }
+        if (!"draft".equals(current.getStatus()))
+        {
+            throw new ServiceException("只有未提交需求可以修改");
+        }
+        if (reqDemand.getCreatorId() == null || current.getCreatorId() == null
+                || !current.getCreatorId().equals(reqDemand.getCreatorId()))
+        {
+            throw new ServiceException("只有需求创建人可以修改");
+        }
         if (reqDemand.getStatus() != null && !reqDemand.getStatus().isBlank()
                 && !reqDemand.getStatus().equals(current.getStatus())
                 && !ReqDemandStatusTransition.isAllowed(current.getStatus(), reqDemand.getStatus()))
         {
             throw new ServiceException("需求状态流转不允许");
         }
+        reqDemand.setStatus(null);
         Long projectId = reqDemand.getProjectId() == null ? current.getProjectId() : reqDemand.getProjectId();
         Long variantId = reqDemand.getVariantId() == null ? current.getVariantId() : reqDemand.getVariantId();
         validateDemandTargetInitialized(projectId, variantId);
@@ -111,7 +121,17 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("需求状态流转不允许");
         }
         int rows = reqDemandMapper.updateReqDemandStatus(demandId, status, updateBy);
-        if (rows > 0 && "archived".equals(status))
+        if (rows > 0 && "submitted".equals(status))
+        {
+            activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                    "demand_submitted", "web", "提交需求：" + current.getDemandNo(), null);
+        }
+        else if (rows > 0 && "completed".equals(status))
+        {
+            activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                    "demand_completed", "web", "办结需求：" + current.getDemandNo(), null);
+        }
+        else if (rows > 0 && "archived".equals(status))
         {
             activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
                     "demand_archived", "web", "归档需求：" + current.getDemandNo(), null);
@@ -119,10 +139,46 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return rows;
     }
 
+    @Override
+    public ReqActionInstruction createRequirementPlanInstruction(Long demandId, String operator)
+    {
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        if (demand == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        String prompt = "请基于需求上下文生成需求说明和执行计划，并通过 reqflow MCP 回写资料包。";
+        ReqActionInstruction instruction = actionTokenService.createInstruction(
+                IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
+                demand.getProjectId(),
+                demand.getVariantId(),
+                demand.getDemandId(),
+                "save_requirement_package",
+                prompt,
+                "复制MCP编排指令",
+                operator);
+        // 编排指令给审批人员复制到 Codex，动作 Token 仅定位需求上下文，不替代人员 MCP Key 鉴权。
+        instruction.setContent(requirementPlanInstructionContent(prompt, instruction.getToken(), demand));
+        return instruction;
+    }
+
     private String nextDemandNo()
     {
-        return "REQ-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
-                + "-" + String.format("%03d", reqDemandMapper.selectTodayDemandCount() + 1);
+        Long currentCount = reqDemandMapper.selectDemandCount();
+        long sequence = (currentCount == null ? 0L : currentCount) + 1;
+        return "REQ-" + String.format("%03d", sequence);
+    }
+
+    private String requirementPlanInstructionContent(String prompt, String actionToken, ReqDemand demand)
+    {
+        return prompt
+                + "\nmcpServer: reqflow"
+                + "\ntools: save_requirement_package, save_development_plan"
+                + "\ndemandId: " + demand.getDemandId()
+                + "\ndemandNo: " + demand.getDemandNo()
+                + "\nactionToken: " + actionToken
+                + "\n要求：先完善需求说明，再形成执行计划；分别调用 save_requirement_package 和 save_development_plan 保存。"
+                + "\n注意：actionToken 只用于需求上下文识别，MCP 鉴权仍使用人员 X-MCP-Key。";
     }
 
     private void validateDemandTargetInitialized(Long projectId, Long variantId)

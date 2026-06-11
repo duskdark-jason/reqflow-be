@@ -11,9 +11,21 @@ class ReqDemandStatusTransitionTest
     void allowsPlannedStatusFlow()
     {
         assertTrue(ReqDemandStatusTransition.isAllowed("draft", "submitted"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("submitted", "plan_ready"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("plan_ready", "confirmed"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("confirmed", "developing"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("developing", "review"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("review", "completed"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("completed", "archived"));
+    }
+
+    @Test
+    void allowsLegacyIntermediateStatesForExistingDemand()
+    {
+        assertTrue(ReqDemandStatusTransition.isAllowed("submitted", "plan_pending"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("plan_pending", "plan_ready"));
         assertTrue(ReqDemandStatusTransition.isAllowed("review", "repairing"));
         assertTrue(ReqDemandStatusTransition.isAllowed("repairing", "review"));
-        assertTrue(ReqDemandStatusTransition.isAllowed("completed", "archived"));
     }
 
     @Test

@@ -103,11 +103,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where demand_id = #{demandId}
     </update>
 
-    <select id="selectTodayDemandCount" resultType="int">
-        select count(1) from req_demand
-        where date_format(create_time, '%Y%m%d') = date_format(sysdate(), '%Y%m%d')
-    </select>
-
     <select id="selectDemandCount" resultType="long">select count(1) from req_demand</select>
 
     <select id="selectProjectRank" resultType="java.util.Map">

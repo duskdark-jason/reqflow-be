@@ -2,6 +2,7 @@ package com.ruoyi.requirement.service;
 
 import java.util.List;
 import com.ruoyi.requirement.domain.ReqDemand;
+import com.ruoyi.requirement.dto.ReqActionInstruction;
 
 public interface IReqDemandService
 {
@@ -10,4 +11,5 @@ public interface IReqDemandService
     int insertReqDemand(ReqDemand reqDemand);
     int updateReqDemand(ReqDemand reqDemand);
     int updateReqDemandStatus(Long demandId, String status, String updateBy);
+    ReqActionInstruction createRequirementPlanInstruction(Long demandId, String operator);
 }

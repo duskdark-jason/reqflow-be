@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|---|
 | 需求管理 | 项目管理 | 项目列表、项目维护入口、项目初始化状态 | `reqflow-ui/src/views/requirement/project/index.vue`、`maintain.vue` | `reqflow-ui/src/api/requirement/project.js`、`projectInit.js` | `/requirement/project/**`，`req:project:*`；`/requirement/project/init/**`，`req:project:*` | `ReqProjectController`、`ReqProjectInitController`、`ReqProjectServiceImpl`、`ReqProjectInitServiceImpl` |
 | 需求管理 | 分支知识库详情页签 | 按项目分支查看模块知识、索引批次和初始化指令 | `reqflow-ui/src/views/requirement/project/knowledge.vue` | `reqflow-ui/src/api/requirement/index.js`、`project.js` | `/requirement/index/module/tree`，`req:index:list`；`/requirement/index/batch/list`，`req:index:list` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper`、`ReqRepositoryIndexBatchMapper` |
-| 需求管理 | 需求列表 | 需求维护页签、新增、编辑、查询和影响面自动关联 | `reqflow-ui/src/views/requirement/demand/index.vue`、`maintain.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；`/requirement/index/impact/suggest`，`req:index:list` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
+| 需求管理 | 需求列表 | 需求维护页签、新增、编辑、查询、状态流转和需求编排指令 | `reqflow-ui/src/views/requirement/demand/index.vue`、`maintain.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；`/requirement/index/impact/suggest`，`req:index:list` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
 | 需求管理 | 需求执行包 | 保存和读取需求、计划、执行报告、Review 报告等交接资料 | `reqflow-ui/src/views/requirement/package/index.vue` | `reqflow-ui/src/api/requirement/package.js` | `/requirement/package/**`，`req:package:*` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
 | 需求管理 | MCP 管理 | 管理人员 MCP Key，创建或重置后返回一次性 Key、Codex 多平台安装命令和高级安装包 | `reqflow-ui/src/views/requirement/mcpKey/index.vue` | `reqflow-ui/src/api/requirement/mcpKey.js` | `/requirement/mcp/key/**`，`/requirement/codex/install.*`，`req:mcp:key:*`；`/requirement/mcp` | `ReqMcpKeyController`、`ReqCodexInstallController`、`ReqMcpController`、`ReqMcpUserKeyServiceImpl`、`McpService` |
 | 需求管理 | 使用统计 | 需求、项目、用户和状态统计 | `reqflow-ui/src/views/requirement/statistics/index.vue` | `reqflow-ui/src/api/requirement/statistics.js` | `/requirement/statistics/**`，`req:stats:view` | `ReqStatisticsController`、`ReqStatisticsService` |
@@ -41,7 +41,10 @@
 - 需求管理左侧菜单以“需求管理”为一级目录；项目仓库、项目分支和人工模块不再作为独立左侧菜单入口。
 - 项目、仓库、项目分支和模块知识必须按项目分支隔离；不能把其他分支或旧项目级模块默认混入当前分支。
 - 新增或编辑需求时，后端必须校验 `projectId + variantId` 属于同一项目，且项目分支已有仓库索引证据；新功能提需允许分支暂时没有既有模块知识。
-- 新增需求时后端必须覆盖请求体中的需求编号并生成 `REQ-yyyyMMdd-序号`；执行包任务分支按 `fix-功能模块-编号-标题` 语义生成 ASCII slug。
+- 新增需求时后端必须覆盖请求体中的需求编号并生成 `REQ-001` 风格编号，不包含日期；后端必须覆盖客户端 `creatorId`，以当前登录用户作为创建人，并将新需求状态置为 `draft`。
+- 普通需求编辑只允许 `draft` 状态且创建人匹配；状态变化必须通过状态流转接口，不得通过通用编辑接口绕过状态机。
+- 需求主状态流转为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，旧 `plan_pending`、`repairing`、`archived` 仅作为兼容状态保留。
+- 审批人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令用于 MCP 保存 `requirement` 和 `plan` 资料包，不能替代人员 `X-MCP-Key`。
 - 需求未选择既有模块时，可以用备注承载新功能名称；执行包模块名解析顺序为人工模块、索引模块、备注。
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。
 - 项目初始化默认复制指令只保留短动态上下文，必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，确保接入项目能触发全局 skill 并定位到指定 MCP server 的指定 tool。
@@ -55,7 +58,7 @@
 
 - 修改项目初始化上下文时，必须同步检查前端项目管理、项目维护、分支知识库页签和需求表单的字段使用。
 - 修改索引导入或影响面推荐时，必须确认项目分支、真实 Git 分支、索引批次和模块知识的粒度一致。
-- MCP tools 新增或改名时，必须同步人员权限校验、接口契约、`tools/list` schema、前端文案和平台初始化指令。
+- MCP tools 新增、改名或 actionToken 解析调整时，必须同步人员权限校验、接口契约、`tools/list` schema、前端文案和平台初始化指令。
 - MCP 管理 Key 创建或重置结果调整时，必须同步前端 MCP 管理页。页面不再提供配置查询入口；创建和重置响应只单独返回一次性 `plainKey` 与 `codexSetupPackage`。`codexSetupPackage.installCommands` 是主复制入口，提供 macOS/Linux 和 Windows PowerShell 代码块命令模板；模板使用 `${REQFLOW_MCP_KEY}` 占位，前端只在当前结果弹窗中用一次性 `plainKey` 渲染。长 JSON 安装包仅作为高级配置/调试信息保留。
 - `/requirement/codex/install.sh` 和 `/requirement/codex/install.ps1` 是匿名可读安装脚本端点，脚本内容不得内置人员 Key，不得自动调用 reqflow MCP tools，只写入本机 Codex MCP 配置和全局 `reqflow-mcp` skill。
 - 全局 `reqflow-mcp` skill 模板的 `SKILL.md` frontmatter 必须保持合法 YAML；`name` 和 `description` 使用双引号包裹，描述中不得出现未转义的 `: `，避免 Codex 启动扫描时跳过该 skill。

@@ -1,0 +1,21 @@
+# 需求流转与填报体验调整元信息
+
+- 状态：complete
+- 当前角色：Execution Agent
+- 流程模式：平台自身建设模式
+- 需求 Key：无，本地平台建设
+- 平台关联远端：https://github.com/duskdark-jason/reqflow-be.git
+- 平台目标分支：feature/req-016-demand-flow-ux
+- 执行模式：任务分支模式
+- 当前分支：feature/req-016-demand-flow-ux
+- 执行授权：已授权
+- Review 授权：已授权
+- 目标客户：通用
+- 基线分支：main
+- companion 仓库：../reqflow-ui/docs/specs/active/REQ-016-需求流转与填报体验调整
+- 关联 spec：../reqflow-ui/docs/specs/active/REQ-016-需求流转与填报体验调整
+- 影响模块：需求管理/需求接口、需求管理/需求执行包、MCP动作Token、需求状态流转
+- 模块知识库动作：更新
+- 模块知识库文档：docs/ai-harness/modules/requirement-platform.md
+- 无需更新原因：不适用
+- 最后更新：2026-06-11

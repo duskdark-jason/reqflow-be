@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.ruoyi.requirement.domain.ReqActionToken;
 import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqMemoryIndex;
 import com.ruoyi.requirement.domain.ReqPackageVersion;
@@ -33,6 +34,7 @@ import com.ruoyi.requirement.mapper.ReqMemoryIndexMapper;
 import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 import com.ruoyi.requirement.service.IReqRepositoryIndexService;
 import com.ruoyi.requirement.service.IReqPackageService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
@@ -337,6 +339,33 @@ class McpServiceTest
         McpResponse response = service.handle(request("tools/call", toolParams("publish_repository_index", arguments)));
 
         assertToolErrorResult(response, "初始化指令不存在或已失效");
+    }
+
+    @Test
+    void packageSaveToolCanResolveDemandByActionToken()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        token.setTargetMethod("save_requirement_package");
+        token.setDemandId(9L);
+        when(actionTokenService.resolveToken("reqflow_action_plan")).thenReturn(token);
+        when(packageService.saveVersion(9L, "plan", "执行计划", "save_development_plan"))
+                .thenReturn(packageVersion("plan", "执行计划"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_plan");
+        arguments.put("content", "执行计划");
+
+        service.handle(request("tools/call", toolParams("save_development_plan", arguments)));
+
+        verify(actionTokenService).resolveToken("reqflow_action_plan");
+        verify(packageService).saveVersion(9L, "plan", "执行计划", "save_development_plan");
     }
 
     @Test

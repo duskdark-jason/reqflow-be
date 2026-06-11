@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.alibaba.fastjson2.JSON;
 import com.ruoyi.common.utils.SecurityUtils;
+import com.ruoyi.requirement.domain.ReqActionToken;
 import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqMemoryIndex;
 import com.ruoyi.requirement.domain.ReqPackageVersion;
@@ -28,6 +29,7 @@ import com.ruoyi.requirement.mapper.ReqMemoryIndexMapper;
 import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 import com.ruoyi.requirement.service.IReqPackageService;
 import com.ruoyi.requirement.service.IReqRepositoryIndexService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
@@ -46,6 +48,7 @@ public class McpService
     @Autowired private IReqPackageService reqPackageService;
     @Autowired private IReqRepositoryIndexService repositoryIndexService;
     @Autowired private ReqActivityLogService activityLogService;
+    @Autowired private IReqActionTokenService actionTokenService;
 
     public McpResponse handle(McpRequest request)
     {
@@ -403,7 +406,7 @@ public class McpService
             return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(toIndexRequest(arguments), "mcp", currentUsername(), currentUserId())));
         }
         requirePermission(name, "req:package:save");
-        Long demandId = longArg(arguments, "demandId");
+        Long demandId = resolvePackageDemandId(name, arguments);
         String artifactType = artifactTypeForTool(name, stringArg(arguments, "artifactType"));
         return toolResult(Collections.singletonMap("version", reqPackageService.saveVersion(demandId, artifactType, stringArg(arguments, "content"), name)));
     }
@@ -798,6 +801,34 @@ public class McpService
         throw new IllegalArgumentException("不支持的MCP工具：" + toolName);
     }
 
+    private Long resolvePackageDemandId(String toolName, Map<String, Object> arguments)
+    {
+        String actionToken = stringArg(arguments, "actionToken");
+        if (actionToken == null || actionToken.isEmpty())
+        {
+            Long demandId = longArg(arguments, "demandId");
+            if (demandId == null)
+            {
+                throw new IllegalArgumentException("需求ID或actionToken不能为空");
+            }
+            return demandId;
+        }
+        ReqActionToken token = actionTokenService.resolveToken(actionToken);
+        if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
+        {
+            if (!"save_requirement_package".equals(toolName) && !"save_development_plan".equals(toolName))
+            {
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            return token.getDemandId();
+        }
+        if (!toolName.equals(token.getTargetMethod()))
+        {
+            throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+        }
+        return token.getDemandId();
+    }
+
     private Map<String, Object> resource(String uri, String name)
     {
         Map<String, Object> map = new HashMap<>();
@@ -941,13 +972,14 @@ public class McpService
     private Map<String, Object> packageToolSchema(boolean allowArtifactType)
     {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("demandId", property("integer", "需求 ID"));
+        properties.put("demandId", property("integer", "需求 ID；未传时可用 actionToken 定位"));
+        properties.put("actionToken", property("string", "需求编排指令中的动作 token，可用于定位需求上下文"));
         properties.put("content", property("string", "要保存的交接资料正文"));
         if (allowArtifactType)
         {
             properties.put("artifactType", property("string", "产物类型，缺省为 requirement"));
         }
-        return objectSchema(properties, Arrays.asList("demandId", "content"));
+        return objectSchema(properties, Collections.singletonList("content"));
     }
 
     private Map<String, Object> registerHarnessSchema()

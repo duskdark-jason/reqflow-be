@@ -1,9 +1,11 @@
 package com.ruoyi.requirement.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -18,10 +20,12 @@ import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
+import com.ruoyi.requirement.dto.ReqActionInstruction;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
 
 class ReqDemandServiceImplTest
@@ -43,6 +47,54 @@ class ReqDemandServiceImplTest
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
 
         assertThrows(ServiceException.class, () -> service.updateReqDemand(update));
+        verify(reqDemandMapper, never()).updateReqDemand(any());
+    }
+
+    @Test
+    void rejectsUpdateWhenDemandIsNotDraft()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = new ReqDemand();
+        current.setDemandId(1L);
+        current.setCreatorId(7L);
+        current.setStatus("submitted");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+
+        ReqDemand update = new ReqDemand();
+        update.setDemandId(1L);
+        update.setCreatorId(7L);
+        update.setTitle("修改需求");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> service.updateReqDemand(update));
+
+        assertTrue(exception.getMessage().contains("只有未提交需求可以修改"));
+        verify(reqDemandMapper, never()).updateReqDemand(any());
+    }
+
+    @Test
+    void rejectsUpdateWhenEditorIsNotCreator()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = new ReqDemand();
+        current.setDemandId(1L);
+        current.setCreatorId(7L);
+        current.setStatus("draft");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+
+        ReqDemand update = new ReqDemand();
+        update.setDemandId(1L);
+        update.setCreatorId(8L);
+        update.setTitle("修改需求");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> service.updateReqDemand(update));
+
+        assertTrue(exception.getMessage().contains("只有需求创建人可以修改"));
         verify(reqDemandMapper, never()).updateReqDemand(any());
     }
 
@@ -84,7 +136,7 @@ class ReqDemandServiceImplTest
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L), repository(22L)));
         when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Arrays.asList(
                 batch(21L, "main"), batch(22L, "main")));
-        when(reqDemandMapper.selectTodayDemandCount()).thenReturn(2);
+        when(reqDemandMapper.selectDemandCount()).thenReturn(2L);
         when(reqDemandMapper.insertReqDemand(any())).thenReturn(1);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
@@ -98,7 +150,8 @@ class ReqDemandServiceImplTest
 
         service.insertReqDemand(demand);
 
-        assertTrue(demand.getDemandNo().contains("REQ-"));
+        assertEquals("REQ-003", demand.getDemandNo());
+        assertEquals("draft", demand.getStatus());
         verify(reqDemandMapper).insertReqDemand(demand);
     }
 
@@ -114,7 +167,7 @@ class ReqDemandServiceImplTest
         when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L)));
         when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
-        when(reqDemandMapper.selectTodayDemandCount()).thenReturn(3);
+        when(reqDemandMapper.selectDemandCount()).thenReturn(3L);
         when(reqDemandMapper.insertReqDemand(any())).thenReturn(1);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
@@ -129,7 +182,8 @@ class ReqDemandServiceImplTest
 
         service.insertReqDemand(demand);
 
-        assertTrue(demand.getDemandNo().endsWith("-004"));
+        assertEquals("REQ-004", demand.getDemandNo());
+        assertEquals("draft", demand.getStatus());
         verify(reqDemandMapper).insertReqDemand(demand);
     }
 
@@ -145,7 +199,7 @@ class ReqDemandServiceImplTest
         when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L)));
         when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
-        when(reqDemandMapper.selectTodayDemandCount()).thenReturn(6);
+        when(reqDemandMapper.selectDemandCount()).thenReturn(6L);
         when(reqDemandMapper.insertReqDemand(any())).thenReturn(1);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
@@ -157,13 +211,54 @@ class ReqDemandServiceImplTest
 
         ReqDemand demand = demand(10L, 31L);
         demand.setDemandNo("MANUAL-001");
+        demand.setCreatorId(999L);
 
         service.insertReqDemand(demand);
 
         assertNotEquals("MANUAL-001", demand.getDemandNo());
-        assertTrue(demand.getDemandNo().startsWith("REQ-"));
-        assertTrue(demand.getDemandNo().endsWith("-007"));
+        assertEquals("REQ-007", demand.getDemandNo());
+        assertEquals(0L, demand.getCreatorId());
         verify(reqDemandMapper).insertReqDemand(demand);
+    }
+
+    @Test
+    void createsRequirementPlanInstructionForDemand()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqDemand demand = demand(10L, 31L);
+        demand.setDemandId(5L);
+        demand.setDemandNo("REQ-005");
+        demand.setStatus("submitted");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(demand);
+
+        ReqActionInstruction created = new ReqActionInstruction();
+        created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        created.setTargetMethod("save_requirement_package");
+        created.setToken("reqflow_action_demo");
+        created.setPrompt("请基于需求上下文生成需求说明和执行计划。");
+        created.setContent("base instruction");
+        when(actionTokenService.createInstruction(
+                eq(IReqActionTokenService.ACTION_REQUIREMENT_PLAN),
+                eq(10L),
+                eq(31L),
+                eq(5L),
+                eq("save_requirement_package"),
+                any(),
+                eq("复制MCP编排指令"),
+                eq("approver"))).thenReturn(created);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+
+        ReqActionInstruction instruction = service.createRequirementPlanInstruction(5L, "approver");
+
+        assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
+        assertTrue(instruction.getContent().contains("save_requirement_package"));
+        assertTrue(instruction.getContent().contains("save_development_plan"));
+        assertTrue(instruction.getContent().contains("demandId: 5"));
+        assertTrue(instruction.getContent().contains("demandNo: REQ-005"));
     }
 
     private ReqDemand demand(Long projectId, Long variantId)
