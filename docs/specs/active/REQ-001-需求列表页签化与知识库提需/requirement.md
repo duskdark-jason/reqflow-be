@@ -54,14 +54,14 @@
 
 ## Companion 关联
 
-- companion spec：`../reqflow-ui/docs/specs/active/2026-06-11-REQ-001-需求列表页签化与知识库提需`
-- 关联分支：`fix/REQ-20260611-001-demand-tab-knowledge`
+- companion spec：`../reqflow-ui/docs/specs/active/REQ-001-需求列表页签化与知识库提需`
+- 关联分支：`fix/req-001-demand-tab-knowledge`
 
 ## 客户与分支
 
 - 目标客户：通用
 - 基线分支：main
-- 任务分支：fix/REQ-20260611-001-demand-tab-knowledge
+- 任务分支：fix/req-001-demand-tab-knowledge
 
 ## 约束与假设
 

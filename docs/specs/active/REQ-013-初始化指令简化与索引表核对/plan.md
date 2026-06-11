@@ -17,7 +17,7 @@
 | L1 | `mvn -pl ruoyi-requirement -am -Dtest=ReqActionTokenServiceImplTest,ReqProjectInitServiceImplTest,ReqRepositoryIndexServiceImplTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 初始化指令、缺表错误和 MCP tool 结果 |
 | L1 | `mvn -pl ruoyi-requirement -am test` | 需求模块回归 |
 | L0 | `sh scripts/check-docs.sh` | 文档结构 |
-| L0 | `sh scripts/check-harness.sh init --spec docs/specs/active/2026-06-10-REQ-013-初始化指令简化与索引表核对` | active spec 和 harness |
+| L0 | `sh scripts/check-harness.sh init --spec docs/specs/active/REQ-013-初始化指令简化与索引表核对` | active spec 和 harness |
 | L0 | `git diff --check` | 空白检查 |
 | DB | `SHOW TABLES LIKE 'req\\_%'` 或等价查询 | 本地平台库索引表核对 |
 

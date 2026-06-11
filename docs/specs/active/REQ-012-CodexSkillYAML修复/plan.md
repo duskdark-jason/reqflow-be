@@ -16,7 +16,7 @@
 | L1 | `mvn -pl ruoyi-admin,ruoyi-requirement -am -Dtest=ReqflowCodexGlobalSkillTemplateTest,ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 模板和安装脚本定向测试 |
 | L1 | `mvn -pl ruoyi-requirement -am test` | 后端需求模块回归 |
 | L0 | `sh scripts/check-docs.sh` | 文档结构 |
-| L0 | `sh scripts/check-harness.sh init --spec docs/specs/active/2026-06-10-REQ-012-CodexSkillYAML修复` | active spec 和 harness |
+| L0 | `sh scripts/check-harness.sh init --spec docs/specs/active/REQ-012-CodexSkillYAML修复` | active spec 和 harness |
 | L0 | `git diff --check` | 空白检查 |
 
 ## 验收映射

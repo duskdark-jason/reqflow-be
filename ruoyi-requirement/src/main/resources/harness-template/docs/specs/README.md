@@ -14,7 +14,7 @@
 新需求优先使用目录式结构：
 
 ```text
-active/YYYY-MM-DD-REQ-001-中文需求标题/
+active/REQ-001-中文需求标题/
   meta.md
   requirement.md
   plan.md
@@ -22,7 +22,7 @@ active/YYYY-MM-DD-REQ-001-中文需求标题/
   review-report.md
 ```
 
-目录名必须同时包含稳定需求编号和中文标题，例如 `2026-06-09-REQ-001-审核结果抽屉优化`。中文标题便于团队阅读；任务分支名不复用中文目录，必须按 `../process/git-workflow.md` 使用 ASCII。
+目录名必须同时包含稳定需求编号和中文标题，例如 `REQ-001-审核结果抽屉优化`。中文标题便于团队阅读；任务分支名不复用中文目录，必须按 `../process/git-workflow.md` 使用 ASCII。
 
 目录内文件职责：
 
@@ -39,7 +39,7 @@ active/YYYY-MM-DD-REQ-001-中文需求标题/
 历史单文件需求仍可保留：
 
 ```text
-YYYY-MM-DD-REQ-001-中文需求标题.md
+REQ-001-中文需求标题.md
 ```
 
 ## 使用流程
@@ -65,7 +65,7 @@ YYYY-MM-DD-REQ-001-中文需求标题.md
 - `requirement.md` 中的每个 `AC-*` 验收 ID 必须在 `plan.md` 中出现；当 `execution-report.md` 或 `review-report.md` 存在时，也必须覆盖同一批验收 ID。
 - Review Agent 刚写完 `review-report.md`、尚未返修时运行：`sh scripts/check-harness.sh review`。该模式允许 `阻断` 或 `有条件通过` 结论和未回填的 `RF-*`，用于验证 Review 中间交接文件本身是否合格。
 - Execution Agent 完成返修并回填后自动交回 Review Agent 复审；最终 Review 通过后运行：`sh scripts/check-harness.sh` 或 `sh scripts/check-harness.sh complete`。该模式要求阻断已关闭、`RF-*` 已在 `execution-report.md` 回填，且最终 Review 结论为 `通过`。
-- 关闭单个需求前可运行：`sh scripts/check-harness.sh complete --spec docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题`。
+- 关闭单个需求前可运行：`sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-001-中文需求标题`。
 - `check-harness.sh` 会检查 active spec 目录名是否包含稳定 `REQ-001` 编号和中文需求标题。
 - `review-report.md` 的 `Review 结论` 必须是 `通过`、`有条件通过` 或 `阻断`；完成态只接受最终 `通过`。
 - Review Agent 产生 `RF-*` 后应自动交回 Execution Agent，不直接修代码，也不回填 `execution-report.md`，除非用户明确授权切换角色。

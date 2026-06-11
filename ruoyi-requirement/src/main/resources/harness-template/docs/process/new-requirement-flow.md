@@ -31,7 +31,7 @@
 新需求优先使用目录式文件交接，详见 `agent-workflow.md`：
 
 ```text
-docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
+docs/specs/active/REQ-001-中文需求标题/
   meta.md
   requirement.md
   plan.md

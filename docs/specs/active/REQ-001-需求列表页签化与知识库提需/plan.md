@@ -40,7 +40,7 @@
 
 ## 验证计划
 
-- L0 文档/规范：`sh scripts/check-docs.sh`，`sh scripts/check-harness.sh complete --spec docs/specs/active/2026-06-11-REQ-001-需求列表页签化与知识库提需`
+- L0 文档/规范：`sh scripts/check-docs.sh`，`sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-001-需求列表页签化与知识库提需`
 - L1 编译/构建：`mvn -pl ruoyi-admin -am -DskipTests package`
 - L2 单元/契约：`mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqPackageServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test`
 - L3 运行态冒烟：若当前环境可启动，调用需求保存和执行包生成接口；无法启动时记录当前执行环境证据。
