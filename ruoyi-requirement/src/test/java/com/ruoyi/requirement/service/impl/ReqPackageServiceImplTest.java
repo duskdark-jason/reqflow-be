@@ -52,7 +52,7 @@ class ReqPackageServiceImplTest
         RequirementTemplateContext context = ReflectionTestUtils.invokeMethod(service, "buildContext", demand);
 
         assertEquals("demand-list", context.getModuleName());
-        assertEquals("fix-demand-list-REQ-20260611-007-new-feature-flow", context.getTaskBranch());
+        assertEquals("fix-demand-list-REQ-007-new-feature-flow", context.getTaskBranch());
     }
 
     private ReqDemand demand()

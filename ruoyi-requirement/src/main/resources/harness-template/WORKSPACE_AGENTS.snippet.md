@@ -39,7 +39,7 @@
 10. 多 agent 协作时，按受影响子仓库的 `docs/process/agent-workflow.md` 使用 `requirement.md`、`plan.md`、`execution-report.md`、`review-report.md` 文件交接。
 11. 多仓 workspace 只维护 workspace 级启动提示词；不要在子仓库单独沉淀独立启动提示词。子仓库规则以各自 `AGENTS.md`、`docs/process/` 和 `docs/ai-harness/` 为准。
 12. 各类落地文档必须使用中文描述；必要英文术语、命令、接口名和工具名可以保留，但标题和说明必须给出中文语义。
-13. 需求 spec 目录必须使用 `YYYY-MM-DD-REQ-001-中文需求标题` 形式，包含稳定需求编号和中文标题；Git 任务分支必须使用 ASCII。
+13. 需求 spec 目录必须使用 `REQ-001-中文需求标题` 形式，包含稳定需求编号和中文标题；Git 任务分支必须使用 ASCII。
 14. 用户选择方案、确认方向或同意建议，只代表进入计划阶段；不得据此自动创建分支、改代码、写执行报告或写 Review 报告；明确执行授权后，默认自动进入 Review、返修和复审循环，直到最终 Review 通过。
 15. 当前分支为 `main` 或 `master` 时，除只读分析和明确的小文档修正外，不得开始功能实现；需要执行新需求时，先按子仓库 Git 工作流创建 ASCII 任务分支。
 16. Plan、Execution、Review 是独立阶段：Plan 写完计划后停止；Execution 不自我 Review；Review 只读审查并产出 `RF-*`；返修自动回到 Execution，复审自动回到 Review，直到最终 Review 通过。

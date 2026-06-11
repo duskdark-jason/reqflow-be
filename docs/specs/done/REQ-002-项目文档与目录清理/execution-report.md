@@ -50,7 +50,7 @@
 | L0 | AC-002 | `find reqflow-be/docs/db/sql -maxdepth 1 -type f -print` | 通过，SQL 脚本已位于 `docs/db/sql/`。 |
 | L0 | AC-003 | `rg` 扫描 README 若依默认宣传内容 | 通过，README 不再保留若依默认宣传内容。 |
 | L0 | AC-004 | `sh scripts/check-docs.sh` | 已通过，最终复验再次确认。 |
-| L0 | AC-004 | `sh scripts/check-harness.sh complete --spec docs/specs/done/2026-06-11-REQ-002-项目文档与目录清理` | 通过。 |
+| L0 | AC-004 | `sh scripts/check-harness.sh complete --spec docs/specs/done/REQ-002-项目文档与目录清理` | 通过。 |
 | L0 | AC-004 | `sh scripts/test-check-harness.sh` | 通过。 |
 | L2 | AC-004 | `mvn -pl ruoyi-requirement -am -Dtest=ReqRepositoryIndexServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，15 tests。 |
 

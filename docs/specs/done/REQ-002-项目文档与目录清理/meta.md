@@ -12,8 +12,8 @@
 - Review 授权：已授权
 - 目标客户：通用
 - 基线分支：main
-- companion 仓库：../reqflow-ui/docs/specs/done/2026-06-11-REQ-002-项目文档与目录清理
-- 关联 spec：../reqflow-ui/docs/specs/done/2026-06-11-REQ-002-项目文档与目录清理
+- companion 仓库：../reqflow-ui/docs/specs/done/REQ-002-项目文档与目录清理
+- 关联 spec：../reqflow-ui/docs/specs/done/REQ-002-项目文档与目录清理
 - 影响模块：项目文档、数据库脚本、AI Harness
 - 模块知识库动作：更新
 - 模块知识库文档：docs/ai-harness/modules/requirement-platform.md

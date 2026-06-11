@@ -52,4 +52,4 @@
 | `mvn -pl ruoyi-requirement -am -Dtest=ReqActionTokenServiceImplTest,ReqProjectInitServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | Green 阶段通过，18 个测试无失败。 |
 | `mvn -pl ruoyi-requirement -am -Dtest=ReqActionTokenServiceImplTest,ReqProjectInitServiceImplTest,ReqRepositoryIndexServiceImplTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，47 个测试无失败。 |
 | `mvn -pl ruoyi-requirement -am test` | 通过，63 个测试无失败。 |
-| `sh scripts/check-docs.sh && sh scripts/check-harness.sh init --spec docs/specs/active/2026-06-10-REQ-013-初始化指令简化与索引表核对 && git diff --check` | 通过，文档检查通过，Harness 检查通过（init 模式），空白检查无输出。 |
+| `sh scripts/check-docs.sh && sh scripts/check-harness.sh init --spec docs/specs/active/REQ-013-初始化指令简化与索引表核对 && git diff --check` | 通过，文档检查通过，Harness 检查通过（init 模式），空白检查无输出。 |
