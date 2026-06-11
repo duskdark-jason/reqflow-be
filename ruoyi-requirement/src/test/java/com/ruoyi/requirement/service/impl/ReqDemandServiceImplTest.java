@@ -1,5 +1,6 @@
 package com.ruoyi.requirement.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -14,13 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.requirement.domain.ReqDemand;
-import com.ruoyi.requirement.domain.ReqModule;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
-import com.ruoyi.requirement.mapper.ReqIndexModuleMapper;
-import com.ruoyi.requirement.mapper.ReqModuleMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
@@ -54,23 +52,16 @@ class ReqDemandServiceImplTest
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
         ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
         ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
-        ReqModuleMapper moduleMapper = mock(ReqModuleMapper.class);
-        ReqIndexModuleMapper indexModuleMapper = mock(ReqIndexModuleMapper.class);
         ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
 
         when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L), repository(22L)));
-        when(moduleMapper.selectReqModuleList(any())).thenReturn(Collections.emptyList());
-        when(indexModuleMapper.selectReqIndexModuleList(any())).thenReturn(Collections.emptyList());
-        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Arrays.asList(
-                batch(21L, "main"), batch(22L, "main")));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
         ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
         ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
-        ReflectionTestUtils.setField(service, "moduleMapper", moduleMapper);
-        ReflectionTestUtils.setField(service, "indexModuleMapper", indexModuleMapper);
         ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
 
         ServiceException exception = assertThrows(ServiceException.class,
@@ -86,15 +77,11 @@ class ReqDemandServiceImplTest
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
         ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
         ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
-        ReqModuleMapper moduleMapper = mock(ReqModuleMapper.class);
-        ReqIndexModuleMapper indexModuleMapper = mock(ReqIndexModuleMapper.class);
         ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
         ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
 
         when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L), repository(22L)));
-        when(moduleMapper.selectReqModuleList(any())).thenReturn(Collections.singletonList(module("demand")));
-        when(indexModuleMapper.selectReqIndexModuleList(any())).thenReturn(Collections.emptyList());
         when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Arrays.asList(
                 batch(21L, "main"), batch(22L, "main")));
         when(reqDemandMapper.selectTodayDemandCount()).thenReturn(2);
@@ -104,8 +91,6 @@ class ReqDemandServiceImplTest
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
         ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
         ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
-        ReflectionTestUtils.setField(service, "moduleMapper", moduleMapper);
-        ReflectionTestUtils.setField(service, "indexModuleMapper", indexModuleMapper);
         ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
         ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
 
@@ -114,6 +99,70 @@ class ReqDemandServiceImplTest
         service.insertReqDemand(demand);
 
         assertTrue(demand.getDemandNo().contains("REQ-"));
+        verify(reqDemandMapper).insertReqDemand(demand);
+    }
+
+    @Test
+    void insertsNewFeatureDemandWhenBranchHasIndexesWithoutExistingModules()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L)));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
+        when(reqDemandMapper.selectTodayDemandCount()).thenReturn(3);
+        when(reqDemandMapper.insertReqDemand(any())).thenReturn(1);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        ReqDemand demand = demand(10L, 31L);
+        demand.setRemark("新增功能");
+
+        service.insertReqDemand(demand);
+
+        assertTrue(demand.getDemandNo().endsWith("-004"));
+        verify(reqDemandMapper).insertReqDemand(demand);
+    }
+
+    @Test
+    void overwritesClientProvidedDemandNoOnInsert()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L)));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
+        when(reqDemandMapper.selectTodayDemandCount()).thenReturn(6);
+        when(reqDemandMapper.insertReqDemand(any())).thenReturn(1);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        ReqDemand demand = demand(10L, 31L);
+        demand.setDemandNo("MANUAL-001");
+
+        service.insertReqDemand(demand);
+
+        assertNotEquals("MANUAL-001", demand.getDemandNo());
+        assertTrue(demand.getDemandNo().startsWith("REQ-"));
+        assertTrue(demand.getDemandNo().endsWith("-007"));
         verify(reqDemandMapper).insertReqDemand(demand);
     }
 
@@ -162,13 +211,4 @@ class ReqDemandServiceImplTest
         return batch;
     }
 
-    private ReqModule module(String moduleCode)
-    {
-        ReqModule module = new ReqModule();
-        module.setProjectId(10L);
-        module.setVariantId(31L);
-        module.setModuleCode(moduleCode);
-        module.setStatus("0");
-        return module;
-    }
 }

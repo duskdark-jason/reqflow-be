@@ -50,6 +50,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         order by order_num asc, index_module_id asc
     </select>
 
+    <select id="selectReqIndexModuleByIndexModuleId" parameterType="Long" resultMap="ReqIndexModuleResult">
+        <include refid="selectReqIndexModuleVo"/>
+        where index_module_id = #{indexModuleId}
+    </select>
+
     <insert id="insertReqIndexModule" parameterType="ReqIndexModule" useGeneratedKeys="true" keyProperty="indexModuleId">
         insert into req_index_module
         <trim prefix="(" suffix=")" suffixOverrides=",">

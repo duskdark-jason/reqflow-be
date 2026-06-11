@@ -120,9 +120,11 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | `/requirement/demand` | PUT | `req:demand:edit` | 修改需求 |
 | `/requirement/demand/{demandId}/status/{status}` | POST | `req:demand:edit` | 状态流转 |
 
-新增需求时后端生成 `demandNo`，格式为 `REQ-yyyyMMdd-序号`，并将状态设为 `submitted`。
+新增需求时后端始终生成 `demandNo`，格式为 `REQ-yyyyMMdd-序号`，即使请求体传入编号也会被覆盖，并将状态设为 `submitted`。
 
-新增和修改需求时，`projectId + variantId` 必须指向同一项目下已启用且初始化完成的项目分支；未初始化完成的分支不得作为需求提交目标。分支初始化完成口径为：项目存在有效代码仓库，所选分支存在模块知识（人工模块或索引模块），且所有有效仓库都已有该分支真实 `baselineBranch` 的 `imported` 索引批次。该校验必须在后端服务层兜底，不能只依赖前端下拉过滤。
+新增和修改需求时，`projectId + variantId` 必须指向同一项目下已启用且初始化完成的项目分支；未初始化完成的分支不得作为需求提交目标。分支初始化完成口径为：项目存在有效代码仓库，且所有有效仓库都已有该分支真实 `baselineBranch` 的 `imported` 索引批次。新功能提需允许当前分支暂时没有既有模块知识，该校验必须在后端服务层兜底，不能只依赖前端下拉过滤。
+
+需求可以选择既有模块，也可以通过备注字段承载“新功能名称”。新功能名称用于执行包上下文和前端展示，不写入项目分支知识库；选择既有模块时，`moduleId` 可以对应人工模块，也可以对应索引模块标识，执行包生成时按人工模块、索引模块、备注的顺序解析模块名。
 
 允许的状态流转：
 
@@ -151,6 +153,8 @@ completed -> archived
 | `/requirement/package/generate/{demandId}` | POST | `req:package:save` | 生成草稿执行包 |
 
 执行包保存永远追加 `req_package_version` 新记录，不覆盖历史版本。版本号按 `demand_id + artifact_type` 独立递增。
+
+生成草稿执行包时，`context_manifest` 和需求草稿中的任务分支使用 `fix-功能模块-编号-标题` 语义，并将各片段转换为命令行友好的 ASCII slug。模块片段优先来自人工模块名，其次来自索引模块名，最后使用备注中的新功能名称。
 
 支持的产物类型：
 

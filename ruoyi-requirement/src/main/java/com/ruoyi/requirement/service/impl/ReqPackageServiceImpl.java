@@ -4,16 +4,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
+import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqDemand;
+import com.ruoyi.requirement.domain.ReqIndexModule;
 import com.ruoyi.requirement.domain.ReqModule;
 import com.ruoyi.requirement.domain.ReqPackageVersion;
 import com.ruoyi.requirement.domain.ReqProject;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
+import com.ruoyi.requirement.mapper.ReqIndexModuleMapper;
 import com.ruoyi.requirement.mapper.ReqModuleMapper;
 import com.ruoyi.requirement.mapper.ReqPackageVersionMapper;
 import com.ruoyi.requirement.mapper.ReqProjectMapper;
@@ -44,6 +48,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
     @Autowired private ReqRepositoryMapper reqRepositoryMapper;
     @Autowired private ReqVariantMapper reqVariantMapper;
     @Autowired private ReqModuleMapper reqModuleMapper;
+    @Autowired private ReqIndexModuleMapper reqIndexModuleMapper;
     @Autowired private RequirementTemplateService templateService;
     @Autowired private ReqActivityLogService activityLogService;
 
@@ -107,11 +112,11 @@ public class ReqPackageServiceImpl implements IReqPackageService
     {
         ReqProject project = reqProjectMapper.selectReqProjectByProjectId(demand.getProjectId());
         ReqVariant variant = reqVariantMapper.selectReqVariantByVariantId(demand.getVariantId());
-        ReqModule module = demand.getModuleId() == null ? null : reqModuleMapper.selectReqModuleByModuleId(demand.getModuleId());
         ReqRepository query = new ReqRepository();
         query.setProjectId(demand.getProjectId());
         List<ReqRepository> repos = reqRepositoryMapper.selectReqRepositoryList(query);
         ReqRepository repo = repos.isEmpty() ? null : repos.get(0);
+        String moduleName = resolveModuleName(demand);
 
         RequirementTemplateContext context = new RequirementTemplateContext();
         context.setProjectName(project == null ? "" : project.getProjectName());
@@ -122,10 +127,68 @@ public class ReqPackageServiceImpl implements IReqPackageService
         context.setBaselineBranch(variant == null ? "main" : variant.getBaselineBranch());
         context.setDemandNo(demand.getDemandNo());
         context.setDemandTitle(demand.getTitle());
-        context.setTaskBranch("feature/" + demand.getDemandNo());
-        context.setModuleName(module == null ? "" : module.getModuleName());
+        context.setModuleName(moduleName);
+        context.setTaskBranch(buildTaskBranch(demand, moduleName));
         context.setAcceptanceText(demand.getAcceptanceText());
         return context;
+    }
+
+    private String resolveModuleName(ReqDemand demand)
+    {
+        if (demand.getModuleId() != null)
+        {
+            ReqModule module = reqModuleMapper.selectReqModuleByModuleId(demand.getModuleId());
+            if (module != null && StringUtils.isNotEmpty(module.getModuleName()))
+            {
+                return module.getModuleName();
+            }
+            ReqIndexModule indexModule = selectIndexModule(demand.getModuleId());
+            if (indexModule != null && StringUtils.isNotEmpty(indexModule.getModuleName()))
+            {
+                return indexModule.getModuleName();
+            }
+        }
+        return StringUtils.isNotEmpty(demand.getRemark()) ? demand.getRemark() : "";
+    }
+
+    private ReqIndexModule selectIndexModule(Long moduleId)
+    {
+        try
+        {
+            return reqIndexModuleMapper.selectReqIndexModuleByIndexModuleId(moduleId);
+        }
+        catch (DataAccessException e)
+        {
+            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module"))
+            {
+                return null;
+            }
+            throw e;
+        }
+    }
+
+    private String buildTaskBranch(ReqDemand demand, String moduleName)
+    {
+        // 任务分支要带业务语义，同时必须保持 Git/命令行友好的 ASCII 片段。
+        return "fix-" + slug(moduleName, "module")
+                + "-" + slug(demand.getDemandNo(), "requirement")
+                + "-" + slug(demand.getTitle(), "demand");
+    }
+
+    private String slug(String value, String fallback)
+    {
+        if (StringUtils.isEmpty(value))
+        {
+            return fallback;
+        }
+        String slug = value.trim()
+                .replaceAll("[^A-Za-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (StringUtils.isNotEmpty(slug))
+        {
+            return slug;
+        }
+        return fallback + "-" + Integer.toHexString(value.hashCode());
     }
 
     private void recordPackageWrite(Long demandId, String artifactType, Integer versionNo)
