@@ -93,8 +93,13 @@ check_spec_dir_name() {
   spec_dir=$1
   spec_name=$(basename "$spec_dir")
 
-  if ! printf '%s\n' "$spec_name" | grep -E '^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-REQ-[0-9][0-9][0-9]-' >/dev/null 2>&1; then
-    fail "spec 目录名必须使用 YYYY-MM-DD-REQ-001-中文需求标题：$spec_dir"
+  if printf '%s\n' "$spec_name" | grep -E '^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-' >/dev/null 2>&1; then
+    fail "spec 目录名不得包含日期前缀，应使用 REQ-001-中文需求标题：$spec_dir"
+    return
+  fi
+
+  if ! printf '%s\n' "$spec_name" | grep -E '^REQ-[0-9][0-9][0-9]-' >/dev/null 2>&1; then
+    fail "spec 目录名必须使用 REQ-001-中文需求标题：$spec_dir"
     return
   fi
 

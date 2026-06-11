@@ -3,7 +3,7 @@
 ## 执行概要
 
 - 状态：完成
-- 当前分支：fix/REQ-20260611-001-demand-tab-knowledge
+- 当前分支：fix/req-001-demand-tab-knowledge
 - commit：complete-check后提交
 - 模块知识库文档：docs/ai-harness/modules/requirement-platform.md
 

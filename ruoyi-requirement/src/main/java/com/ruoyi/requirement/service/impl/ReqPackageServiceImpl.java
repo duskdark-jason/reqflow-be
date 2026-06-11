@@ -171,8 +171,14 @@ public class ReqPackageServiceImpl implements IReqPackageService
     {
         // 任务分支要带业务语义，同时必须保持 Git/命令行友好的 ASCII 片段。
         return "fix-" + slug(moduleName, "module")
-                + "-" + slug(demand.getDemandNo(), "requirement")
+                + "-" + requirementBranchToken(demand.getDemandNo())
                 + "-" + slug(demand.getTitle(), "demand");
+    }
+
+    private String requirementBranchToken(String demandNo)
+    {
+        String token = slug(demandNo, "requirement");
+        return token.replaceFirst("^REQ-[0-9]{8}-([0-9]+)$", "REQ-$1");
     }
 
     private String slug(String value, String fallback)

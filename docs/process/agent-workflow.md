@@ -7,7 +7,7 @@
 新需求默认使用目录式 spec：
 
 ```text
-docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/
+docs/specs/active/REQ-001-中文需求标题/
   meta.md
   requirement.md
   plan.md
@@ -92,7 +92,7 @@ draft requirement -> selected option -> approved plan -> execution authorized ->
 sh scripts/check-harness.sh init      # Harness 初始化或纯文档接入后使用，不检查 active spec，不启动项目
 sh scripts/check-harness.sh review    # Review Agent 输出 review-report.md 后使用，允许阻断结论和未回填 RF
 sh scripts/check-harness.sh complete  # 默认完成态门禁，要求 RF 已回填且最终 Review 通过
-sh scripts/check-harness.sh complete --spec docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题  # 只检查指定需求，要求 meta.md 状态为 complete
+sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-001-中文需求标题  # 只检查指定需求，要求 meta.md 状态为 complete
 sh scripts/check-harness.sh           # 等同 complete
 ```
 

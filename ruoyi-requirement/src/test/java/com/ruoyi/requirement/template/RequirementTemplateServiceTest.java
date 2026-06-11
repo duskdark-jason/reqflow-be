@@ -15,7 +15,7 @@ class RequirementTemplateServiceTest
         context.setProjectCode("REQFLOW");
         context.setDemandNo("REQ-20260609-001");
         context.setDemandTitle("提交需求");
-        context.setTaskBranch("feature/REQ-20260609-001");
+        context.setTaskBranch("feature/req-001-submit-demand");
         context.setAcceptanceText("可以生成执行包");
 
         String content = new RequirementTemplateService()

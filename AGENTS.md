@@ -32,7 +32,7 @@
 
 各类落地文档必须使用中文描述；必要英文术语、命令、接口名和工具名可以保留，但标题和说明必须给出中文语义。
 
-需求 spec 目录必须使用 `YYYY-MM-DD-REQ-001-中文需求标题` 形式，包含稳定需求编号和中文标题；Git 任务分支必须使用 ASCII，详见 `docs/specs/README.md` 和 `docs/process/git-workflow.md`。
+需求 spec 目录必须使用 `REQ-001-中文需求标题` 形式，包含稳定需求编号和中文标题；Git 任务分支必须使用 ASCII，详见 `docs/specs/README.md` 和 `docs/process/git-workflow.md`。
 
 新需求、接口变更、数据库变更或跨端联调开始前，必须先按 `docs/process/new-requirement-flow.md` 判断影响范围、补充需求说明和确认文档联动。
 

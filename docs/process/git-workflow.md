@@ -53,14 +53,14 @@ git remote -v
 ## 分支命名建议
 
 ```text
-feature/REQ-YYYYMMDD-001-ascii-task
-feature/customer-code/REQ-YYYYMMDD-001-ascii-task
-fix/REQ-YYYYMMDD-001-ascii-fix
-docs/REQ-YYYYMMDD-001-harness-docs
-chore/REQ-YYYYMMDD-001-maintenance
+feature/req-001-ascii-task
+feature/customer-code/req-001-ascii-task
+fix/req-001-ascii-fix
+docs/req-001-harness-docs
+chore/req-001-maintenance
 ```
 
-Git 任务分支必须使用 ASCII，避免 CI、Webhook、URL、Shell 和远端平台兼容问题。需求 spec 目录可使用 `YYYY-MM-DD-REQ-001-中文需求标题`，但不要直接复用为分支名。
+Git 任务分支必须使用 ASCII，避免 CI、Webhook、URL、Shell 和远端平台兼容问题。需求 spec 目录必须使用 `REQ-001-中文需求标题`，不包含日期前缀，也不要直接复用为分支名。
 
 多仓联调时，相关仓库使用相同 ASCII 分支名，便于追踪。客户定制需求应从对应客户基线分支创建任务分支，并在 `docs/specs/active/.../meta.md` 记录目标客户和基线分支。
 
@@ -71,7 +71,7 @@ Git 任务分支必须使用 ASCII，避免 CI、Webhook、URL、Shell 和远端
 ```bash
 git switch <baseline-branch>
 git pull --ff-only
-git switch -c feature/REQ-YYYYMMDD-001-ascii-task
+git switch -c feature/req-001-ascii-task
 ```
 
 如本地不允许拉取远端，必须说明原因，并确认当前基线分支已经是可接受的最新代码。

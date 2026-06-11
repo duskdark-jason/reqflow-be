@@ -5,9 +5,9 @@
 - 流程模式：平台自身建设模式
 - 需求 Key：无，本地平台建设
 - 平台关联远端：未配置
-- 平台目标分支：fix/REQ-20260610-013-init-instruction-slim-index-schema
+- 平台目标分支：fix/req-013-init-instruction-slim-index-schema
 - 执行模式：任务分支模式
-- 当前分支：fix/REQ-20260610-013-init-instruction-slim-index-schema
+- 当前分支：fix/req-013-init-instruction-slim-index-schema
 - 执行授权：已授权
 - Review 授权：未授权
 - 目标客户：通用

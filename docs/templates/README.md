@@ -4,7 +4,7 @@
 
 ## 新需求主流程
 
-在 `docs/specs/active/YYYY-MM-DD-REQ-001-中文需求标题/` 下复制并填写：
+在 `docs/specs/active/REQ-001-中文需求标题/` 下复制并填写：
 
 | 模板 | 目标文件 | 用途 |
 |---|---|---|
