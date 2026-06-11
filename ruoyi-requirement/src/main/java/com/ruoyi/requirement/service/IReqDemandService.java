@@ -12,4 +12,5 @@ public interface IReqDemandService
     int updateReqDemand(ReqDemand reqDemand);
     int updateReqDemandStatus(Long demandId, String status, String updateBy);
     ReqActionInstruction createRequirementPlanInstruction(Long demandId, String operator);
+    ReqActionInstruction createRequirementDevelopInstruction(Long demandId, String operator);
 }

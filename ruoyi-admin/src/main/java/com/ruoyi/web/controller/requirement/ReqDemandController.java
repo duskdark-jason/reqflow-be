@@ -77,4 +77,12 @@ public class ReqDemandController extends BaseController
         ReqActionInstruction instruction = reqDemandService.createRequirementPlanInstruction(demandId, getUsername());
         return success(instruction);
     }
+
+    @PreAuthorize("@ss.hasPermi('req:demand:query')")
+    @GetMapping("/{demandId}/develop-instruction")
+    public AjaxResult developInstruction(@PathVariable Long demandId)
+    {
+        ReqActionInstruction instruction = reqDemandService.createRequirementDevelopInstruction(demandId, getUsername());
+        return success(instruction);
+    }
 }

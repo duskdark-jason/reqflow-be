@@ -5,7 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -257,8 +260,83 @@ class ReqDemandServiceImplTest
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
         assertTrue(instruction.getContent().contains("save_requirement_package"));
         assertTrue(instruction.getContent().contains("save_development_plan"));
+        assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
+        assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_requirement_package"));
+        assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_development_plan"));
+        assertTrue(instruction.getContent().contains("arguments.actionToken"));
+        assertTrue(instruction.getContent().contains("不是 X-MCP-Key"));
+        assertTrue(instruction.getContent().contains("24小时内有效"));
+        assertTrue(instruction.getContent().contains("仅可使用一次"));
+        assertTrue(instruction.getContent().contains("重新生成"));
         assertTrue(instruction.getContent().contains("demandId: 5"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-005"));
+    }
+
+    @Test
+    void createsRequirementDevelopInstructionForDemand()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqDemand demand = demand(10L, 31L);
+        demand.setDemandId(6L);
+        demand.setDemandNo("REQ-006");
+        demand.setStatus("confirmed");
+        when(reqDemandMapper.selectReqDemandByDemandId(6L)).thenReturn(demand);
+
+        ReqActionInstruction created = new ReqActionInstruction();
+        created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        created.setTargetMethod("upload_execution_report");
+        created.setToken("reqflow_action_develop");
+        created.setPrompt("请按需求设计和执行方案完成开发。");
+        created.setContent("base instruction");
+        when(actionTokenService.createInstruction(
+                eq(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP),
+                eq(10L),
+                eq(31L),
+                eq(6L),
+                eq("upload_execution_report"),
+                any(),
+                eq("复制执行开发指令"),
+                eq("developer"))).thenReturn(created);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+
+        ReqActionInstruction instruction = service.createRequirementDevelopInstruction(6L, "developer");
+
+        assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, instruction.getActionType());
+        assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
+        assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_execution_report"));
+        assertTrue(instruction.getContent().contains("actionToken: reqflow_action_develop"));
+        assertTrue(instruction.getContent().contains("arguments.actionToken"));
+        assertTrue(instruction.getContent().contains("24小时内有效"));
+        assertTrue(instruction.getContent().contains("仅可使用一次"));
+        assertTrue(instruction.getContent().contains("重新生成"));
+        assertTrue(instruction.getContent().contains("demandId: 6"));
+        assertTrue(instruction.getContent().contains("demandNo: REQ-006"));
+    }
+
+    @Test
+    void recordsRepairingStatusTransition()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("review");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(reqDemandMapper.updateReqDemandStatus(5L, "repairing", "approver")).thenReturn(1);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        service.updateReqDemandStatus(5L, "repairing", "approver");
+
+        verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_repairing"),
+                eq("web"), contains("发起返修"), isNull());
     }
 
     private ReqDemand demand(Long projectId, Long variantId)

@@ -9,9 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Date;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -42,6 +44,8 @@ class ReqActionTokenServiceImplTest
         assertTrue(instruction.getPrompt().contains("项目分支初始化"));
         assertTrue(instruction.getContent().contains(instruction.getPrompt()));
         assertTrue(instruction.getContent().contains(instruction.getToken()));
+        assertTrue(instruction.getContent().contains("24小时内有效"));
+        assertTrue(instruction.getContent().contains("仅可使用一次"));
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
         assertTrue(instruction.getContent().contains("toolName: publish_repository_index"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));
@@ -63,6 +67,10 @@ class ReqActionTokenServiceImplTest
         assertEquals(31L, saved.getVariantId());
         assertEquals("publish_repository_index", saved.getTargetMethod());
         assertEquals("0", saved.getStatus());
+        assertNotNull(saved.getExpireTime());
+        assertTrue(saved.getExpireTime().after(new Date(System.currentTimeMillis() + 23L * 60 * 60 * 1000)));
+        assertTrue(saved.getExpireTime().before(new Date(System.currentTimeMillis() + 25L * 60 * 60 * 1000)));
+        assertEquals(saved.getExpireTime(), instruction.getExpireTime());
         assertNotEquals(instruction.getToken(), saved.getTokenHash());
         assertEquals(service.hashTokenForTest(instruction.getToken()), saved.getTokenHash());
         assertTrue(instruction.getToken().startsWith(saved.getTokenPrefix()));
@@ -96,7 +104,9 @@ class ReqActionTokenServiceImplTest
         ReqActionTokenServiceImpl service = newService(mapper);
         String plainToken = "reqflow_action_test_token";
         ReqActionToken stored = token(88L, "0");
+        stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
         when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.updateLastUsed(88L)).thenReturn(1);
 
         ReqActionToken resolved = service.resolveToken(plainToken);
 
@@ -114,6 +124,50 @@ class ReqActionTokenServiceImplTest
 
         assertThrows(ServiceException.class, () -> service.resolveToken(""));
         assertThrows(ServiceException.class, () -> service.resolveToken(plainToken));
+    }
+
+    @Test
+    void rejectsExpiredToken()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_expired_token";
+        ReqActionToken stored = token(90L, "0");
+        stored.setExpireTime(new Date(System.currentTimeMillis() - 1000));
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+
+        assertThrows(ServiceException.class, () -> service.resolveToken(plainToken));
+        verify(mapper, never()).updateLastUsed(90L);
+    }
+
+    @Test
+    void rejectsAlreadyUsedToken()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_used_token";
+        ReqActionToken stored = token(91L, "0");
+        stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
+        stored.setLastUsedTime(new Date(System.currentTimeMillis() - 1000));
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+
+        assertThrows(ServiceException.class, () -> service.resolveToken(plainToken));
+        verify(mapper, never()).updateLastUsed(91L);
+    }
+
+    @Test
+    void rejectsTokenWhenLastUsedUpdateDoesNotWin()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_race_token";
+        ReqActionToken stored = token(92L, "0");
+        stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.updateLastUsed(92L)).thenReturn(0);
+
+        assertThrows(ServiceException.class, () -> service.resolveToken(plainToken));
+        verify(mapper).updateLastUsed(92L);
     }
 
     private ReqActionTokenServiceImpl newService(ReqActionTokenMapper mapper)

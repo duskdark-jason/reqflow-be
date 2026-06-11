@@ -103,5 +103,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         update req_action_token
         set last_used_time = sysdate()
         where token_id = #{tokenId}
+          and last_used_time is null
     </update>
 </mapper>

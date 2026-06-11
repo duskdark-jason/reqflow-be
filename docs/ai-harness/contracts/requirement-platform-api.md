@@ -53,13 +53,13 @@
   "token": "reqflow_action_xxx",
   "tokenPrefix": "reqflow_action_xxx",
   "prompt": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。",
-  "content": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。\n请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。\nmcpServer: reqflow\ntoolName: publish_repository_index\nmcpTool: reqflow.publish_repository_index\ntargetMethod: publish_repository_index\nprojectId: 1\nvariantId: 2\nactionToken: reqflow_action_xxx\n要求：actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。",
+  "content": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。\n请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。\nmcpServer: reqflow\ntoolName: publish_repository_index\nmcpTool: reqflow.publish_repository_index\ntargetMethod: publish_repository_index\nprojectId: 1\nvariantId: 2\nactionToken: reqflow_action_xxx\n有效期：24小时内有效，仅可使用一次；过期或已使用后需重新生成。\n要求：actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。",
   "copyLabel": "复制初始化指令",
-  "expireTime": null
+  "expireTime": "2026-06-12 10:00:00"
 }
 ```
 
-`initInstruction.content` 是给接入项目复制的短动态上下文，不再重复完整执行步骤。内容必须保留 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，避免接入项目在存在多个 MCP server 或同名能力描述时无法定位到需求平台工具。`projectId` 用于先读取 `get_harness_template`，`actionToken` 是项目分支动作 token，只能作为 `publish_repository_index` 的 `arguments.actionToken` 传入，不能写入 `X-MCP-Key` 请求头；完整初始化顺序由全局 `reqflow-mcp` skill 承接。
+`initInstruction.content` 是给接入项目复制的短动态上下文，不再重复完整执行步骤。内容必须保留 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，避免接入项目在存在多个 MCP server 或同名能力描述时无法定位到需求平台工具。`projectId` 用于先读取 `get_harness_template`，`actionToken` 是项目分支动作 token，只能作为 `publish_repository_index` 的 `arguments.actionToken` 传入，不能写入 `X-MCP-Key` 请求头；完整初始化顺序由全局 `reqflow-mcp` skill 承接。初始化 actionToken 生成后 24 小时内有效且仅可使用一次，过期或已使用后必须重新生成初始化指令。
 
 初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成兼容字段，前端主展示以 `initInstruction` 为准。
 
@@ -120,6 +120,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | `/requirement/demand` | PUT | `req:demand:edit` | 修改未提交需求正文 |
 | `/requirement/demand/{demandId}/status/{status}` | POST | `req:demand:edit` | 状态流转 |
 | `/requirement/demand/{demandId}/plan-instruction` | GET | `req:demand:query` | 获取生成需求说明和执行计划的 MCP 编排指令 |
+| `/requirement/demand/{demandId}/develop-instruction` | GET | `req:demand:query` | 获取执行开发并回写执行报告的 MCP 指令 |
 
 新增需求时后端始终生成 `demandNo`，格式为 `REQ-001` 风格递增编号，不包含日期；即使请求体传入编号也会被覆盖。创建人 ID 由当前登录用户获取，即使请求体传入 `creatorId` 也会被覆盖。新增后状态设为 `draft`，中文语义为“未提交”。
 
@@ -145,9 +146,11 @@ review -> completed
 completed -> archived
 ```
 
-其中 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed` 是新主流程；`plan_pending`、`repairing`、`archived` 用于兼容历史或返修场景。不允许跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
+其中 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed` 是新主流程；`review -> repairing -> review` 是验收返修分支；`plan_pending`、`archived` 用于兼容历史或归档场景。不允许跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
 
-`plan-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_plan`，复制内容必须包含 `mcpServer: reqflow`、`save_requirement_package`、`save_development_plan`、`demandId`、`demandNo` 和 `actionToken`。该 actionToken 只用于需求编排上下文定位，不能替代人员 `X-MCP-Key`。
+`plan-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_plan`，复制内容必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`mcpTool: reqflow.save_requirement_package`、`mcpTool: reqflow.save_development_plan`、`demandId`、`demandNo`、`actionToken`、`arguments.actionToken` 使用说明，以及 24 小时内有效、仅可使用一次、过期或已使用后重新生成的提示。该 actionToken 只用于需求编排上下文定位，不能替代人员 `X-MCP-Key`。
+
+`develop-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_develop`，复制内容必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`mcpTool: reqflow.upload_execution_report`、`demandId`、`demandNo`、`actionToken`、`arguments.actionToken` 使用说明，以及 24 小时内有效、仅可使用一次、过期或已使用后重新生成的提示。该 actionToken 只用于执行开发上下文定位，不能替代人员 `X-MCP-Key`。
 
 ## 执行包接口
 
@@ -158,9 +161,9 @@ completed -> archived
 | `/requirement/package/{demandId}/{artifactType}` | POST | `req:package:save` | 保存新版本 |
 | `/requirement/package/generate/{demandId}` | POST | `req:package:save` | 生成草稿执行包 |
 
-执行包保存永远追加 `req_package_version` 新记录，不覆盖历史版本。版本号按 `demand_id + artifact_type` 独立递增。
+执行包保存永远追加 `req_package_version` 新记录，不覆盖历史版本。版本号按 `demand_id + artifact_type` 独立递增。验收返修不新建需求，继续在同一需求下追加需求设计、执行方案、执行报告或 Review 报告版本，用版本链表达返修轮次。
 
-MCP `save_requirement_package` 和 `save_development_plan` 可显式传 `demandId`，也可传需求编排指令里的 `actionToken` 由服务端解析到绑定需求；两者仍必须通过人员 `X-MCP-Key` 或登录态权限校验。
+MCP `save_requirement_package` 和 `save_development_plan` 可显式传 `demandId`，也可传需求编排指令里的 `actionToken` 由服务端解析到绑定需求；MCP `upload_execution_report` 可传执行开发指令里的 `actionToken` 由服务端解析到绑定需求；这些调用仍必须通过人员 `X-MCP-Key` 或登录态权限校验。actionToken 被成功解析后立即写入 `last_used_time`，后续重复使用必须失败。
 
 生成草稿执行包时，`context_manifest` 和需求草稿中的任务分支使用 `fix-功能模块-编号-标题` 语义，并将各片段转换为命令行友好的 ASCII slug。模块片段优先来自人工模块名，其次来自索引模块名，最后使用备注中的新功能名称。
 
@@ -202,7 +205,7 @@ requirement_plan
 requirement_develop
 ```
 
-动作 token 不是人员认证 Key，不能替代 MCP 请求头 `X-MCP-Key`；人员 Key 负责认证和权限，动作 token 负责让 MCP 服务识别应该调用哪个接口以及绑定到哪个项目、分支或需求上下文。任何列表、日志或前端持久化都不得展示 `token_hash`，也不得把明文 action token 写入本地存储。
+动作 token 不是人员认证 Key，不能替代 MCP 请求头 `X-MCP-Key`；人员 Key 负责认证和权限，动作 token 负责让 MCP 服务识别应该调用哪个接口以及绑定到哪个项目、分支或需求上下文。所有动作 token 生成后默认 24 小时内有效，且只能成功解析一次；`expire_time` 早于当前时间或 `last_used_time` 非空时必须拒绝使用，调用方需要重新打开页面生成新指令。任何列表、日志或前端持久化都不得展示 `token_hash`，也不得把明文 action token 写入本地存储。
 
 ## MCP人员Key管理接口
 

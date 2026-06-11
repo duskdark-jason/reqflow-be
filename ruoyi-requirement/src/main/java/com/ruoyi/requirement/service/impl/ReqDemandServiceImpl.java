@@ -28,6 +28,8 @@ public class ReqDemandServiceImpl implements IReqDemandService
 {
     private static final String BRANCH_NOT_INITIALIZED_MESSAGE = "项目分支尚未初始化完成，请先完成分支初始化后再提交需求";
 
+    private static final String ACTION_TOKEN_USAGE_RULE = "有效期：24小时内有效，仅可使用一次；过期或已使用后需重新生成。";
+
     @Autowired
     private ReqDemandMapper reqDemandMapper;
 
@@ -131,6 +133,16 @@ public class ReqDemandServiceImpl implements IReqDemandService
             activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
                     "demand_completed", "web", "办结需求：" + current.getDemandNo(), null);
         }
+        else if (rows > 0 && "repairing".equals(status))
+        {
+            activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                    "demand_repairing", "web", "发起返修：" + current.getDemandNo(), null);
+        }
+        else if (rows > 0 && "review".equals(status) && "repairing".equals(current.getStatus()))
+        {
+            activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                    "demand_repair_submitted", "web", "返修提交验收：" + current.getDemandNo(), null);
+        }
         else if (rows > 0 && "archived".equals(status))
         {
             activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
@@ -162,6 +174,28 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return instruction;
     }
 
+    @Override
+    public ReqActionInstruction createRequirementDevelopInstruction(Long demandId, String operator)
+    {
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        if (demand == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        String prompt = "请基于需求设计和执行方案完成开发，并通过 reqflow MCP 回写执行报告。";
+        ReqActionInstruction instruction = actionTokenService.createInstruction(
+                IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
+                demand.getProjectId(),
+                demand.getVariantId(),
+                demand.getDemandId(),
+                "upload_execution_report",
+                prompt,
+                "复制执行开发指令",
+                operator);
+        instruction.setContent(requirementDevelopInstructionContent(prompt, instruction.getToken(), demand));
+        return instruction;
+    }
+
     private String nextDemandNo()
     {
         Long currentCount = reqDemandMapper.selectDemandCount();
@@ -172,13 +206,37 @@ public class ReqDemandServiceImpl implements IReqDemandService
     private String requirementPlanInstructionContent(String prompt, String actionToken, ReqDemand demand)
     {
         return prompt
+                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求资料编排。"
                 + "\nmcpServer: reqflow"
-                + "\ntools: save_requirement_package, save_development_plan"
+                + "\ntoolName: save_requirement_package"
+                + "\nmcpTool: reqflow.save_requirement_package"
+                + "\ntoolName: save_development_plan"
+                + "\nmcpTool: reqflow.save_development_plan"
+                + "\ntargetMethods: save_requirement_package, save_development_plan"
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
                 + "\nactionToken: " + actionToken
-                + "\n要求：先完善需求说明，再形成执行计划；分别调用 save_requirement_package 和 save_development_plan 保存。"
-                + "\n注意：actionToken 只用于需求上下文识别，MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n" + ACTION_TOKEN_USAGE_RULE
+                + "\n要求：先读取需求详情和现有资料包，迭代出完整需求设计，再形成执行方案。"
+                + "\n保存要求：分别调用 save_requirement_package 和 save_development_plan；两次调用的 arguments.actionToken 都填上面的 actionToken。"
+                + "\n注意：actionToken 是 save_requirement_package/save_development_plan 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+    }
+
+    private String requirementDevelopInstructionContent(String prompt, String actionToken, ReqDemand demand)
+    {
+        return prompt
+                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求开发。"
+                + "\nmcpServer: reqflow"
+                + "\ntoolName: upload_execution_report"
+                + "\nmcpTool: reqflow.upload_execution_report"
+                + "\ntargetMethod: upload_execution_report"
+                + "\ndemandId: " + demand.getDemandId()
+                + "\ndemandNo: " + demand.getDemandNo()
+                + "\nactionToken: " + actionToken
+                + "\n" + ACTION_TOKEN_USAGE_RULE
+                + "\n要求：先读取需求详情、需求设计和执行方案，按目标仓库规范完成实现、验证和提交。"
+                + "\n回写要求：开发完成后调用 upload_execution_report，arguments.actionToken 填上面的 actionToken，content 填执行报告。"
+                + "\n注意：actionToken 是 upload_execution_report 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
     }
 
     private void validateDemandTargetInitialized(Long projectId, Long variantId)

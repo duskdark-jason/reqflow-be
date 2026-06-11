@@ -10,7 +10,10 @@
 - 需求编号生成改为不带日期的稳定序号格式。
 - 默认状态改为未提交，提交后进入待生成需求说明和执行计划。
 - 提供审批人员可复制的 MCP 编排指令，绑定需求动作上下文。
+- 提供开发人员可复制的执行开发指令，绑定执行报告回写动作上下文。
 - 状态流转与前端按钮保持一致。
+- 增加返修流程，记录状态事件并通过执行包版本链保留返修资料历史。
+- 初始化、需求编排和执行开发 actionToken 仅可使用一次，24 小时内有效，过期或已使用后需重新生成。
 
 ## 范围
 
@@ -41,7 +44,8 @@
 - 创建人：`creatorId` 来自当前登录用户 ID，不使用客户端提交值。
 - 默认状态：新增为 `draft`，中文语义为“未提交”。
 - 主状态流转：`draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`。
-- 兼容状态：旧 `plan_pending`、`repairing`、`archived` 可继续识别，但不作为新页面主路径必经项。
+- 返修流转：`review -> repairing -> review`，返修完成后重新走验收确认。
+- 兼容状态：旧 `plan_pending`、`repairing`、`archived` 可继续识别，其中 `repairing` 作为待验收返修分支。
 
 ## 验收标准
 
@@ -50,6 +54,10 @@
 - AC-003：状态机允许新主路径流转并拒绝跳转和倒退。
 - AC-004：审批人员可通过需求详情获取用于 MCP 更新需求说明和执行计划的复制指令。
 - AC-005：后端 API、数据库关系和模块 harness 文档同步记录新契约。
+- AC-006：MCP 编排指令采用初始化指令风格，明确 `mcpServer`、`mcpTool`、`toolName`、`arguments.actionToken`，并说明 actionToken 不是 `X-MCP-Key`。
+- AC-007：开发阶段可获取执行开发指令，明确调用 `reqflow.upload_execution_report` 回写执行报告。
+- AC-008：待验收可进入返修状态，返修提交后回到待验收，并记录返修状态事件；资料历史通过 `req_package_version` 新版本保留。
+- AC-009：`project_init`、`requirement_plan`、`requirement_develop` actionToken 生成后 24 小时内有效且仅可成功解析一次；已过期或 `last_used_time` 非空时拒绝使用，重新执行需重新生成指令。
 
 ## Companion 关联
 

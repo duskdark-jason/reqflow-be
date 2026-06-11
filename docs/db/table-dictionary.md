@@ -53,11 +53,11 @@
 | 表 | 字段 | 含义 | 维护要求 |
 |---|---|---|---|
 | `req_demand` | `demand_no` | 稳定需求编号 | 与本地 spec 目录中的 `REQ-001` 类编号保持可追踪关系。 |
-| `req_demand` | `status` | 需求状态 | 新增默认 `draft`；主流程为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，兼容 `plan_pending`、`repairing`、`archived`。 |
+| `req_demand` | `status` | 需求状态 | 新增默认 `draft`；主流程为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，验收返修分支为 `review -> repairing -> review`，兼容 `plan_pending`、`archived`。 |
 | `req_demand` | `creator_id` | 需求创建人用户 ID | 新增时由服务端当前登录用户写入；普通编辑只允许创建人在 `draft` 状态修改。 |
 | `req_demand` | `project_id`、`variant_id`、`module_id` | 需求归属 | 保存前必须校验项目分支归属和仓库索引证据；新功能提需可以没有既有模块知识。 |
 | `req_demand` | `impact_page`、`impact_api`、`impact_data`、`impact_permission` | 影响面摘要 | 需求编排和开发计划使用，不能替代详细设计文档。 |
-| `req_package_version` | `artifact_type`、`version_no` | 产物类型和版本号 | 多版本并存，查询最新版本时不能直接 join 后分页。 |
+| `req_package_version` | `artifact_type`、`version_no` | 产物类型和版本号 | 多版本并存，查询最新版本时不能直接 join 后分页；返修轮次通过同一需求下的多版本链表达。 |
 | `req_package_version` | `content` | 需求设计、计划或报告内容 | 内容可能较大，列表查询避免直接加载。 |
 
 ### 索引与知识库
@@ -78,6 +78,7 @@
 | `req_mcp_user_key` | `key_prefix`、`key_hash` | Key 前缀和哈希 | 明文不得落库、不得写日志、不得进入活动记录。 |
 | `req_action_token` | `action_type`、`target_method` | 动作类型和目标 MCP 方法 | 用于限定初始化、编排或开发动作，不替代 `X-MCP-Key` 认证。 |
 | `req_action_token` | `project_id`、`variant_id`、`demand_id` | 动作上下文 | 必须和平台返回的项目、分支和需求一致。 |
+| `req_action_token` | `expire_time`、`last_used_time` | 有效期和消费标记 | 动作 token 生成后 24 小时内有效，且仅可成功解析一次；`last_used_time` 非空或过期后需重新生成。 |
 | `req_activity_log` | `event_type`、`metadata_json` | 事件类型和扩展信息 | 扩展 JSON 只存可审计摘要，不写敏感明文。 |
 
 ## 系统表关联点

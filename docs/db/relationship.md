@@ -67,7 +67,8 @@
 - `req_module` 在 REQ-005 后按 `project_id + variant_id + module_code` 保持唯一；新增人工模块、需求表单模块下拉和父级模块选择都必须带 `variant_id`，否则不同分支的同名模块会互相污染。
 - `req_mcp_user_key` 与 `sys_user` 是多对一关系，一个用户可拥有多个 Key。列表页只能 join 用户表展示账号和昵称，不能因一个用户多个 Key 反向放大用户数量或权限判断。
 - `req_action_token` 与项目、项目分支和需求都是上下文定位关系，不代表人员身份。统计或审计时不能把 action token 数量当作用户数量，也不能用 action token 绕过 `X-MCP-Key` 认证和菜单权限。
-- `requirement_plan` 动作 token 可绑定 `req_action_token.demand_id`，供 MCP `save_requirement_package` 和 `save_development_plan` 定位需求；人员权限仍由登录态或 `X-MCP-Key` 决定。
+- `requirement_plan` 动作 token 可绑定 `req_action_token.demand_id`，供 MCP `save_requirement_package` 和 `save_development_plan` 定位需求；`requirement_develop` 动作 token 可绑定同一字段，供 MCP `upload_execution_report` 定位需求；人员权限仍由登录态或 `X-MCP-Key` 决定。
+- `req_action_token.expire_time` 和 `last_used_time` 是安全边界字段：动作 token 生成后 24 小时内有效且仅可消费一次，不能作为长期项目、分支或需求缓存键。
 - 项目初始化上下文一次返回一个项目全貌，不能直接把 `req_repository`、`req_variant`、`req_module`、`req_index_module`、`req_repository_index_batch` 做一条 SQL join 后分页，否则会因多组一对多关系放大行数；当前实现使用分表查询后在 Service 层聚合。
 - 在 REQ-004 后，`req_variant.variant_name` 兼容承载需求人员可见中文标签，`req_variant.baseline_branch` 承载真实 Git 分支名，`req_variant.mcp_key` 保留 MCP 项目分支兼容 key；REQ-003 后前端主展示和 MCP 新指令使用 `req_action_token` 生成的 `actionToken`。`variant_code` 保持唯一键需要，允许由后端根据真实分支名兜底生成。
 
@@ -92,6 +93,7 @@
 - 新增统计时先写清输出行的数据粒度，再决定 join 顺序。
 - 对 `req_package_version` 只做追加，不做覆盖更新。
 - 对状态流转只能通过 Service 的状态机方法，不要在 Mapper 外直接更新状态。
+- 验收返修不创建新需求；状态按 `review -> repairing -> review` 循环，返修版本通过 `req_package_version` 追加需求设计、执行方案、执行报告和 Review 报告版本体现。
 - 需求编号由服务端生成 `REQ-001` 风格序号，不包含日期；新增请求中的 `demand_no` 和 `creator_id` 只作为客户端输入噪声处理，不参与最终落库值。
 - MCP 工具只能写平台表，不能扩大到仓库文件、Git 或 shell。
 - MCP resource 可以读取 `req_project`、`req_repository`、`req_variant` 和 `req_memory_index`，但只能按项目和项目分支返回结构化上下文，不能代替执行器访问仓库文件系统。
