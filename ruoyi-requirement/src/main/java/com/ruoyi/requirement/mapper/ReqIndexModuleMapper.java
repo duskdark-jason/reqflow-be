@@ -7,6 +7,8 @@ public interface ReqIndexModuleMapper
 {
     int checkReqIndexModuleTable();
 
+    ReqIndexModule selectReqIndexModuleByIndexModuleId(Long indexModuleId);
+
     List<ReqIndexModule> selectReqIndexModuleList(ReqIndexModule module);
 
     int insertReqIndexModule(ReqIndexModule module);

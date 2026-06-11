@@ -13,14 +13,10 @@ import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqDemand;
-import com.ruoyi.requirement.domain.ReqIndexModule;
-import com.ruoyi.requirement.domain.ReqModule;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
-import com.ruoyi.requirement.mapper.ReqIndexModuleMapper;
-import com.ruoyi.requirement.mapper.ReqModuleMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
@@ -40,12 +36,6 @@ public class ReqDemandServiceImpl implements IReqDemandService
 
     @Autowired
     private ReqRepositoryMapper repositoryMapper;
-
-    @Autowired
-    private ReqModuleMapper moduleMapper;
-
-    @Autowired
-    private ReqIndexModuleMapper indexModuleMapper;
 
     @Autowired
     private ReqRepositoryIndexBatchMapper batchMapper;
@@ -151,13 +141,9 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException(BRANCH_NOT_INITIALIZED_MESSAGE);
         }
 
-        // 需求只能提交到完成初始化的项目分支：必须有可用仓库、模块知识和每个仓库的索引批次。
+        // 新功能可以没有既有模块，但必须有仓库索引证据，避免需求落到未接入分支。
         List<ReqRepository> repositories = loadReadyRepositories(projectId);
         if (repositories.isEmpty())
-        {
-            throw new ServiceException(BRANCH_NOT_INITIALIZED_MESSAGE);
-        }
-        if (!hasBranchKnowledge(projectId, variantId))
         {
             throw new ServiceException(BRANCH_NOT_INITIALIZED_MESSAGE);
         }
@@ -181,36 +167,6 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return safeList(repositoryMapper.selectReqRepositoryList(query)).stream()
                 .filter(this::isReadyRepository)
                 .collect(Collectors.toList());
-    }
-
-    private boolean hasBranchKnowledge(Long projectId, Long variantId)
-    {
-        ReqModule moduleQuery = new ReqModule();
-        moduleQuery.setProjectId(projectId);
-        moduleQuery.setVariantId(variantId);
-        moduleQuery.setStatus("0");
-        if (!safeList(moduleMapper.selectReqModuleList(moduleQuery)).isEmpty())
-        {
-            return true;
-        }
-
-        ReqIndexModule indexModuleQuery = new ReqIndexModule();
-        indexModuleQuery.setProjectId(projectId);
-        indexModuleQuery.setVariantId(variantId);
-        indexModuleQuery.setStatus("0");
-        try
-        {
-            return !safeList(indexModuleMapper.selectReqIndexModuleList(indexModuleQuery)).isEmpty();
-        }
-        catch (DataAccessException e)
-        {
-            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module"))
-            {
-                // 缺索引表等价于未完成初始化，不能放行需求提交。
-                return false;
-            }
-            throw e;
-        }
     }
 
     private List<ReqRepositoryIndexBatch> loadImportedBatches(Long projectId, String branchName)
