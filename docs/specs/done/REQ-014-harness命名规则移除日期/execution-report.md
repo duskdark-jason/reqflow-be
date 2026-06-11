@@ -44,7 +44,7 @@
 |---|---|---|---|
 | L0 | AC-001, AC-002, AC-004 | `sh scripts/check-docs.sh` | 通过 |
 | L0 | AC-001 | `sh scripts/test-check-harness.sh` | 通过 |
-| L0 | AC-001, AC-002, AC-004 | `sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-014-harness命名规则移除日期` | 通过 |
+| L0 | AC-001, AC-002, AC-004 | `sh scripts/check-harness.sh complete --spec docs/specs/done/REQ-014-harness命名规则移除日期` | 通过 |
 | L1 | AC-003 | `mvn -pl ruoyi-requirement -am -Dtest=ReqPackageServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过 |
 | L2 | AC-002, AC-004 | `rg` 扫描旧日期命名残留 | 已执行，除日期拒绝测试样例外无旧 spec/branch 命名残留 |
 | L3 | AC-001, AC-003 | Review diff | 通过 |

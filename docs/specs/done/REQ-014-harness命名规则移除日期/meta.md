@@ -12,8 +12,8 @@
 - Review 授权：已授权
 - 目标客户：通用
 - 基线分支：main
-- companion 仓库：../reqflow-ui/docs/specs/active/REQ-014-harness命名规则移除日期
-- 关联 spec：../reqflow-ui/docs/specs/active/REQ-014-harness命名规则移除日期
+- companion 仓库：../reqflow-ui/docs/specs/done/REQ-014-harness命名规则移除日期
+- 关联 spec：../reqflow-ui/docs/specs/done/REQ-014-harness命名规则移除日期
 - 影响模块：AI Harness、需求执行包
 - 模块知识库动作：无需更新
 - 模块知识库文档：无

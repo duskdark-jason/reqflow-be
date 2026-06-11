@@ -16,7 +16,7 @@
 |---|---|---|
 | L0 | AC-001, AC-002, AC-004 | `sh scripts/check-docs.sh` |
 | L0 | AC-001 | `sh scripts/test-check-harness.sh` |
-| L0 | AC-001, AC-002, AC-004 | `sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-014-harness命名规则移除日期` |
+| L0 | AC-001, AC-002, AC-004 | `sh scripts/check-harness.sh complete --spec docs/specs/done/REQ-014-harness命名规则移除日期` |
 | L1 | AC-003 | `mvn -pl ruoyi-requirement -Dtest=ReqPackageServiceImplTest test` |
 | L2 | AC-002, AC-004 | `rg` 扫描旧日期命名残留 |
 | L3 | AC-001, AC-003 | Review diff |

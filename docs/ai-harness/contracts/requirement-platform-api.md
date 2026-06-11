@@ -102,7 +102,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 
 索引导入只保存 Git 远端、仓库类型、分支、commit、相对路径和结构化影响面。上传内容如果包含个人本机绝对路径，服务端必须拒绝导入。
 
-索引批次列表和模块知识只读接口用于项目接入中心展示。模块知识库需要同时关联 `projectId` 和 `variantId`；传入 `variantId` 时只返回该项目分支的模块知识，不再混入 `variant_id is null` 的项目级旧数据。部分迁移库缺少 `req_repository_index_batch` 或 `req_index_module` 时，这两个只读接口返回空列表和成功响应，避免项目接入中心整页不可用；索引导入、影响面推荐和其他表异常仍按真实错误处理。
+索引批次列表和模块知识只读接口用于项目维护和分支知识库展示。模块知识库需要同时关联 `projectId` 和 `variantId`；传入 `variantId` 时只返回该项目分支的模块知识，不再混入 `variant_id is null` 的项目级旧数据。部分迁移库缺少 `req_repository_index_batch` 或 `req_index_module` 时，这两个只读接口返回空列表和成功响应，避免项目维护或分支知识库整页不可用；索引导入、影响面推荐和其他表异常仍按真实错误处理。
 
 索引导入优先支持 `actionToken + remoteUrl`：服务端按动作 token 解析目标动作、项目和项目分支，并在同项目下按 `remoteUrl` 定位代码仓库。`actionToken` 必须能解析为 `project_init` 动作且 `targetMethod` 为 `publish_repository_index`；同时兼容旧的 `mcpKey + remoteUrl` 和 `projectId + repoId + branchName`。项目初始化上下文中的 `modules` 不能为空，且每一项必须有稳定 `moduleCode` 和业务 `moduleName`；推荐按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按动作 token、项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。每个项目分支都需要单独初始化索引，不能用主线索引代替客户分支或其他功能分支。
 
