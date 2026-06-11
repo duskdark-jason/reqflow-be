@@ -9,7 +9,6 @@
 | 菜单目录 | 子菜单/页面 | 功能说明 | 前端文件 | API 封装 | 后端接口与权限 | 后端核心文件 |
 |---|---|---|---|---|---|---|
 | 需求管理 | 项目管理 | 项目列表、项目维护入口、项目初始化状态 | `reqflow-ui/src/views/requirement/project/index.vue`、`maintain.vue` | `reqflow-ui/src/api/requirement/project.js`、`projectInit.js` | `/requirement/project/**`，`req:project:*`；`/requirement/project/init/**`，`req:project:*` | `ReqProjectController`、`ReqProjectInitController`、`ReqProjectServiceImpl`、`ReqProjectInitServiceImpl` |
-| 需求管理 | 项目接入中心 | 查看项目仓库、项目分支、索引批次、模块知识和初始化指令 | `reqflow-ui/src/views/requirement/project/detail.vue` | `reqflow-ui/src/api/requirement/project.js`、`index.js` | `/requirement/project/init/{projectId}`，`req:project:query`；`/requirement/index/**`，`req:index:*` | `ReqProjectInitController`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
 | 需求管理 | 分支知识库详情页签 | 按项目分支查看模块知识、索引批次和初始化指令 | `reqflow-ui/src/views/requirement/project/knowledge.vue` | `reqflow-ui/src/api/requirement/index.js`、`project.js` | `/requirement/index/module/tree`，`req:index:list`；`/requirement/index/batch/list`，`req:index:list` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper`、`ReqRepositoryIndexBatchMapper` |
 | 需求管理 | 需求列表 | 需求维护页签、新增、编辑、查询和影响面自动关联 | `reqflow-ui/src/views/requirement/demand/index.vue`、`maintain.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；`/requirement/index/impact/suggest`，`req:index:list` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
 | 需求管理 | 需求执行包 | 保存和读取需求、计划、执行报告、Review 报告等交接资料 | `reqflow-ui/src/views/requirement/package/index.vue` | `reqflow-ui/src/api/requirement/package.js` | `/requirement/package/**`，`req:package:*` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
@@ -54,7 +53,7 @@
 
 ## 常见风险
 
-- 修改项目初始化上下文时，必须同步检查前端项目管理、项目接入中心、分支知识库页签和需求表单的字段使用。
+- 修改项目初始化上下文时，必须同步检查前端项目管理、项目维护、分支知识库页签和需求表单的字段使用。
 - 修改索引导入或影响面推荐时，必须确认项目分支、真实 Git 分支、索引批次和模块知识的粒度一致。
 - MCP tools 新增或改名时，必须同步人员权限校验、接口契约、`tools/list` schema、前端文案和平台初始化指令。
 - MCP 管理 Key 创建或重置结果调整时，必须同步前端 MCP 管理页。页面不再提供配置查询入口；创建和重置响应只单独返回一次性 `plainKey` 与 `codexSetupPackage`。`codexSetupPackage.installCommands` 是主复制入口，提供 macOS/Linux 和 Windows PowerShell 代码块命令模板；模板使用 `${REQFLOW_MCP_KEY}` 占位，前端只在当前结果弹窗中用一次性 `plainKey` 渲染。长 JSON 安装包仅作为高级配置/调试信息保留。
@@ -76,4 +75,4 @@
 - MCP 协议变更：在后端启动后用 `curl` 或 MCP 客户端验证 `initialize -> notifications/initialized -> resources/templates/list -> tools/list`，并确认工具列表含 `publish_repository_index`。
 - MCP 项目接入初始化变更：验证 `resources/templates/list` 含 `skill://reqflow/project-init`，`get_harness_template` 返回 `reqflowMcpSkill`、`workspaceFiles` 和每个仓库的 `files`，且 `files` 包含 `docs/ai-harness/modules/*-page-functions.md` 非模板页面功能索引文档、完整 `docs/process/**`、完整 `docs/templates/**`、检查脚本和测试脚本。
 - MCP tool 错误路径变更：用无效 `actionToken` 调用 `tools/call publish_repository_index`，确认 HTTP 响应没有顶层 protocol `error`，而是 `result.content` 中包含错误说明且 `result.isError=true`。
-- 跨端流程变更：配合前端验证项目管理、项目接入中心、分支知识库详情、需求新增、执行包保存、MCP Key 管理和统计页面。
+- 跨端流程变更：配合前端验证项目管理、项目维护、分支知识库详情、需求新增、执行包保存、MCP Key 管理和统计页面。
