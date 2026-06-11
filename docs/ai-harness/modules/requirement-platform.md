@@ -21,7 +21,7 @@
 
 | 类型 | 优先查看文件 | 说明 |
 |---|---|---|
-| 菜单与权限 SQL | `sql/req_platform_menu.sql` | 需求管理一级菜单、子菜单和按钮权限。 |
+| 菜单与权限 SQL | `docs/db/sql/req_platform_menu.sql` | 需求管理一级菜单、子菜单和按钮权限。 |
 | 接口契约 | `docs/ai-harness/contracts/requirement-platform-api.md` | 后端接口、MCP resource、MCP tool、知识库和初始化契约。 |
 | 领域入口 | `docs/domains/requirement-platform/README.md` | 后端业务边界和长期维护规则。 |
 | 后端 Controller | `ruoyi-admin/src/main/java/com/ruoyi/web/controller/requirement/` | HTTP 接口入口。 |
@@ -34,8 +34,8 @@
 
 - 相关契约文档：`docs/ai-harness/contracts/requirement-platform-api.md`。
 - 相关领域入口：`docs/domains/requirement-platform/README.md`。
-- 关键菜单脚本：`sql/req_platform_menu.sql`。
-- 关键表结构：`sql/req_platform_schema.sql` 以及后续 `sql/req_platform_req*.sql` 增量脚本。
+- 关键菜单脚本：`docs/db/sql/req_platform_menu.sql`。
+- 关键表结构：`docs/db/sql/req_platform_schema.sql` 以及后续 `docs/db/sql/req_platform_req*.sql` 增量脚本。
 
 ## 不变量
 
@@ -65,8 +65,8 @@
 - 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
 - 项目接入初始化索引调整时，必须防止“已发布索引但没有具体业务模块”的假阳性；`actionToken` 或 `mcpKey` 项目初始化上下文下，`modules` 至少包含一个带 `moduleCode` 和 `moduleName` 的页面业务功能或后端主能力。
 - MCP 下发的完整 harness 模板由后端 `ruoyi-requirement/src/main/resources/harness-template/` 保存并随包发布；`files.txt` 是下发清单，必须与 workspace 根目录 `harness-template/` 的流程、模板和脚本保持一致。
-- 索引表迁移不完整时，`publish_repository_index` 必须返回指向 `sql/req_platform_req007_index_tables.sql` 的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
-- 菜单权限调整时，必须同时检查 `sql/req_platform_menu.sql`、Controller `@PreAuthorize` 和前端按钮权限。
+- 索引表迁移不完整时，`publish_repository_index` 必须返回指向 `docs/db/sql/req_platform_req007_index_tables.sql` 的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
+- 菜单权限调整时，必须同时检查 `docs/db/sql/req_platform_menu.sql`、Controller `@PreAuthorize` 和前端按钮权限。
 
 ## 验证建议
 

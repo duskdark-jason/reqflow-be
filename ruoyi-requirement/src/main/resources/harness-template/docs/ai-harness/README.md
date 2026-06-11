@@ -42,6 +42,6 @@
 
 项目接入初始化时，不能只保留 `modules/.gitkeep`；必须至少落地一个非模板模块文档。初始内容必须来自前端路由、菜单、页面组件和 API 封装分析，按菜单目录、子菜单、隐藏页签或页面业务功能沉淀为具体业务知识库；纯后端项目按 companion 前端菜单、MCP 能力或后台任务沉淀，不得只生成仓库概览。
 
-如果项目存在 `docs/db/`，该目录必须至少包含 `README.md`、`table-dictionary.md` 和 `relationship.md`。现有 `sql/` 目录保留为可执行 SQL、迁移脚本和历史基线目录，不迁移到 `docs/db/`；`docs/db/` 只维护表结构字典、表关系、数据粒度和口径说明。数据库相关需求必须先读 `docs/db/README.md`，涉及表、字段、索引或约束时更新 `table-dictionary.md`；涉及 DDL、DML、迁移、清理 SQL、Mapper、join、聚合、统计口径或分页粒度时，同步更新 `relationship.md` 或在执行报告写明无需更新原因；完成态执行报告必须记录相关 `sql/` 或 `docs/db/` 路径。
+如果项目存在 `docs/db/`，该目录必须至少包含 `README.md`、`table-dictionary.md` 和 `relationship.md`。可执行 SQL、迁移脚本和历史基线统一放入 `docs/db/sql/`；`docs/db/` 同时维护表结构字典、表关系、数据粒度和口径说明。数据库相关需求必须先读 `docs/db/README.md`，涉及表、字段、索引或约束时更新 `table-dictionary.md`；涉及 DDL、DML、迁移、清理 SQL、Mapper、join、聚合、统计口径或分页粒度时，同步更新 `relationship.md` 或在执行报告写明无需更新原因；完成态执行报告必须记录相关 `docs/db/sql/` 或 `docs/db/` 路径。
 
 如果判断无需更新 harness，请在完成说明中写明原因。

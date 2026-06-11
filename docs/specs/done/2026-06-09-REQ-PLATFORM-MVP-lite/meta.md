@@ -6,7 +6,7 @@
 - 目标客户：通用
 - 基线分支：main
 - companion 仓库：`../../../../reqflow-ui/docs/specs/done/2026-06-09-REQ-PLATFORM-MVP-lite`
-- 关联 spec：`../../../../2026-06-09-需求管理平台轻量版设计.md`、`../../../../2026-06-09-需求管理平台轻量版开发计划.md`
+- 关联 spec：历史根目录设计与计划已在 workspace 清理时移除，长期记录以本 done spec 为准。
 - 最后更新：2026-06-09
 
 ## 状态说明
@@ -15,6 +15,6 @@
 
 ## 角色匹配
 
-- Plan Agent：根目录开发计划已产出。
+- Plan Agent：早期根目录设计与计划已收口到本 done spec。
 - Execution Agent：已实现后端代码、SQL 和验证报告。
 - Review Agent：已完成只读 review 并完成 Critical/Important 返修。

@@ -6,13 +6,13 @@
 - 影响模块：【模块名称】
 - 影响表：【表名列表】
 - 影响数据访问层：【Mapper/Repository/DAO】
-- 基线结构来源：【sql/xxx.sql、docs/db/relationship.md、实际库快照或说明】
-- 正向 SQL 脚本路径：【sql/req_xxx.sql；没有脚本时说明原因】
-- 回滚 SQL 脚本路径：【sql/rollback_xxx.sql / 无，说明原因】
+- 基线结构来源：【docs/db/sql/xxx.sql、docs/db/relationship.md、实际库快照或说明】
+- 正向 SQL 脚本路径：【docs/db/sql/req_xxx.sql；没有脚本时说明原因】
+- 回滚 SQL 脚本路径：【docs/db/sql/rollback_xxx.sql / 无，说明原因】
 
 ## 正向 SQL
 
-- 脚本路径：【sql/req_xxx.sql】
+- 脚本路径：【docs/db/sql/req_xxx.sql】
 - 执行顺序：【第几步，依赖什么前置条件】
 - SQL 摘要：【新增表/新增字段/迁移数据/修正菜单等】
 
@@ -22,7 +22,7 @@
 
 ## 回滚方案
 
-- 回滚脚本路径：【sql/rollback_xxx.sql / 无】
+- 回滚脚本路径：【docs/db/sql/rollback_xxx.sql / 无】
 - 无法自动回滚原因：【无或说明】
 - 回滚前检查：【查询语句或人工确认项】
 
@@ -49,7 +49,7 @@
 - [ ] `docs/db/relationship.md`
 - [ ] `docs/ai-harness/contracts/*.md`
 - [ ] `docs/ai-harness/modules/*.md`
-- [ ] 当前 spec 的 `execution-report.md` 已记录 `sql/` 或 `docs/db/` 路径
+- [ ] 当前 spec 的 `execution-report.md` 已记录 `docs/db/sql/` 或 `docs/db/` 路径
 
 ## 验证
 

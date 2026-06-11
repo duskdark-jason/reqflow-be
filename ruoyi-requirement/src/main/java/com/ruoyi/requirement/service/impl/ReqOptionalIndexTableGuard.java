@@ -6,7 +6,7 @@ import com.ruoyi.common.exception.ServiceException;
 
 final class ReqOptionalIndexTableGuard
 {
-    static final String INDEX_TABLE_MIGRATION = "sql/req_platform_req007_index_tables.sql";
+    static final String INDEX_TABLE_MIGRATION = "docs/db/sql/req_platform_req007_index_tables.sql";
 
     private ReqOptionalIndexTableGuard()
     {
@@ -27,7 +27,7 @@ final class ReqOptionalIndexTableGuard
         // 写入索引时必须显式失败并给出迁移路径，不能静默丢弃初始化结果。
         return new ServiceException("平台索引表未初始化：" + tableName
                 + "。请先执行 " + INDEX_TABLE_MIGRATION
-                + "，或执行 sql/req_platform_schema.sql 中 req_repository_index_batch、req_index_module、req_impact_item 的建表段。");
+                + "，或执行 docs/db/sql/req_platform_schema.sql 中 req_repository_index_batch、req_index_module、req_impact_item 的建表段。");
     }
 
     private static String collectExceptionMessage(Throwable throwable)

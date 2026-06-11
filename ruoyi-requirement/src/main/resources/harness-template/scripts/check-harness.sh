@@ -414,7 +414,7 @@ spec_mentions_db_change() {
   requirement_file="$spec_dir/requirement.md"
   plan_file="$spec_dir/plan.md"
 
-  grep -E '(数据库/SQL[：:][[:space:]]*是|新增.*(数据库|数据表|表结构|表字段|索引|约束|SQL)|修改.*(数据库|数据表|表结构|表字段|索引|约束|SQL|join|JOIN|聚合|统计口径|分页粒度|Mapper|MyBatis)|数据迁移|数据清理|DDL|DML|库表|表关系|Mapper XML|MyBatis|sql/|docs/db/)' "$requirement_file" "$plan_file" >/dev/null 2>&1
+  grep -E '(数据库/SQL[：:][[:space:]]*是|新增.*(数据库|数据表|表结构|表字段|索引|约束|SQL)|修改.*(数据库|数据表|表结构|表字段|索引|约束|SQL|join|JOIN|聚合|统计口径|分页粒度|Mapper|MyBatis)|数据迁移|数据清理|DDL|DML|库表|表关系|Mapper XML|MyBatis|docs/db/sql/|docs/db/)' "$requirement_file" "$plan_file" >/dev/null 2>&1
 }
 
 check_db_change_record() {
@@ -426,8 +426,8 @@ check_db_change_record() {
   [ -f "$execution_file" ] || return
   spec_mentions_db_change "$spec_dir" || return
 
-  if ! grep -E '(sql/|docs/db/)' "$execution_file" >/dev/null 2>&1; then
-    fail "需求涉及数据库变更、SQL、Mapper 或数据口径时，execution-report.md 必须记录 sql/ 或 docs/db/ 路径：$execution_file"
+  if ! grep -E '(docs/db/sql/|docs/db/)' "$execution_file" >/dev/null 2>&1; then
+    fail "需求涉及数据库变更、SQL、Mapper 或数据口径时，execution-report.md 必须记录 docs/db/sql/ 或 docs/db/ 路径：$execution_file"
   fi
 }
 
