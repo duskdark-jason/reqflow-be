@@ -16,7 +16,7 @@
 1. 读取 `AGENTS.md`、`docs/README.md`、`docs/ai-harness/harness-index.json`、`docs/ai-harness/search-map.md` 和 `docs/ai-harness/change-checklist.md`。
 2. 按 `search-map.md` 定位相关模块、契约、决策、数据库或运行手册。
 3. 新需求或 Bug 修复先创建 `docs/specs/active/REQ-001-中文需求标题/`，并填写 `meta.md`、`requirement.md`。
-4. `meta.md` 中 `流程模式` 写 `本地 Harness 模式`，`需求 Key` 写“无，本地流程”，`平台关联远端` 写“未配置”或当前仓库远端。只有当前仓库就是需求平台自身、且正在自举建设平台能力时，才可写 `平台自身建设模式`，它必须按本流程执行。
+4. `meta.md` 中 `流程模式` 写 `本地 Harness 模式`，`需求 Key` 写“无，本地流程”，`平台关联远端` 写“未配置”或当前仓库远端。当前仓库正在建设需求平台、平台类治理能力，或明确拷贝平台建设版本进行本地自举时，可写 `平台自身建设模式`，它必须按本流程执行。
 5. 未获得明确执行授权前，不写 `plan.md`、不改业务代码、不写执行报告和 Review 报告。
 
 ## 需求设计确认点
