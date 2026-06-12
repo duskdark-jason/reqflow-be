@@ -4,7 +4,7 @@
 
 - 结论：通过
 - Review Agent：Codex 本地复核
-- Review 时间：2026-06-11
+- Review 时间：2026-06-12
 
 ## 审查输入
 
@@ -33,6 +33,11 @@
 | AC-007 | 执行开发指令 | `ReqDemandController`、`ReqDemandServiceImpl.createRequirementDevelopInstruction` | 单测断言目标工具为 `reqflow.upload_execution_report`，浏览器接口冒烟返回成功 | 通过 |
 | AC-008 | 返修流转和版本历史 | `ReqDemandServiceImpl.updateDemandStatus`、执行包版本链文档 | 单测覆盖 `demand_repairing` 和 `demand_repair_submitted` 事件，文档记录 `req_package_version` 历史版本 | 通过 |
 | AC-009 | actionToken 一次性和 24 小时有效 | `ReqActionTokenServiceImpl`、`ReqActionTokenMapper.xml` | `ReqActionTokenServiceImplTest` 覆盖有效期、过期拒绝、已使用拒绝和条件更新失败拒绝 | 通过 |
+| AC-010 | 角色授权 SQL | `req_platform_req016_role_permissions.sql` | `ReqPlatformRoleSqlTest` 覆盖角色边界 | 通过 |
+| AC-011 | 计划阶段只生成需求设计 | `ReqDemandServiceImpl`、`McpService` | 单测断言计划 token 只允许 `save_requirement_package` | 通过 |
+| AC-012 | 执行阶段生成计划和报告 | `ReqDemandServiceImpl`、`McpService` | 单测断言执行计划和执行报告两个 actionToken | 通过 |
+| AC-013 | 详情嵌入资料读取权限 | `ReqPackageController` | 权限注解复核，前端构建和浏览器详情页通过 | 通过 |
+| AC-014 | 来源必填、附件和 2MB 上传 | `ReqDemandServiceImpl`、`ReqDemandController`、模板和 SQL | 来源必填、字段脚本、上传限制、富文本模板转义测试通过 | 通过 |
 
 ## 验收复核
 
@@ -45,6 +50,11 @@
 - AC-007：通过，执行开发指令可指向 `upload_execution_report` 回写执行报告。
 - AC-008：通过，待验收可进入返修，返修完成后重新进入待验收；历史资料通过执行包版本链保留。
 - AC-009：通过，初始化、需求编排和执行开发 actionToken 统一 24 小时内有效且仅可消费一次。
+- AC-010：通过，角色授权脚本覆盖三类角色边界。
+- AC-011：通过，计划阶段只生成需求设计，不包含执行计划。
+- AC-012：通过，执行阶段包含执行计划和执行报告回写。
+- AC-013：通过，需求详情读取资料包可使用 `req:demand:query`。
+- AC-014：通过，需求来源必填、需求上传 2MB 限制和执行包上下文已覆盖。
 
 ## 返修交接清单
 

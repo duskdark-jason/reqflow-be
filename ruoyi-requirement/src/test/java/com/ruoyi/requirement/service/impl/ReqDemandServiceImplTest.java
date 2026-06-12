@@ -1,6 +1,7 @@
 package com.ruoyi.requirement.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -127,6 +128,33 @@ class ReqDemandServiceImplTest
     }
 
     @Test
+    void rejectsInsertWhenDemandSourceIsBlank()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L)));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
+
+        ReqDemand demand = demand(10L, 31L);
+        demand.setDemandSource(" ");
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> service.insertReqDemand(demand));
+
+        assertTrue(exception.getMessage().contains("需求来源不能为空"));
+        verify(reqDemandMapper, never()).insertReqDemand(any());
+    }
+
+    @Test
     void insertsDemandWhenProjectBranchIsInitialized()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
@@ -239,7 +267,7 @@ class ReqDemandServiceImplTest
         created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
         created.setTargetMethod("save_requirement_package");
         created.setToken("reqflow_action_demo");
-        created.setPrompt("请基于需求上下文生成需求说明和执行计划。");
+        created.setPrompt("请基于需求上下文生成需求设计。");
         created.setContent("base instruction");
         when(actionTokenService.createInstruction(
                 eq(IReqActionTokenService.ACTION_REQUIREMENT_PLAN),
@@ -248,7 +276,7 @@ class ReqDemandServiceImplTest
                 eq(5L),
                 eq("save_requirement_package"),
                 any(),
-                eq("复制MCP编排指令"),
+                eq("复制生成需求设计指令"),
                 eq("approver"))).thenReturn(created);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
@@ -259,15 +287,16 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
         assertTrue(instruction.getContent().contains("save_requirement_package"));
-        assertTrue(instruction.getContent().contains("save_development_plan"));
+        assertFalse(instruction.getContent().contains("save_development_plan"));
+        assertFalse(instruction.getContent().contains("执行计划"));
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_requirement_package"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_development_plan"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
         assertTrue(instruction.getContent().contains("不是 X-MCP-Key"));
         assertTrue(instruction.getContent().contains("24小时内有效"));
         assertTrue(instruction.getContent().contains("仅可使用一次"));
         assertTrue(instruction.getContent().contains("重新生成"));
+        assertTrue(instruction.getContent().contains("需求设计"));
         assertTrue(instruction.getContent().contains("demandId: 5"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-005"));
     }
@@ -285,10 +314,25 @@ class ReqDemandServiceImplTest
 
         ReqActionInstruction created = new ReqActionInstruction();
         created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
-        created.setTargetMethod("upload_execution_report");
-        created.setToken("reqflow_action_develop");
-        created.setPrompt("请按需求设计和执行方案完成开发。");
+        created.setTargetMethod("save_development_plan");
+        created.setToken("reqflow_action_plan_token");
+        created.setPrompt("请按需求设计和执行计划完成开发。");
         created.setContent("base instruction");
+        when(actionTokenService.createInstruction(
+                eq(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP),
+                eq(10L),
+                eq(31L),
+                eq(6L),
+                eq("save_development_plan"),
+                any(),
+                eq("复制执行任务指令"),
+                eq("developer"))).thenReturn(created);
+        ReqActionInstruction reportInstruction = new ReqActionInstruction();
+        reportInstruction.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        reportInstruction.setTargetMethod("upload_execution_report");
+        reportInstruction.setToken("reqflow_action_report_token");
+        reportInstruction.setPrompt("请回写执行报告。");
+        reportInstruction.setContent("report instruction");
         when(actionTokenService.createInstruction(
                 eq(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP),
                 eq(10L),
@@ -296,8 +340,8 @@ class ReqDemandServiceImplTest
                 eq(6L),
                 eq("upload_execution_report"),
                 any(),
-                eq("复制执行开发指令"),
-                eq("developer"))).thenReturn(created);
+                eq("复制执行报告指令"),
+                eq("developer"))).thenReturn(reportInstruction);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
@@ -307,12 +351,16 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, instruction.getActionType());
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
+        assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_development_plan"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_execution_report"));
-        assertTrue(instruction.getContent().contains("actionToken: reqflow_action_develop"));
+        assertTrue(instruction.getContent().contains("执行计划 actionToken: reqflow_action_plan_token"));
+        assertTrue(instruction.getContent().contains("执行报告 actionToken: reqflow_action_report_token"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
         assertTrue(instruction.getContent().contains("24小时内有效"));
         assertTrue(instruction.getContent().contains("仅可使用一次"));
         assertTrue(instruction.getContent().contains("重新生成"));
+        assertTrue(instruction.getContent().contains("执行计划"));
+        assertTrue(instruction.getContent().contains("执行报告"));
         assertTrue(instruction.getContent().contains("demandId: 6"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-006"));
     }
@@ -336,7 +384,7 @@ class ReqDemandServiceImplTest
         service.updateReqDemandStatus(5L, "repairing", "approver");
 
         verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_repairing"),
-                eq("web"), contains("发起返修"), isNull());
+                eq("web"), contains("提交返修"), isNull());
     }
 
     private ReqDemand demand(Long projectId, Long variantId)
@@ -346,6 +394,10 @@ class ReqDemandServiceImplTest
         demand.setVariantId(variantId);
         demand.setTitle("新增需求");
         demand.setDemandType("FEATURE");
+        demand.setDemandSource("BUSINESS");
+        demand.setBusinessBackground("业务背景");
+        demand.setExpectedResult("预期结果");
+        demand.setAcceptanceText("验收标准");
         return demand;
     }
 

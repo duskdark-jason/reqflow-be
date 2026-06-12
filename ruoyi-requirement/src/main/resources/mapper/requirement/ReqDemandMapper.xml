@@ -8,6 +8,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="demandNo" column="demand_no"/>
         <result property="title" column="title"/>
         <result property="demandType" column="demand_type"/>
+        <result property="demandSource" column="demand_source"/>
         <result property="projectId" column="project_id"/>
         <result property="variantId" column="variant_id"/>
         <result property="moduleId" column="module_id"/>
@@ -20,6 +21,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="impactPermission" column="impact_permission"/>
         <result property="impactExportOrAsync" column="impact_export_or_async"/>
         <result property="acceptanceText" column="acceptance_text"/>
+        <result property="attachments" column="attachments"/>
         <result property="status" column="status"/>
         <result property="creatorId" column="creator_id"/>
         <result property="createBy" column="create_by"/>
@@ -30,9 +32,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectReqDemandVo">
-        select demand_id, demand_no, title, demand_type, project_id, variant_id, module_id, feature_id,
+        select demand_id, demand_no, title, demand_type, demand_source, project_id, variant_id, module_id, feature_id,
                business_background, expected_result, impact_page, impact_api, impact_data,
-               impact_permission, impact_export_or_async, acceptance_text, status, creator_id,
+               impact_permission, impact_export_or_async, acceptance_text, attachments, status, creator_id,
                create_by, create_time, update_by, update_time, remark
         from req_demand
     </sql>
@@ -46,6 +48,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="variantId != null">and variant_id = #{variantId}</if>
             <if test="moduleId != null">and module_id = #{moduleId}</if>
             <if test="demandType != null and demandType != ''">and demand_type = #{demandType}</if>
+            <if test="demandSource != null and demandSource != ''">and demand_source = #{demandSource}</if>
             <if test="status != null and status != ''">and status = #{status}</if>
             <if test="creatorId != null">and creator_id = #{creatorId}</if>
         </where>
@@ -63,13 +66,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </select>
 
     <insert id="insertReqDemand" parameterType="ReqDemand" useGeneratedKeys="true" keyProperty="demandId">
-        insert into req_demand(demand_no, title, demand_type, project_id, variant_id, module_id, feature_id,
+        insert into req_demand(demand_no, title, demand_type, demand_source, project_id, variant_id, module_id, feature_id,
                                business_background, expected_result, impact_page, impact_api, impact_data,
-                               impact_permission, impact_export_or_async, acceptance_text, status, creator_id,
+                               impact_permission, impact_export_or_async, acceptance_text, attachments, status, creator_id,
                                create_by, create_time, remark)
-        values(#{demandNo}, #{title}, #{demandType}, #{projectId}, #{variantId}, #{moduleId}, #{featureId},
+        values(#{demandNo}, #{title}, #{demandType}, #{demandSource}, #{projectId}, #{variantId}, #{moduleId}, #{featureId},
                #{businessBackground}, #{expectedResult}, #{impactPage}, #{impactApi}, #{impactData},
-               #{impactPermission}, #{impactExportOrAsync}, #{acceptanceText}, #{status}, #{creatorId},
+               #{impactPermission}, #{impactExportOrAsync}, #{acceptanceText}, #{attachments}, #{status}, #{creatorId},
                #{createBy}, sysdate(), #{remark})
     </insert>
 
@@ -78,6 +81,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <set>
             <if test="title != null and title != ''">title = #{title},</if>
             <if test="demandType != null and demandType != ''">demand_type = #{demandType},</if>
+            <if test="demandSource != null and demandSource != ''">demand_source = #{demandSource},</if>
             <if test="projectId != null">project_id = #{projectId},</if>
             <if test="variantId != null">variant_id = #{variantId},</if>
             <if test="moduleId != null">module_id = #{moduleId},</if>
@@ -90,6 +94,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="impactPermission != null">impact_permission = #{impactPermission},</if>
             <if test="impactExportOrAsync != null">impact_export_or_async = #{impactExportOrAsync},</if>
             <if test="acceptanceText != null">acceptance_text = #{acceptanceText},</if>
+            <if test="attachments != null">attachments = #{attachments},</if>
             <if test="status != null and status != ''">status = #{status},</if>
             <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
             <if test="remark != null">remark = #{remark},</if>

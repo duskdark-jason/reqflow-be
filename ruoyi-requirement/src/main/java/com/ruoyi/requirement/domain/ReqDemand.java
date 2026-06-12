@@ -24,6 +24,9 @@ public class ReqDemand extends BaseEntity
     /** 需求类型 */
     private String demandType;
 
+    /** 需求来源 */
+    private String demandSource;
+
     /** 项目ID */
     private Long projectId;
 
@@ -59,6 +62,9 @@ public class ReqDemand extends BaseEntity
 
     /** 验收标准 */
     private String acceptanceText;
+
+    /** 需求附件 */
+    private String attachments;
 
     /** 状态 */
     private String status;
@@ -104,6 +110,16 @@ public class ReqDemand extends BaseEntity
     public void setDemandType(String demandType)
     {
         this.demandType = demandType;
+    }
+
+    public String getDemandSource()
+    {
+        return demandSource;
+    }
+
+    public void setDemandSource(String demandSource)
+    {
+        this.demandSource = demandSource;
     }
 
     public Long getProjectId()
@@ -226,6 +242,16 @@ public class ReqDemand extends BaseEntity
         this.acceptanceText = acceptanceText;
     }
 
+    public String getAttachments()
+    {
+        return attachments;
+    }
+
+    public void setAttachments(String attachments)
+    {
+        this.attachments = attachments;
+    }
+
     public String getStatus()
     {
         return status;
@@ -254,6 +280,7 @@ public class ReqDemand extends BaseEntity
             .append("demandNo", getDemandNo())
             .append("title", getTitle())
             .append("demandType", getDemandType())
+            .append("demandSource", getDemandSource())
             .append("projectId", getProjectId())
             .append("variantId", getVariantId())
             .append("moduleId", getModuleId())
@@ -266,6 +293,7 @@ public class ReqDemand extends BaseEntity
             .append("impactPermission", getImpactPermission())
             .append("impactExportOrAsync", getImpactExportOrAsync())
             .append("acceptanceText", getAcceptanceText())
+            .append("attachments", getAttachments())
             .append("status", getStatus())
             .append("creatorId", getCreatorId())
             .append("createBy", getCreateBy())

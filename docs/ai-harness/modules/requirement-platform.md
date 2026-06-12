@@ -10,8 +10,8 @@
 |---|---|---|---|---|---|---|
 | 需求管理 | 项目管理 | 项目列表、项目维护入口、项目初始化状态 | `reqflow-ui/src/views/requirement/project/index.vue`、`maintain.vue` | `reqflow-ui/src/api/requirement/project.js`、`projectInit.js` | `/requirement/project/**`，`req:project:*`；`/requirement/project/init/**`，`req:project:*` | `ReqProjectController`、`ReqProjectInitController`、`ReqProjectServiceImpl`、`ReqProjectInitServiceImpl` |
 | 需求管理 | 分支知识库详情页签 | 按项目分支查看模块知识、索引批次和初始化指令 | `reqflow-ui/src/views/requirement/project/knowledge.vue` | `reqflow-ui/src/api/requirement/index.js`、`project.js` | `/requirement/index/module/tree`，`req:index:list`；`/requirement/index/batch/list`，`req:index:list` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper`、`ReqRepositoryIndexBatchMapper` |
-| 需求管理 | 需求列表 | 需求维护页签、新增、编辑、查询、状态流转、返修流转、需求编排指令和执行开发指令 | `reqflow-ui/src/views/requirement/demand/index.vue`、`maintain.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；`/requirement/index/impact/suggest`，`req:index:list` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
-| 需求管理 | 需求执行包 | 保存和读取需求、计划、执行报告、Review 报告等交接资料 | `reqflow-ui/src/views/requirement/package/index.vue` | `reqflow-ui/src/api/requirement/package.js` | `/requirement/package/**`，`req:package:*` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
+| 需求管理 | 需求列表 | 需求维护页签、新增、编辑、查询、状态流转、返修流转、生成需求设计指令和执行任务指令 | `reqflow-ui/src/views/requirement/demand/index.vue`、`maintain.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；`/requirement/index/impact/suggest`，`req:index:list` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
+| 需求管理 | 需求执行包 | 保存和读取需求设计、执行计划、执行报告、Review 报告等交接资料；需求详情嵌入读取可使用 `req:demand:query` | `reqflow-ui/src/views/requirement/package/index.vue` | `reqflow-ui/src/api/requirement/package.js` | `/requirement/package/**`，读取为 `req:package:list` 或 `req:demand:query`，保存为 `req:package:save` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
 | 需求管理 | MCP 管理 | 管理人员 MCP Key，创建或重置后返回一次性 Key、Codex 多平台安装命令和高级安装包 | `reqflow-ui/src/views/requirement/mcpKey/index.vue` | `reqflow-ui/src/api/requirement/mcpKey.js` | `/requirement/mcp/key/**`，`/requirement/codex/install.*`，`req:mcp:key:*`；`/requirement/mcp` | `ReqMcpKeyController`、`ReqCodexInstallController`、`ReqMcpController`、`ReqMcpUserKeyServiceImpl`、`McpService` |
 | 需求管理 | 使用统计 | 需求、项目、用户和状态统计 | `reqflow-ui/src/views/requirement/statistics/index.vue` | `reqflow-ui/src/api/requirement/statistics.js` | `/requirement/statistics/**`，`req:stats:view` | `ReqStatisticsController`、`ReqStatisticsService` |
 | 需求管理 | 隐藏兼容能力 | 仓库、项目分支、人工模块兼容 CRUD，不作为左侧菜单独立入口 | `reqflow-ui/src/api/requirement/repository.js`、`variant.js`、`module.js` | 同前述 API 文件 | `/requirement/repository/**`、`/requirement/variant/**`、`/requirement/module/**`，`req:repo:*`、`req:variant:*`、`req:module:*` | `ReqRepositoryController`、`ReqVariantController`、`ReqModuleController` 及对应 Service/Mapper |
@@ -20,7 +20,7 @@
 
 | 类型 | 优先查看文件 | 说明 |
 |---|---|---|
-| 菜单与权限 SQL | `docs/db/sql/req_platform_menu.sql` | 需求管理一级菜单、子菜单和按钮权限。 |
+| 菜单与权限 SQL | `docs/db/sql/req_platform_menu.sql`、`docs/db/sql/req_platform_req016_role_permissions.sql` | 需求管理一级菜单、子菜单、按钮权限和三类角色授权。 |
 | 接口契约 | `docs/ai-harness/contracts/requirement-platform-api.md` | 后端接口、MCP resource、MCP tool、知识库和初始化契约。 |
 | 领域入口 | `docs/domains/requirement-platform/README.md` | 后端业务边界和长期维护规则。 |
 | 后端 Controller | `ruoyi-admin/src/main/java/com/ruoyi/web/controller/requirement/` | HTTP 接口入口。 |
@@ -34,6 +34,7 @@
 - 相关契约文档：`docs/ai-harness/contracts/requirement-platform-api.md`。
 - 相关领域入口：`docs/domains/requirement-platform/README.md`。
 - 关键菜单脚本：`docs/db/sql/req_platform_menu.sql`。
+- 关键角色脚本：`docs/db/sql/req_platform_req016_role_permissions.sql`。
 - 关键表结构：`docs/db/sql/req_platform_schema.sql` 以及后续 `docs/db/sql/req_platform_req*.sql` 增量脚本。
 
 ## 不变量
@@ -42,12 +43,14 @@
 - 项目、仓库、项目分支和模块知识必须按项目分支隔离；不能把其他分支或旧项目级模块默认混入当前分支。
 - 新增或编辑需求时，后端必须校验 `projectId + variantId` 属于同一项目，且项目分支已有仓库索引证据；新功能提需允许分支暂时没有既有模块知识。
 - 新增需求时后端必须覆盖请求体中的需求编号并生成 `REQ-001` 风格编号，不包含日期；后端必须覆盖客户端 `creatorId`，以当前登录用户作为创建人，并将新需求状态置为 `draft`。
+- 新增和修改需求必须提供 `demandSource`；业务背景允许保存富文本 HTML 和粘贴图片，背景图片及需求附件统一通过 `/requirement/demand/upload` 上传，服务端单文件最大 2MB。
 - 普通需求编辑只允许 `draft` 状态且创建人匹配；状态变化必须通过状态流转接口，不得通过通用编辑接口绕过状态机。
-- 需求主状态流转为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，旧 `plan_pending`、`archived` 仅作为兼容状态保留。
-- 审批人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令用于 MCP 保存 `requirement` 和 `plan` 资料包，不能替代人员 `X-MCP-Key`。
-- 开发人员可通过需求详情获取 `requirement_develop` 动作 token 指令；该指令用于 MCP 回写 `execution_report`，不能替代人员 `X-MCP-Key`。
+- 需求主状态流转为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，旧 `plan_pending`、`archived` 仅作为兼容状态保留；`submitted` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发。
+- 开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令只能用于 MCP `save_requirement_package` 保存 `requirement` 需求设计，不能替代人员 `X-MCP-Key`。
+- 开发人员可通过需求详情获取 `requirement_develop` 动作 token 指令；该指令包含执行计划和执行报告两个一次性 actionToken，分别用于 MCP `save_development_plan` 和 `upload_execution_report`，不能替代人员 `X-MCP-Key`。
 - 项目初始化、需求编排和开发执行动作 token 生成后 24 小时内有效且仅可使用一次；`last_used_time` 非空或 `expire_time` 过期时必须拒绝，重新执行需重新生成指令。
-- 需求资料包通过 `req_package_version` 追加版本记录，返修流程依赖同一需求下需求设计、执行方案、执行报告和 Review 报告的历史版本链，不新增覆盖式更新。
+- 需求资料包通过 `req_package_version` 追加版本记录，返修流程依赖同一需求下需求设计、执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新。
+- 管理员角色沿用 `role_key='admin'` 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，供 MCP 回写资料。
 - 需求未选择既有模块时，可以用备注承载新功能名称；执行包模块名解析顺序为人工模块、索引模块、备注。
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。
 - 项目初始化默认复制指令只保留短动态上下文，必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，确保接入项目能触发全局 skill 并定位到指定 MCP server 的指定 tool。

@@ -10,6 +10,9 @@ public class RequirementTemplateContext
     private String baselineBranch;
     private String demandNo;
     private String demandTitle;
+    private String demandSource;
+    private String businessBackground;
+    private String attachments;
     private String taskBranch;
     private String moduleName;
     private String acceptanceText;
@@ -30,6 +33,12 @@ public class RequirementTemplateContext
     public void setDemandNo(String demandNo) { this.demandNo = demandNo; }
     public String getDemandTitle() { return demandTitle; }
     public void setDemandTitle(String demandTitle) { this.demandTitle = demandTitle; }
+    public String getDemandSource() { return demandSource; }
+    public void setDemandSource(String demandSource) { this.demandSource = demandSource; }
+    public String getBusinessBackground() { return businessBackground; }
+    public void setBusinessBackground(String businessBackground) { this.businessBackground = businessBackground; }
+    public String getAttachments() { return attachments; }
+    public void setAttachments(String attachments) { this.attachments = attachments; }
     public String getTaskBranch() { return taskBranch; }
     public void setTaskBranch(String taskBranch) { this.taskBranch = taskBranch; }
     public String getModuleName() { return moduleName; }

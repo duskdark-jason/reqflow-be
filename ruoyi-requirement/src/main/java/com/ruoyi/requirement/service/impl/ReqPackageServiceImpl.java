@@ -127,6 +127,9 @@ public class ReqPackageServiceImpl implements IReqPackageService
         context.setBaselineBranch(variant == null ? "main" : variant.getBaselineBranch());
         context.setDemandNo(demand.getDemandNo());
         context.setDemandTitle(demand.getTitle());
+        context.setDemandSource(demand.getDemandSource());
+        context.setBusinessBackground(demand.getBusinessBackground());
+        context.setAttachments(demand.getAttachments());
         context.setModuleName(moduleName);
         context.setTaskBranch(buildTaskBranch(demand, moduleName));
         context.setAcceptanceText(demand.getAcceptanceText());

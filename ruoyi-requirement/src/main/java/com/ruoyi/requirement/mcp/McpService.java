@@ -65,8 +65,8 @@ public class McpService
             if ("resources/read".equals(request.getMethod())) return McpResponse.success(request.getId(), resourcesRead(stringParam(request, "uri")));
             if ("resources/templates/list".equals(request.getMethod())) return McpResponse.success(request.getId(), resourceTemplatesList());
             if ("prompts/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("prompts", Arrays.asList(
-                    prompt("generate_agent_requirement_package", "生成需求说明包"),
-                    prompt("generate_development_plan", "生成开发计划"),
+                    prompt("generate_requirement_design", "生成需求设计"),
+                    prompt("generate_development_plan", "生成执行计划"),
                     prompt("generate_execution_prompt", "生成执行提示"),
                     prompt("generate_review_prompt", "生成 Review 提示"))));
             if ("prompts/get".equals(request.getMethod())) return McpResponse.success(request.getId(), promptsGet(stringParam(request, "name")));
@@ -367,8 +367,8 @@ public class McpService
     private Map<String, Object> toolsList()
     {
         return Collections.singletonMap("tools", Arrays.asList(
-                tool("save_requirement_package", "保存需求说明包", packageToolSchema(true)),
-                tool("save_development_plan", "保存开发计划", packageToolSchema(false)),
+                tool("save_requirement_package", "保存需求设计", packageToolSchema(true)),
+                tool("save_development_plan", "保存执行计划", packageToolSchema(false)),
                 tool("upload_execution_report", "上传执行报告", packageToolSchema(false)),
                 tool("upload_review_report", "上传 Review 报告", packageToolSchema(false)),
                 tool("register_harness_init_result", "登记项目 harness 初始化结果", registerHarnessSchema()),
@@ -816,7 +816,7 @@ public class McpService
         ReqActionToken token = actionTokenService.resolveToken(actionToken);
         if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
         {
-            if (!"save_requirement_package".equals(toolName) && !"save_development_plan".equals(toolName))
+            if (!"save_requirement_package".equals(toolName))
             {
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
@@ -973,7 +973,7 @@ public class McpService
     {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("demandId", property("integer", "需求 ID；未传时可用 actionToken 定位"));
-        properties.put("actionToken", property("string", "需求编排指令中的动作 token，可用于定位需求上下文"));
+        properties.put("actionToken", property("string", "生成需求设计或执行任务指令中的动作 token，可用于定位需求上下文"));
         properties.put("content", property("string", "要保存的交接资料正文"));
         if (allowArtifactType)
         {

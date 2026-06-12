@@ -55,6 +55,27 @@ class ReqPackageServiceImplTest
         assertEquals("fix-demand-list-REQ-007-new-feature-flow", context.getTaskBranch());
     }
 
+    @Test
+    void buildContextIncludesDemandSourceBackgroundAndAttachments()
+    {
+        ReqPackageServiceImpl service = new ReqPackageServiceImpl();
+        ReflectionTestUtils.setField(service, "reqProjectMapper", projectMapper());
+        ReflectionTestUtils.setField(service, "reqVariantMapper", variantMapper());
+        ReflectionTestUtils.setField(service, "reqRepositoryMapper", repositoryMapper());
+        ReflectionTestUtils.setField(service, "reqModuleMapper", mock(ReqModuleMapper.class));
+
+        ReqDemand demand = demand();
+        demand.setDemandSource("CUSTOMER");
+        demand.setBusinessBackground("<p>客户反馈<img src=\"/profile/upload/demo.png\"></p>");
+        demand.setAttachments("/profile/upload/demo.pdf");
+
+        RequirementTemplateContext context = ReflectionTestUtils.invokeMethod(service, "buildContext", demand);
+
+        assertEquals("CUSTOMER", context.getDemandSource());
+        assertEquals("<p>客户反馈<img src=\"/profile/upload/demo.png\"></p>", context.getBusinessBackground());
+        assertEquals("/profile/upload/demo.pdf", context.getAttachments());
+    }
+
     private ReqDemand demand()
     {
         ReqDemand demand = new ReqDemand();
