@@ -47,7 +47,7 @@
 
 ## 验证计划
 
-- L0 文档/规范：`sh scripts/check-docs.sh`、`sh scripts/check-harness.sh init`、`sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-019-harness双轨触发机制`
+- L0 文档/规范：`sh scripts/check-docs.sh`、`sh scripts/check-harness.sh init`、`sh scripts/check-harness.sh complete --spec docs/specs/done/REQ-019-harness双轨触发机制`
 - L1 编译/构建：`mvn -pl ruoyi-requirement -am -DskipTests compile`
 - L2 单元/契约：`sh ruoyi-requirement/src/main/resources/harness-template/scripts/test-check-harness.sh`、`sh scripts/test-check-harness.sh`、前端 `sh scripts/test-check-harness.sh`
 - L3 运行态冒烟：不适用，本次不改运行态接口、页面、权限或配置。

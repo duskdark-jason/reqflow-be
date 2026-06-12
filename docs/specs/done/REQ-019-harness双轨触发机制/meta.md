@@ -12,7 +12,7 @@
 - Review 授权：已授权
 - 目标客户：通用
 - 基线分支：main
-- companion 仓库：../reqflow-ui/docs/specs/active/REQ-019-harness双轨触发机制
+- companion 仓库：../reqflow-ui/docs/specs/done/REQ-019-harness双轨触发机制
 - 关联 spec：无
 - 影响模块：需求平台 harness 模板、项目接入初始化流程、需求执行流程、前端 harness 同步
 - 模块知识库动作：更新

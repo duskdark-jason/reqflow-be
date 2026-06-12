@@ -63,7 +63,7 @@
 
 ## Companion 关联
 
-- companion spec：`../reqflow-ui/docs/specs/active/REQ-019-harness双轨触发机制`
+- companion spec：`../reqflow-ui/docs/specs/done/REQ-019-harness双轨触发机制`
 - 关联分支：`../reqflow-ui` 使用 `docs/req-019-harness-dual-mode`
 
 ## 客户与分支
