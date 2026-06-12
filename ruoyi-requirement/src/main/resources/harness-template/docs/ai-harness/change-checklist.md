@@ -33,7 +33,7 @@
 
 ## 需求平台流程
 
-- [ ] 如果任务来自需求平台 Key，已按 `docs/process/platform-key-workflow.md` 判断需求设计模式、开发模式、项目接入初始化模式或平台自身建设模式。
+- [ ] 如果任务来自需求平台 Key，已按 `docs/process/platform-key-workflow.md` 判断需求设计模式、开发模式或项目接入初始化模式。
 - [ ] 如果没有需求平台 Key、未接入 MCP 或 MCP 不可用，已按 `docs/process/local-harness-workflow.md` 使用本地 Harness 模式。
 - [ ] 本地 Harness 模式下未把本地文件写入伪造成 MCP 回写成功。
 - [ ] 本地或平台需求设计阶段仍停留在 `planning`，需求确认前未生成 `plan.md`、`execution-report.md` 或 `review-report.md`。
@@ -42,7 +42,6 @@
 - [ ] 项目接入初始化时，已生成至少一个 `docs/ai-harness/modules/*.md` 非模板模块文档，并按菜单目录、子菜单、接口、权限和涉及文件建立初始索引。
 - [ ] 需求平台需求设计模式下，已在最新目标基线上创建或切换到平台建议的 ASCII 任务分支，先回写需求可行性评估；结论允许继续后才生成/调整 `requirement.md`。
 - [ ] 需求平台开发模式下，已校验当前分支为需求设计阶段任务分支，未在开发阶段另建不同任务分支。
-- [ ] 平台自身建设模式仅用于需求平台自身、平台类治理能力，或明确拷贝平台建设版本进行本地自举的项目，未伪造 MCP 回写结果；普通项目无 Key、未接入 MCP 或 MCP 不可用时使用本地 Harness 模式。
 
 ## 模块知识库
 

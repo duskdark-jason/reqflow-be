@@ -2,7 +2,7 @@
 
 这是一套可由需求平台存储并下发到其他项目的 agentic coding / vibecoding harness 模板。目标是让模型和团队成员在新需求开始前，先理解业务边界、接口契约、数据口径和验证方式，再进入编码。
 
-优先落地方式是：需求平台保存本模板，项目接入时通过需求平台 MCP 或接口生成初始化包，由 Codex 在目标 workspace 校验远端仓库后写入 `docs/`、`scripts/`、子仓库 `AGENTS.md` 和 workspace 根目录 `AGENTS.md`。本地复制方式仅作为平台自身建设、离线接入或 MCP 不可用时的降级方案。
+优先落地方式是：需求平台保存本模板，项目接入时通过需求平台 MCP 或接口生成初始化包，由 Codex 在目标 workspace 校验远端仓库后写入 `docs/`、`scripts/`、子仓库 `AGENTS.md` 和 workspace 根目录 `AGENTS.md`。本地复制方式仅作为离线接入、纯本地 harness 维护或 MCP 不可用时的降级方案。
 
 ## 复制方式
 

@@ -6,7 +6,7 @@
 - 相关契约：【列出 ai-harness/contracts 文件】
 - 相关模块文档：【列出 ai-harness/modules 或 domains 文件】
 - 搜索导航：`docs/ai-harness/search-map.md`
-- 流程模式：【需求平台开发模式/本地 Harness 模式/平台自身建设模式】
+- 流程模式：【需求平台开发模式/本地 Harness 模式】
 - 目标客户与基线分支：【通用/main 或 客户标识/客户定制分支】
 - 影响模块：【菜单目录/子菜单/隐藏页签/后端能力】
 - 模块知识库动作：【新增/更新/无需更新】

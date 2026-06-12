@@ -7,7 +7,7 @@
 - 用户没有提供需求平台需求设计 Key、开发 Key 或项目接入初始化 Key。
 - 当前仓库未接入 Reqflow MCP，或当前 Codex 会话没有可用 MCP 工具。
 - MCP 服务暂时不可用，且用户明确允许先本地推进。
-- 当前项目处于平台自身建设、自举前治理或纯本地 harness 维护阶段。
+- 当前项目处于本地文档闭环、自举前治理或纯本地 harness 维护阶段。
 
 如果用户提供了有效 Key，必须优先走 `platform-key-workflow.md`。不能因为本地流程更方便而绕过平台流程。
 
@@ -16,7 +16,7 @@
 1. 读取 `AGENTS.md`、`docs/README.md`、`docs/ai-harness/harness-index.json`、`docs/ai-harness/search-map.md` 和 `docs/ai-harness/change-checklist.md`。
 2. 按 `search-map.md` 定位相关模块、契约、决策、数据库或运行手册。
 3. 新需求或 Bug 修复先创建 `docs/specs/active/REQ-001-中文需求标题/`，并填写 `meta.md`、`requirement.md`。
-4. `meta.md` 中 `流程模式` 写 `本地 Harness 模式`，`需求 Key` 写“无，本地流程”，`平台关联远端` 写“未配置”或当前仓库远端。当前仓库正在建设需求平台、平台类治理能力，或明确拷贝平台建设版本进行本地自举时，可写 `平台自身建设模式`，它必须按本流程执行。
+4. `meta.md` 中 `流程模式` 写 `本地 Harness 模式`，`需求 Key` 写“无，本地流程”，`平台关联远端` 写“未配置”或当前仓库远端。
 5. 未获得明确执行授权前，不写 `plan.md`、不改业务代码、不写执行报告和 Review 报告。
 
 ## 需求设计确认点

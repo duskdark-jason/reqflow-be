@@ -2,8 +2,8 @@
 
 - 状态：complete
 - 当前角色：Execution Agent
-- 流程模式：平台自身建设模式
-- 需求 Key：无，本地平台建设
+- 流程模式：本地 Harness 模式
+- 需求 Key：无，本地流程
 - 平台关联远端：https://github.com/duskdark-jason/reqflow-be.git
 - 平台目标分支：docs/req-019-harness-dual-mode
 - 执行模式：任务分支模式
@@ -22,4 +22,4 @@
 
 ## 状态说明
 
-本需求属于需求平台自身 harness 治理，不通过 MCP 回写需求平台。当前已完成执行、验证和 Review 闭环。
+本需求属于本地 harness 治理，不通过 MCP 回写需求平台。当前已完成执行、验证和 Review 闭环。

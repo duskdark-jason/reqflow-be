@@ -2,8 +2,8 @@
 
 - 状态：complete
 - 当前角色：Review Agent
-- 流程模式：平台自身建设模式
-- 需求 Key：无，本地平台建设
+- 流程模式：本地 Harness 模式
+- 需求 Key：无，本地流程
 - 平台关联远端：https://github.com/duskdark-jason/reqflow-be.git
 - 平台目标分支：chore/req-018-release-baseline
 - 执行模式：任务分支模式
