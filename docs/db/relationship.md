@@ -92,7 +92,7 @@
 - 新增或修改需求时必须校验 `req_demand.project_id + req_demand.variant_id` 指向已初始化完成的项目分支：`req_variant.project_id` 必须等于需求项目，分支未停用，项目有效仓库不能为空，并且每个有效仓库都有该分支 `baseline_branch` 对应的 `req_repository_index_batch.status='imported'` 批次；新功能提需允许暂时没有既有 `req_module` 或 `req_index_module` 知识。
 - 普通编辑需求只能处理 `status='draft'` 且 `creator_id` 为当前用户的记录；状态字段必须通过状态接口按状态机流转，不得通过普通编辑绕过。
 - 新增或修改草稿需求必须指定启用的 `requirement_developer` 用户作为 `developer_user_id`。非管理员查询需求列表时只返回当前用户创建的需求，以及已提交后指定给当前用户开发的需求；开发人员不能看到他人尚未提交的草稿。
-- 需求详情、资料包读取、MCP 需求资源读取和状态流转必须校验参与人：创建人负责提交需求、确认需求设计、提交返修和确认验收；指定开发人员负责提交需求设计、开始开发、提交验收和返修提交验收，并可生成需求设计/执行任务指令和回写资料包；管理员不受参与人限制。
+- 需求详情、资料包读取、MCP 需求资源读取和状态流转必须校验参与人：创建人负责提交需求、补充说明、确认需求设计、提交返修和确认验收；指定开发人员负责需求分析结论、需求设计结论、开始开发、提交验收和返修提交验收，并可生成需求设计/执行任务指令和回写资料包；管理员不受参与人限制。
 - 需求填报新增字段由 `docs/db/sql/req_platform_req016_demand_form_fields.sql` 维护；`demand_source` 是必填业务字段，`attachments` 是逗号分隔的上传路径串，不建立独立附件表。
 - 指定开发人员字段由 `docs/db/sql/req_platform_req017_demand_developer_lock.sql` 维护；历史需求允许 `developer_user_id` 为空，但新建和草稿编辑由服务层强制补齐。
 - MCP 读取 `memory://{projectId}/...?...variantId={variantId}` 时必须按 `req_memory_index.project_id + req_memory_index.variant_id + doc_type` 查询；分支知识库缺少 `variant_id` 会导致同项目不同长期分支的模块、契约或决策文档混用。

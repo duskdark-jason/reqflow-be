@@ -138,6 +138,7 @@ class McpServiceTest
 
         assertTrue(String.valueOf(response.getResult()).contains("resourceTemplates"));
         assertTrue(String.valueOf(response.getResult()).contains("requirement://{demandNo}"));
+        assertTrue(String.valueOf(response.getResult()).contains("requirement://{demandNo}/supplement"));
         assertTrue(String.valueOf(response.getResult()).contains("memory://{projectId}/modules"));
         assertTrue(String.valueOf(response.getResult()).contains("skill://reqflow/project-init"));
     }
@@ -222,6 +223,31 @@ class McpServiceTest
         assertTrue(String.valueOf(response.getResult()).contains("需求草稿内容"));
         verify(demandService).validateDemandReadable(5L);
         verify(packageService).selectLatest(5L, "requirement_draft");
+    }
+
+    @Test
+    void readsLatestRequirementSupplementPackage()
+    {
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        IReqDemandService demandService = mock(IReqDemandService.class);
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "reqDemandService", demandService);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        when(demandMapper.selectReqDemandByDemandNo("REQ-20260609-001")).thenReturn(demand(7L));
+        when(packageService.selectLatest(7L, "requirement_supplement"))
+                .thenReturn(packageVersion("requirement_supplement", "需求人补充说明"));
+
+        McpResponse response = service.handle(request("resources/read",
+                params("uri", "requirement://REQ-20260609-001/supplement")));
+
+        assertTrue(String.valueOf(response.getResult()).contains("需求人补充说明"));
+        verify(demandService).validateDemandReadable(7L);
+        verify(packageService).selectLatest(7L, "requirement_supplement");
     }
 
     @Test

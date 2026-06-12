@@ -41,6 +41,7 @@
 | AC-015 | 需求列表上下文权限和首页快捷入口 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController`、`ReqIndexController`、首页 | 需求上下文只读接口权限复核，前端构建通过 | 通过 |
 | AC-016 | 管理员删除和流程角色隔离 | `ReqDemandController`、`ReqDemandServiceImpl`、SQL 脚本 | 单测覆盖删除链路、角色状态动作拦截和 SQL 权限边界 | 通过 |
 | AC-017 | 单一指定开发人员和参与人锁定 | `ReqDemandServiceImpl`、`ReqDemandMapper.xml`、`ReqPackageServiceImpl`、`McpService`、前端状态按钮过滤 | 单测覆盖指定开发人员、非参与人拒绝和 SQL 字段；前端构建通过 | 通过 |
+| AC-018 | 自动需求草稿、结论分支和需求人补充说明 | `ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqDemandController`、`McpService` | `ReqDemandServiceImplTest` 覆盖提交需求自动生成草稿和补充说明；`ReqDemandStatusTransitionTest` 覆盖分支；`McpServiceTest` 覆盖补充说明资源 | 通过 |
 
 ## 验收复核
 

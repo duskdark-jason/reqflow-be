@@ -34,6 +34,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
 {
     private static final Set<String> SUPPORTED_ARTIFACT_TYPES = Set.of(
             "requirement_draft",
+            "requirement_supplement",
             "requirement_assessment",
             "requirement",
             "plan",

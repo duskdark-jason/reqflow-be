@@ -24,6 +24,7 @@ import com.ruoyi.common.utils.file.FileUtils;
 import com.ruoyi.framework.config.ServerConfig;
 import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.dto.ReqActionInstruction;
+import com.ruoyi.requirement.dto.ReqDemandSupplementRequest;
 import com.ruoyi.requirement.service.IReqDemandService;
 
 @RestController
@@ -119,6 +120,15 @@ public class ReqDemandController extends BaseController
     public AjaxResult updateStatus(@PathVariable Long demandId, @PathVariable String status)
     {
         return toAjax(reqDemandService.updateReqDemandStatus(demandId, status, getUsername()));
+    }
+
+    @PreAuthorize("@ss.hasPermi('req:demand:edit')")
+    @Log(title = "需求补充说明", businessType = BusinessType.UPDATE)
+    @PostMapping("/{demandId}/supplement")
+    public AjaxResult submitSupplement(@PathVariable Long demandId, @RequestBody ReqDemandSupplementRequest request)
+    {
+        return toAjax(reqDemandService.submitDemandSupplement(demandId,
+                request == null ? null : request.getContent(), getUsername()));
     }
 
     @PreAuthorize("@ss.hasPermi('req:demand:query')")

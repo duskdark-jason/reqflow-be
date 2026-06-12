@@ -48,13 +48,14 @@
 - 普通需求编辑只允许 `draft` 状态且创建人匹配；状态变化必须通过状态流转接口，不得通过通用编辑接口绕过状态机。
 - 普通用户的需求列表、详情、资料包读取和 MCP 需求资源读取必须按参与人锁定：创建人可见自己创建的需求，指定开发人员仅在需求提交后可见分配给自己的需求；管理员不受参与人限制。
 - 删除需求只开放给管理员按钮权限 `req:demand:remove`，会同步删除该需求的资料包版本和动作 token；需求人员和开发人员角色脚本不得分配该权限。
-- 需求主状态流转为 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，`archived` 仅作为归档状态保留；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发。
-- 状态流转不仅校验 `req:demand:edit` 和状态机，还必须按角色和参与人隔离：需求创建人执行提交需求、确认需求设计、返修和验收，指定开发人员执行提交需求设计、开始开发、提交验收和返修验收，`admin` 可执行全部合法动作。
+- 需求主状态流转为 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed`；需求分析或需求设计阶段可由指定开发人员流转到 `supplement_required` 或 `rejected`，需求创建人在 `supplement_required` 提交补充说明后回到 `plan_pending`；验收阶段可走 `review -> repairing -> review` 返修分支，`archived` 仅作为归档状态保留；`submitted` 表示待需求分析，`supplement_required` 表示待需求补充，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发，`rejected` 表示当前需求无法实现。
+- 状态流转不仅校验 `req:demand:edit` 和状态机，还必须按角色和参与人隔离：需求创建人执行提交需求、补充说明、确认需求设计、返修和验收，指定开发人员执行需求分析结论、需求设计结论、开始开发、提交验收和返修验收，`admin` 可执行全部合法动作。
 - 指定开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；`submitted` 状态只生成需求分析指令，使用 `target_method=requirement_analysis` 和 `upload_requirement_assessment` 回写 `requirement_assessment`；`plan_pending/plan_ready` 状态只生成需求生成指令，使用 `target_method=requirement_generate` 和 `save_requirement_package` 保存 `requirement`。需求分析阶段必须先给出可行性结论和风险，需求生成阶段只写 `requirement.md`，不能替代人员 `X-MCP-Key`。
 - 指定开发人员可在 `confirmed` 或 `developing` 状态通过需求详情获取 `requirement_develop` 开发阶段动作 token 指令；该指令只给出一个开发阶段 actionToken，可在当前开发阶段内用于 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，不能替代人员 `X-MCP-Key`。
 - 指定开发人员可在 `repairing` 状态通过需求详情获取 `requirement_repair` 返修阶段动作 token 指令；该指令只给出一个返修阶段 actionToken，可在当前返修阶段内用于 MCP `upload_execution_report` 和 `upload_review_report`，不得重新生成需求设计或执行计划。
 - 项目初始化、需求分析和需求生成动作 token 生成后在当前流程阶段内有效，最长保留 24 小时，且仅可使用一次；开发阶段动作 token 在 `confirmed/developing` 阶段内可重复用于执行计划、执行报告和 Review 报告回写，返修阶段动作 token 在 `repairing` 阶段内可重复用于执行报告和 Review 报告回写；需求流转到下一阶段后旧 token 立即失效，超过 24 小时也需重新生成。
-- 需求资料包通过 `req_package_version` 追加版本记录，需求设计阶段保留需求可行性评估和需求设计版本，返修流程依赖同一需求下执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新；保存和 MCP 回写只允许指定开发人员或管理员。
+- 需求提交时服务端自动追加 `requirement_draft` 和 `context_manifest` 版本，供 MCP `requirement://{demandNo}/draft-package` 和 `context-manifest` 读取；需求创建人在 `supplement_required` 状态提交补充说明时追加 `requirement_supplement`，MCP 可通过 `requirement://{demandNo}/supplement` 读取。
+- 需求资料包通过 `req_package_version` 追加版本记录，需求设计阶段保留需求草稿、需求补充、需求可行性评估和需求设计版本，返修流程依赖同一需求下执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新；通用保存和 MCP 回写只允许指定开发人员或管理员，需求人补充说明仅能通过专用补充接口写入。
 - 管理员角色沿用 `role_key='admin'` 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，供 MCP 回写资料。
 - 需求未选择既有模块时，可以用备注承载新功能名称；执行包模块名解析顺序为人工模块、索引模块、备注。
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。

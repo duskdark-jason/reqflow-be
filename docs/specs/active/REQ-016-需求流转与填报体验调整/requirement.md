@@ -55,6 +55,8 @@
 - 业务背景与附件：`businessBackground` 保存普通文本业务背景；图片和文件通过需求上传接口返回路径后写入 `attachments`，单文件不超过 2MB。
 - 默认状态：新增为 `draft`，中文语义为“未提交”。
 - 主状态流转：`draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed`，其中 `submitted` 表示待需求分析，`plan_pending` 表示待开发人员生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待开发人员生成执行计划并开始开发。
+- 结论分支：`submitted` 和 `plan_pending` 可由指定开发人员选择退回 `supplement_required` 或结束到 `rejected`；需求创建人在 `supplement_required` 提交补充说明后回到 `plan_pending`。
+- 自动草稿：需求从 `draft` 提交到 `submitted` 后，后端自动生成 `requirement_draft` 和 `context_manifest`，供 MCP 读取基础需求和上下文清单。
 - 返修流转：`review -> repairing -> review`，返修完成后重新走验收确认。
 - 兼容状态：`repairing`、`archived` 可继续识别，其中 `repairing` 作为待验收返修分支。
 - 需求分析阶段：`submitted` 状态下 `plan-instruction` 只指向 `upload_requirement_assessment` 回写需求可行性评估，并要求先给出可实现结论、风险和需求人补充项；该阶段不生成最终 `requirement.md`、`plan.md`、执行报告或 Review 报告。
@@ -85,6 +87,7 @@
 - AC-015：需求人员账号进入需求列表不出现项目、分支、模块、索引模块四类上下文接口权限不足；首页快捷入口不得展示无权限的 MCP 管理。
 - AC-016：管理员可删除需求；需求人员和开发人员不可见删除按钮，服务端状态流转按角色隔离具体动作。
 - AC-017：新增和修改草稿需求必须指定开发人员；提交后只有创建人、指定开发人员和管理员可查看或操作该需求，开发人员不能看到他人未提交草稿。
+- AC-018：需求提交后自动生成需求草稿和上下文清单；需求分析或需求设计阶段支持“需要补充说明”和“需求无法实现”结论；需求人在待补充说明状态可提交补充说明并回到待生成需求设计。
 
 ## Companion 关联
 

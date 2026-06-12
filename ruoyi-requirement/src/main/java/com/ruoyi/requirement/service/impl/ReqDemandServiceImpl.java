@@ -9,10 +9,12 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqDemand;
+import com.ruoyi.requirement.domain.ReqPackageVersion;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
@@ -179,6 +181,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
     }
 
     @Override
+    @Transactional
     public int updateReqDemandStatus(Long demandId, String status, String updateBy)
     {
         ReqDemand current = reqDemandMapper.selectReqDemandByDemandId(demandId);
@@ -199,8 +202,19 @@ public class ReqDemandServiceImpl implements IReqDemandService
         int rows = reqDemandMapper.updateReqDemandStatus(demandId, status, updateBy);
         if (rows > 0 && "submitted".equals(status))
         {
+            saveInitialDraftPackage(current, updateBy);
             activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
                     "demand_submitted", "web", "提交需求：" + current.getDemandNo(), null);
+        }
+        else if (rows > 0 && "supplement_required".equals(status))
+        {
+            activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                    "demand_supplement_required", "web", "需要补充说明：" + current.getDemandNo(), null);
+        }
+        else if (rows > 0 && "rejected".equals(status))
+        {
+            activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                    "demand_rejected", "web", "需求无法实现：" + current.getDemandNo(), null);
         }
         else if (rows > 0 && "completed".equals(status))
         {
@@ -221,6 +235,42 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
                     "demand_archived", "web", "归档需求：" + current.getDemandNo(), null);
+        }
+        return rows;
+    }
+
+    @Override
+    @Transactional
+    public int submitDemandSupplement(Long demandId, String content, String updateBy)
+    {
+        if (StringUtils.isBlank(content))
+        {
+            throw new ServiceException("补充说明不能为空");
+        }
+        ReqDemand current = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        if (current == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        if (!"supplement_required".equals(current.getStatus()))
+        {
+            throw new ServiceException("当前状态不需要补充说明");
+        }
+        if (!isCurrentAdmin() && !isCurrentCreator(current))
+        {
+            throw new ServiceException("只有需求创建人可以补充说明");
+        }
+
+        savePackageVersion(demandId, "requirement_supplement", content.trim(), "需求人补充说明", updateBy);
+        int rows = reqDemandMapper.updateReqDemandStatus(demandId, "plan_pending", updateBy);
+        if (rows < 1)
+        {
+            throw new ServiceException("补充说明提交失败");
+        }
+        if (rows > 0)
+        {
+            activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                    "demand_supplement_submitted", "web", "提交补充说明：" + current.getDemandNo(), null);
         }
         return rows;
     }
@@ -538,6 +588,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             return ROLE_REQUIREMENT_USER;
         }
         if ("plan_ready".equals(targetStatus) || "plan_pending".equals(targetStatus)
+                || "supplement_required".equals(targetStatus) || "rejected".equals(targetStatus)
                 || "developing".equals(targetStatus) || "review".equals(targetStatus))
         {
             return ROLE_REQUIREMENT_DEVELOPER;
@@ -574,6 +625,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("只有需求创建人可以执行该流程动作");
         }
         if ("plan_ready".equals(targetStatus) || "plan_pending".equals(targetStatus)
+                || "supplement_required".equals(targetStatus) || "rejected".equals(targetStatus)
                 || "developing".equals(targetStatus) || "review".equals(targetStatus))
         {
             if (isCurrentDeveloper(demand))
@@ -619,6 +671,75 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("指定开发人员不存在或未启用开发人员角色");
         }
+    }
+
+    private void saveInitialDraftPackage(ReqDemand demand, String operator)
+    {
+        // 平台提交时生成的基础资料供 MCP 读取，不开放为需求人员的通用资料包写权限。
+        savePackageVersion(demand.getDemandId(), "requirement_draft", buildRequirementDraftContent(demand),
+                "提交需求自动生成草稿", operator);
+        savePackageVersion(demand.getDemandId(), "context_manifest", buildContextManifestContent(demand),
+                "提交需求自动生成上下文清单", operator);
+    }
+
+    private void savePackageVersion(Long demandId, String artifactType, String content, String versionNote,
+            String operator)
+    {
+        Integer maxVersion = packageVersionMapper.selectMaxVersionNo(demandId, artifactType);
+        ReqPackageVersion version = new ReqPackageVersion();
+        version.setDemandId(demandId);
+        version.setArtifactType(artifactType);
+        version.setVersionNo((maxVersion == null ? 0 : maxVersion) + 1);
+        version.setContent(content == null ? "" : content);
+        version.setStatus("draft");
+        version.setVersionNote(versionNote);
+        version.setCreateBy(operator);
+        packageVersionMapper.insertReqPackageVersion(version);
+    }
+
+    private String buildRequirementDraftContent(ReqDemand demand)
+    {
+        return "# 需求草稿\n\n"
+                + "- 需求编号：" + text(demand.getDemandNo()) + "\n"
+                + "- 需求标题：" + text(demand.getTitle()) + "\n"
+                + "- 需求类型：" + text(demand.getDemandType()) + "\n"
+                + "- 需求来源：" + text(demand.getDemandSource()) + "\n"
+                + "- 项目ID：" + text(demand.getProjectId()) + "\n"
+                + "- 项目分支ID：" + text(demand.getVariantId()) + "\n"
+                + "- 指定开发人员ID：" + text(demand.getDeveloperUserId()) + "\n\n"
+                + "## 业务背景\n\n" + text(demand.getBusinessBackground()) + "\n\n"
+                + "## 预期结果\n\n" + text(demand.getExpectedResult()) + "\n\n"
+                + "## 验收标准\n\n" + text(demand.getAcceptanceText()) + "\n\n"
+                + "## 附件\n\n" + text(demand.getAttachments()) + "\n";
+    }
+
+    private String buildContextManifestContent(ReqDemand demand)
+    {
+        return "{\n"
+                + "  \"demandId\": " + jsonNumber(demand.getDemandId()) + ",\n"
+                + "  \"demandNo\": \"" + jsonText(demand.getDemandNo()) + "\",\n"
+                + "  \"title\": \"" + jsonText(demand.getTitle()) + "\",\n"
+                + "  \"projectId\": " + jsonNumber(demand.getProjectId()) + ",\n"
+                + "  \"variantId\": " + jsonNumber(demand.getVariantId()) + ",\n"
+                + "  \"moduleId\": " + jsonNumber(demand.getModuleId()) + ",\n"
+                + "  \"creatorId\": " + jsonNumber(demand.getCreatorId()) + ",\n"
+                + "  \"developerUserId\": " + jsonNumber(demand.getDeveloperUserId()) + "\n"
+                + "}\n";
+    }
+
+    private String text(Object value)
+    {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private String jsonNumber(Number value)
+    {
+        return value == null ? "null" : String.valueOf(value);
+    }
+
+    private String jsonText(String value)
+    {
+        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private Long[] normalizeDemandIds(Long[] demandIds)

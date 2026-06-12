@@ -86,6 +86,7 @@
 | AC-015 | 需求列表上下文只读接口权限 | Controller 权限复核、端到端账号冒烟 |
 | AC-016 | 管理员删除和流程角色隔离 | `ReqDemandServiceImplTest`、`ReqPlatformRoleSqlTest` |
 | AC-017 | 单一指定开发人员和参与人锁定 | `ReqDemandServiceImplTest`、`ReqDemandSchemaSqlTest`、接口账号冒烟 |
+| AC-018 | 自动需求草稿、结论分支和需求人补充说明 | `ReqDemandStatusTransitionTest`、`ReqDemandServiceImplTest`、`McpServiceTest` |
 
 ## 执行约束
 

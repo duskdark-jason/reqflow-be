@@ -141,6 +141,7 @@ public class McpService
         return Collections.singletonMap("resources", Arrays.asList(
                 resource("requirement://{demandNo}", "需求详情"),
                 resource("requirement://{demandNo}/draft-package", "需求草稿包"),
+                resource("requirement://{demandNo}/supplement", "需求补充说明"),
                 resource("requirement://{demandNo}/context-manifest", "需求上下文清单"),
                 resource("project://{projectId}/overview", "项目概览"),
                 resource("project://{projectId}/repositories", "项目仓库清单"),
@@ -160,6 +161,7 @@ public class McpService
         return Collections.singletonMap("resourceTemplates", Arrays.asList(
                 resourceTemplate("requirement://{demandNo}", "需求详情", "按稳定需求编号读取需求详情"),
                 resourceTemplate("requirement://{demandNo}/draft-package", "需求草稿包", "读取最新需求草稿包"),
+                resourceTemplate("requirement://{demandNo}/supplement", "需求补充说明", "读取最新需求人补充说明"),
                 resourceTemplate("requirement://{demandNo}/context-manifest", "上下文清单", "读取最新需求上下文清单"),
                 resourceTemplate("project://{projectId}/overview", "项目概览", "读取项目、仓库和项目分支"),
                 resourceTemplate("project://{projectId}/repositories", "项目仓库清单", "读取项目下代码仓库"),
@@ -1169,6 +1171,7 @@ public class McpService
     private String requirementArtifactType(String path)
     {
         if ("draft-package".equals(path)) return "requirement_draft";
+        if ("supplement".equals(path)) return "requirement_supplement";
         if ("context-manifest".equals(path)) return "context_manifest";
         return null;
     }
