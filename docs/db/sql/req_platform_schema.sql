@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS req_demand (
   attachments TEXT,
   status VARCHAR(32) NOT NULL DEFAULT 'draft',
   creator_id BIGINT NOT NULL,
+  developer_user_id BIGINT DEFAULT NULL,
   create_by VARCHAR(64) DEFAULT '',
   create_time DATETIME DEFAULT NULL,
   update_by VARCHAR(64) DEFAULT '',
@@ -129,7 +130,8 @@ CREATE TABLE IF NOT EXISTS req_demand (
   PRIMARY KEY (demand_id),
   UNIQUE KEY uk_req_demand_no (demand_no),
   KEY idx_req_demand_project (project_id),
-  KEY idx_req_demand_variant (variant_id)
+  KEY idx_req_demand_variant (variant_id),
+  KEY idx_req_demand_developer (developer_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求';
 
 CREATE TABLE IF NOT EXISTS req_package_version (

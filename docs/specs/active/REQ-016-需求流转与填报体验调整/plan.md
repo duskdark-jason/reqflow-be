@@ -23,7 +23,8 @@
 9. 需求填报字段与上传限制：新增 `demand_source`、`attachments` 字段和专用上传接口，执行包上下文同步来源、背景和附件，覆盖 AC-014。
 10. 需求上下文权限与 Controller 迁移：将需求管理 Controller 迁入 `ruoyi-requirement` 模块，需求表单所需项目、分支、模块和索引模块只读接口接受需求权限，覆盖 AC-015。
 11. 删除与流程隔离：新增 `req:demand:remove` 管理员删除接口和按钮权限，服务层按角色拦截具体状态动作，覆盖 AC-016。
-12. 文档同步：更新 API 契约、模块文档、表字典和关系说明，覆盖 AC-005、AC-010~AC-016。
+12. 单一指定开发人员锁定：新增 `developer_user_id` 字段、开发人员候选接口、参与人列表过滤和资料包读写校验，覆盖 AC-017。
+13. 文档同步：更新 API 契约、模块文档、表字典和关系说明，覆盖 AC-005、AC-010~AC-017。
 
 ## 文件改动范围
 
@@ -40,7 +41,9 @@
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | MCP 工具与 actionToken 阶段边界。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqPackageController.java` | 需求详情嵌入资料包读取权限。 |
 | 迁移 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/**` | 将需求管理 Controller 从 admin 模块迁移到需求模块，需求页面只读上下文接口按需求权限放行。 |
+| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/domain/ReqDemand.java`、`ReqDemandMapper.xml` | 指定开发人员字段回显、候选查询和非管理员参与人过滤。 |
 | 新增 | `docs/db/sql/req_platform_req016_role_permissions.sql` | 平台三类角色菜单权限。 |
+| 新增 | `docs/db/sql/req_platform_req017_demand_developer_lock.sql` | 指定开发人员字段和索引幂等升级脚本。 |
 | 新增 | `ruoyi-requirement/src/test/java/com/ruoyi/requirement/service/impl/ReqPlatformRoleSqlTest.java` | 角色 SQL 契约测试。 |
 | 修改 | `docs/ai-harness/contracts/requirement-platform-api.md`、`docs/ai-harness/modules/requirement-platform.md`、`docs/db/table-dictionary.md`、`docs/db/relationship.md` | 长期契约同步。 |
 
@@ -82,9 +85,10 @@
 | AC-014 | 来源必填、附件和 2MB 上传限制 | `ReqDemandServiceImplTest`、`ReqDemandSchemaSqlTest`、`ReqDemandControllerUploadTest`、`RequirementTemplateServiceTest` |
 | AC-015 | 需求列表上下文只读接口权限 | Controller 权限复核、端到端账号冒烟 |
 | AC-016 | 管理员删除和流程角色隔离 | `ReqDemandServiceImplTest`、`ReqPlatformRoleSqlTest` |
+| AC-017 | 单一指定开发人员和参与人锁定 | `ReqDemandServiceImplTest`、`ReqDemandSchemaSqlTest`、接口账号冒烟 |
 
 ## 执行约束
 
 - 本需求使用任务分支 `feature/req-016-demand-flow-ux`，不在 `main` 直接实现。
-- 新增 `demand_source`、`attachments` 字段脚本和角色权限脚本均为幂等升级脚本，本轮不直接连接本机库执行。
+- 新增 `demand_source`、`attachments`、`developer_user_id` 字段脚本和角色权限脚本均为幂等升级脚本。
 - 完成修改和验证后直接 commit；merge、push、rebase 仍需用户确认。

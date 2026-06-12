@@ -33,6 +33,7 @@
 - `req_demand.project_id -> req_project.project_id`，证据：DDL 索引 `idx_req_demand_project`。
 - `req_demand.variant_id -> req_variant.variant_id`，证据：DDL 索引 `idx_req_demand_variant`。
 - `req_demand.module_id -> req_module.module_id`，证据：模板上下文加载模块名称。
+- `req_demand.developer_user_id -> sys_user.user_id`，证据：DDL 索引 `idx_req_demand_developer`，需求列表和详情左连接用户表回显指定开发人员。
 - `req_package_version.demand_id -> req_demand.demand_id`，证据：唯一键 `uk_req_package_version(demand_id, artifact_type, version_no)`。
 - `req_memory_index.project_id -> req_project.project_id`，证据：DDL 索引 `idx_req_memory_project`。
 - `req_memory_index.repo_id -> req_repository.repo_id`，证据：DDL 索引 `idx_req_memory_repo`。
@@ -72,6 +73,7 @@
 - `req_action_token` 与项目、项目分支和需求都是上下文定位关系，不代表人员身份。统计或审计时不能把 action token 数量当作用户数量，也不能用 action token 绕过 `X-MCP-Key` 认证和菜单权限。
 - `requirement_plan` 动作 token 可绑定 `req_action_token.demand_id`，只供 MCP `save_requirement_package` 定位需求并回写需求设计；`requirement_develop` 动作 token 可绑定同一字段，分别供 MCP `save_development_plan` 和 `upload_execution_report` 定位需求并回写执行计划和执行报告；人员权限仍由登录态或 `X-MCP-Key` 决定。
 - `req_action_token.expire_time` 和 `last_used_time` 是安全边界字段：动作 token 生成后 24 小时内有效且仅可消费一次，不能作为长期项目、分支或需求缓存键。
+- `req_demand.developer_user_id` 与 `sys_user` 是多对一展示关系；列表只允许左连接回显开发人员账号和昵称，不能因角色表 join 放大需求行数。开发人员候选列表可 join `sys_user_role` 和 `sys_role`，但必须使用 `distinct u.user_id`。
 - `sys_role_menu` 与菜单权限是多对多关系，角色授权脚本会重置 `requirement_user` 和 `requirement_developer` 的菜单集合；开发人员角色包含隐藏 `req:package:save` 以允许 MCP 回写资料，但不分配独立“需求执行包”菜单。
 - 项目初始化上下文一次返回一个项目全貌，不能直接把 `req_repository`、`req_variant`、`req_module`、`req_index_module`、`req_repository_index_batch` 做一条 SQL join 后分页，否则会因多组一对多关系放大行数；当前实现使用分表查询后在 Service 层聚合。
 - 在 REQ-004 后，`req_variant.variant_name` 兼容承载需求人员可见中文标签，`req_variant.baseline_branch` 承载真实 Git 分支名，`req_variant.mcp_key` 保留 MCP 项目分支兼容 key；REQ-003 后前端主展示和 MCP 新指令使用 `req_action_token` 生成的 `actionToken`。`variant_code` 保持唯一键需要，允许由后端根据真实分支名兜底生成。
@@ -89,7 +91,10 @@
 - 模块知识库接收到 `variant_id` 时必须严格过滤该项目分支，不再兼容混入 `variant_id is null` 的旧项目级索引模块。
 - 新增或修改需求时必须校验 `req_demand.project_id + req_demand.variant_id` 指向已初始化完成的项目分支：`req_variant.project_id` 必须等于需求项目，分支未停用，项目有效仓库不能为空，并且每个有效仓库都有该分支 `baseline_branch` 对应的 `req_repository_index_batch.status='imported'` 批次；新功能提需允许暂时没有既有 `req_module` 或 `req_index_module` 知识。
 - 普通编辑需求只能处理 `status='draft'` 且 `creator_id` 为当前用户的记录；状态字段必须通过状态接口按状态机流转，不得通过普通编辑绕过。
+- 新增或修改草稿需求必须指定启用的 `requirement_developer` 用户作为 `developer_user_id`。非管理员查询需求列表时只返回当前用户创建的需求，以及已提交后指定给当前用户开发的需求；开发人员不能看到他人尚未提交的草稿。
+- 需求详情、资料包读取、MCP 需求资源读取和状态流转必须校验参与人：创建人负责提交需求、确认需求设计、提交返修和确认验收；指定开发人员负责提交需求设计、开始开发、提交验收和返修提交验收，并可生成需求设计/执行任务指令和回写资料包；管理员不受参与人限制。
 - 需求填报新增字段由 `docs/db/sql/req_platform_req016_demand_form_fields.sql` 维护；`demand_source` 是必填业务字段，`attachments` 是逗号分隔的上传路径串，不建立独立附件表。
+- 指定开发人员字段由 `docs/db/sql/req_platform_req017_demand_developer_lock.sql` 维护；历史需求允许 `developer_user_id` 为空，但新建和草稿编辑由服务层强制补齐。
 - MCP 读取 `memory://{projectId}/...?...variantId={variantId}` 时必须按 `req_memory_index.project_id + req_memory_index.variant_id + doc_type` 查询；分支知识库缺少 `variant_id` 会导致同项目不同长期分支的模块、契约或决策文档混用。
 - MCP 人员 Key 只允许匹配 `status='0'` 且绑定用户也为启用、未删除状态；停用 Key、停用用户或已删除用户都不能继续鉴权。Key 明文不得落库、不得出现在列表响应或操作日志中。
 - MCP 动作 Token 只允许匹配 `status='0'` 且未过期记录；明文只出现在本次初始化指令响应中，服务端落库和列表只能保存哈希、前缀和上下文。`project_init` 动作必须校验 `target_method='publish_repository_index'` 后才能用于索引导入。
@@ -101,6 +106,7 @@
 - 对状态流转只能通过 Service 的状态机方法，不要在 Mapper 外直接更新状态。
 - 验收返修不创建新需求；状态按 `review -> repairing -> review` 循环，返修版本通过 `req_package_version` 追加需求设计、执行方案、执行报告和 Review 报告版本体现。
 - 需求编号由服务端生成 `REQ-001` 风格序号，不包含日期；新增请求中的 `demand_no` 和 `creator_id` 只作为客户端输入噪声处理，不参与最终落库值。
+- 需求参与人锁定只使用一个指定开发人员字段，不再拆分需求对接人和实际开发人；用户需求中提到的“开发人员”均映射为 `req_demand.developer_user_id`。
 - MCP 工具只能写平台表，不能扩大到仓库文件、Git 或 shell。
 - MCP resource 可以读取 `req_project`、`req_repository`、`req_variant` 和 `req_memory_index`，但只能按项目和项目分支返回结构化上下文，不能代替执行器访问仓库文件系统。
 - 项目初始化编辑会同步删除本次维护弹窗移除的仓库和分支配置；如果未来为索引批次增加物理外键或软删除语义，必须重新评估删除策略，避免留下不可访问的历史索引。

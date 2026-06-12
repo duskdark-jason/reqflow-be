@@ -129,6 +129,7 @@ class ReqDemandServiceImplTest
         when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L), repository(22L)));
         when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
+        when(reqDemandMapper.countEnabledUserByRoleKey("requirement_developer", 8L)).thenReturn(1);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
@@ -140,6 +141,23 @@ class ReqDemandServiceImplTest
                 () -> service.insertReqDemand(demand(10L, 31L)));
 
         assertTrue(exception.getMessage().contains("项目分支尚未初始化完成"));
+        verify(reqDemandMapper, never()).insertReqDemand(any());
+    }
+
+    @Test
+    void rejectsInsertWhenDeveloperIsMissing()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ReqDemand demand = demand(10L, 31L);
+        demand.setDeveloperUserId(null);
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> service.insertReqDemand(demand));
+
+        assertTrue(exception.getMessage().contains("请选择指定开发人员"));
         verify(reqDemandMapper, never()).insertReqDemand(any());
     }
 
@@ -183,6 +201,7 @@ class ReqDemandServiceImplTest
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L), repository(22L)));
         when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Arrays.asList(
                 batch(21L, "main"), batch(22L, "main")));
+        when(reqDemandMapper.countEnabledUserByRoleKey("requirement_developer", 8L)).thenReturn(1);
         when(reqDemandMapper.selectDemandCount()).thenReturn(2L);
         when(reqDemandMapper.insertReqDemand(any())).thenReturn(1);
 
@@ -214,6 +233,7 @@ class ReqDemandServiceImplTest
         when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L)));
         when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
+        when(reqDemandMapper.countEnabledUserByRoleKey("requirement_developer", 8L)).thenReturn(1);
         when(reqDemandMapper.selectDemandCount()).thenReturn(3L);
         when(reqDemandMapper.insertReqDemand(any())).thenReturn(1);
 
@@ -295,6 +315,83 @@ class ReqDemandServiceImplTest
     }
 
     @Test
+    void selectedDeveloperCanExecuteDeveloperStatusAction()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(1L);
+        current.setStatus("submitted");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+        when(reqDemandMapper.updateReqDemandStatus(1L, "plan_ready", "developer")).thenReturn(1);
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        assertEquals(1, service.updateReqDemandStatus(1L, "plan_ready", "developer"));
+        verify(reqDemandMapper).updateReqDemandStatus(1L, "plan_ready", "developer");
+    }
+
+    @Test
+    void rejectsOtherDeveloperExecutingDeveloperStatusAction()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(1L);
+        current.setStatus("submitted");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+        mockLoginUser(9L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.updateReqDemandStatus(1L, "plan_ready", "developer"));
+
+        assertTrue(exception.getMessage().contains("只有指定开发人员"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
+    }
+
+    @Test
+    void creatorCanExecuteRequirementStatusAction()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(1L);
+        current.setStatus("plan_ready");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+        when(reqDemandMapper.updateReqDemandStatus(1L, "confirmed", "creator")).thenReturn(1);
+        mockLoginUser(7L, "requirement_user");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.updateReqDemandStatus(1L, "confirmed", "creator"));
+        verify(reqDemandMapper).updateReqDemandStatus(1L, "confirmed", "creator");
+    }
+
+    @Test
+    void rejectsNonParticipantReadingDemand()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(1L);
+        current.setStatus("submitted");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+        mockLoginUser(9L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.selectReqDemandByDemandId(1L));
+
+        assertTrue(exception.getMessage().contains("当前用户不是该需求参与人"));
+    }
+
+    @Test
     void deletesDemandAndRelatedGeneratedData()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
@@ -335,6 +432,7 @@ class ReqDemandServiceImplTest
         when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository(21L)));
         when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
+        when(reqDemandMapper.countEnabledUserByRoleKey("requirement_developer", 8L)).thenReturn(1);
         when(reqDemandMapper.selectDemandCount()).thenReturn(6L);
         when(reqDemandMapper.insertReqDemand(any())).thenReturn(1);
 
@@ -367,6 +465,7 @@ class ReqDemandServiceImplTest
         demand.setDemandNo("REQ-005");
         demand.setStatus("submitted");
         when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(demand);
+        mockLoginUser(8L, "requirement_developer");
 
         ReqActionInstruction created = new ReqActionInstruction();
         created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
@@ -416,6 +515,7 @@ class ReqDemandServiceImplTest
         demand.setDemandNo("REQ-006");
         demand.setStatus("confirmed");
         when(reqDemandMapper.selectReqDemandByDemandId(6L)).thenReturn(demand);
+        mockLoginUser(8L, "requirement_developer");
 
         ReqActionInstruction created = new ReqActionInstruction();
         created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
@@ -504,6 +604,8 @@ class ReqDemandServiceImplTest
         demand.setBusinessBackground("业务背景");
         demand.setExpectedResult("预期结果");
         demand.setAcceptanceText("验收标准");
+        demand.setCreatorId(7L);
+        demand.setDeveloperUserId(8L);
         return demand;
     }
 

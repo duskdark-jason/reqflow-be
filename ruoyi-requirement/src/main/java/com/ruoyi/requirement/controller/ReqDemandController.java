@@ -47,6 +47,13 @@ public class ReqDemandController extends BaseController
         return getDataTable(list);
     }
 
+    @PreAuthorize("@ss.hasAnyPermi('req:demand:list,req:demand:add,req:demand:edit,req:demand:query')")
+    @GetMapping("/developer-options")
+    public AjaxResult developerOptions(String userName)
+    {
+        return success(reqDemandService.selectDeveloperOptions(userName));
+    }
+
     @PreAuthorize("@ss.hasPermi('req:demand:query')")
     @GetMapping(value = "/{demandId}")
     public AjaxResult getInfo(@PathVariable("demandId") Long demandId)

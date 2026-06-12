@@ -16,7 +16,7 @@
 | `req_repository` | 项目下代码仓库 | `repo_id` | `idx_req_repo_project(project_id)` | `repo_url` 是远端匹配依据；`local_path_hint` 不能保存个人本机绝对路径。 |
 | `req_variant` | 项目分支，兼容旧客户线语义 | `variant_id` | `uk_req_variant_code(project_id, variant_code)`、`uk_req_variant_mcp_key(mcp_key)` | `baseline_branch` 是真实 Git 基线分支；`mcp_key` 仅保留兼容识别。 |
 | `req_module` | 人工维护模块或功能点 | `module_id` | `uk_req_module_code(project_id, variant_id, module_code)`、`idx_req_module_project_variant(project_id, variant_id)` | REQ-005 后模块按项目分支隔离，查询和写入必须带 `variant_id`。 |
-| `req_demand` | 需求记录 | `demand_id` | `uk_req_demand_no(demand_no)`、`idx_req_demand_project(project_id)`、`idx_req_demand_variant(variant_id)` | 需求必须绑定项目和项目分支；编号使用 `REQ-001` 风格且不含日期；`feature_id` 仍是预留字段。 |
+| `req_demand` | 需求记录 | `demand_id` | `uk_req_demand_no(demand_no)`、`idx_req_demand_project(project_id)`、`idx_req_demand_variant(variant_id)`、`idx_req_demand_developer(developer_user_id)` | 需求必须绑定项目、项目分支和指定开发人员；编号使用 `REQ-001` 风格且不含日期；`feature_id` 仍是预留字段。 |
 | `req_package_version` | 需求执行包产物版本 | `package_id` | `uk_req_package_version(demand_id, artifact_type, version_no)` | 同一需求和产物类型可有多版本，查询当前版本必须明确版本选择规则。 |
 | `req_memory_index` | 项目记忆文档索引 | `memory_id` | `idx_req_memory_project(project_id)`、`idx_req_memory_repo(repo_id)`、`idx_req_memory_project_variant(project_id, variant_id)` | 记录文档路径、分支和摘要，不保存本机绝对路径。 |
 | `req_repository_index_batch` | 仓库索引批次 | `batch_id` | `idx_req_index_batch_project(project_id)`、`idx_req_index_batch_repo(repo_id)`、`idx_req_index_batch_commit(repo_id, branch_name, commit_hash)` | 一行代表某仓库某分支某 commit 的一次索引上传。 |
@@ -56,6 +56,7 @@
 | `req_demand` | `demand_source` | 需求来源 | 新增和修改需求必填；历史数据通过 `req_platform_req016_demand_form_fields.sql` 默认补为 `BUSINESS`。 |
 | `req_demand` | `status` | 需求状态 | 新增默认 `draft`；主流程为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，其中 `submitted` 为待生成需求设计、`plan_ready` 为需求设计待确认、`confirmed` 为待执行开发；验收返修分支为 `review -> repairing -> review`，兼容 `plan_pending`、`archived`。 |
 | `req_demand` | `creator_id` | 需求创建人用户 ID | 新增时由服务端当前登录用户写入；普通编辑只允许创建人在 `draft` 状态修改。 |
+| `req_demand` | `developer_user_id` | 指定开发人员用户 ID | 新增或修改草稿需求时必须指向启用的 `requirement_developer` 用户；需求提交后普通访问、流程按钮、MCP 指令和资料包回写锁定在创建人与该开发人员之间，管理员不受该参与人限制。 |
 | `req_demand` | `project_id`、`variant_id`、`module_id` | 需求归属 | 保存前必须校验项目分支归属和仓库索引证据；新功能提需可以没有既有模块知识。 |
 | `req_demand` | `impact_page`、`impact_api`、`impact_data`、`impact_permission` | 影响面摘要 | 需求编排和开发计划使用，不能替代详细设计文档。 |
 | `req_demand` | `business_background`、`attachments` | 业务背景和需求附件 | `business_background` 可保存富文本 HTML 与图片 URL；`attachments` 保存上传附件路径，多个文件用英文逗号分隔，上传接口单文件最大 2MB。 |
@@ -87,7 +88,7 @@
 
 | 系统表 | 使用位置 | 注意事项 |
 |---|---|---|
-| `sys_user` | `req_mcp_user_key.user_id`、需求创建人、活动用户 | 查询用户显示信息时避免因角色表 join 放大行数。 |
+| `sys_user` | `req_mcp_user_key.user_id`、需求创建人、指定开发人员、活动用户 | 查询用户显示信息时避免因角色表 join 放大行数。 |
 | `sys_menu` | 需求平台菜单、按钮权限和 MCP Key 菜单 | 菜单 SQL 保留在 `docs/db/sql/req_platform_menu.sql` 和增量 SQL 中，权限标识需与 Controller 注解一致。 |
 | `sys_role`、`sys_role_menu` | 需求人员、开发人员和管理员菜单授权 | 角色授权脚本为 `docs/db/sql/req_platform_req016_role_permissions.sql`；开发人员有隐藏 `req:package:save` 供 MCP 回写资料，需求人员不分配 MCP 管理和独立执行包菜单。 |
 

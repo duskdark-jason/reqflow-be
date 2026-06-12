@@ -40,6 +40,7 @@
 | AC-014 | 来源必填、附件和 2MB 上传 | `ReqDemandServiceImpl`、`ReqDemandController`、模板和 SQL | 来源必填、字段脚本、上传限制、富文本模板转义测试通过 | 通过 |
 | AC-015 | 需求列表上下文权限和首页快捷入口 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController`、`ReqIndexController`、首页 | 需求上下文只读接口权限复核，前端构建通过 | 通过 |
 | AC-016 | 管理员删除和流程角色隔离 | `ReqDemandController`、`ReqDemandServiceImpl`、SQL 脚本 | 单测覆盖删除链路、角色状态动作拦截和 SQL 权限边界 | 通过 |
+| AC-017 | 单一指定开发人员和参与人锁定 | `ReqDemandServiceImpl`、`ReqDemandMapper.xml`、`ReqPackageServiceImpl`、`McpService`、前端状态按钮过滤 | 单测覆盖指定开发人员、非参与人拒绝和 SQL 字段；前端构建通过 | 通过 |
 
 ## 验收复核
 
@@ -57,6 +58,9 @@
 - AC-012：通过，执行阶段包含执行计划和执行报告回写。
 - AC-013：通过，需求详情读取资料包可使用 `req:demand:query`。
 - AC-014：通过，需求来源必填、需求上传 2MB 限制和执行包上下文已覆盖。
+- AC-015：通过，需求列表上下文只读接口按需求权限放行，首页快捷入口按权限过滤。
+- AC-016：通过，管理员删除和流程角色隔离已覆盖。
+- AC-017：通过，需求只锁定一个指定开发人员，该人员同时负责需求设计、执行开发和返修；普通访问与操作限制在创建人和该开发人员之间。
 
 ## 返修交接清单
 

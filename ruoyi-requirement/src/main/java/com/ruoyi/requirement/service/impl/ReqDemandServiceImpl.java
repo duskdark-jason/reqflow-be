@@ -17,6 +17,7 @@ import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.dto.ReqActionInstruction;
+import com.ruoyi.requirement.dto.ReqMcpUserOption;
 import com.ruoyi.requirement.mapper.ReqActionTokenMapper;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
 import com.ruoyi.requirement.mapper.ReqPackageVersionMapper;
@@ -65,19 +66,36 @@ public class ReqDemandServiceImpl implements IReqDemandService
     @Override
     public ReqDemand selectReqDemandByDemandId(Long demandId)
     {
-        return reqDemandMapper.selectReqDemandByDemandId(demandId);
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        validateDemandReadable(demand);
+        return demand;
     }
 
     @Override
     public List<ReqDemand> selectReqDemandList(ReqDemand reqDemand)
     {
+        if (reqDemand == null)
+        {
+            reqDemand = new ReqDemand();
+        }
+        if (!isCurrentAdmin())
+        {
+            reqDemand.setParticipantUserId(currentUserId());
+        }
         return reqDemandMapper.selectReqDemandList(reqDemand);
+    }
+
+    @Override
+    public List<ReqMcpUserOption> selectDeveloperOptions(String userName)
+    {
+        return safeList(reqDemandMapper.selectUserOptionsByRoleKey(ROLE_REQUIREMENT_DEVELOPER, userName));
     }
 
     @Override
     public int insertReqDemand(ReqDemand reqDemand)
     {
         validateDemandContent(reqDemand);
+        validateDeveloperUser(reqDemand.getDeveloperUserId());
         validateDemandTargetInitialized(reqDemand.getProjectId(), reqDemand.getVariantId());
         reqDemand.setDemandNo(nextDemandNo());
         reqDemand.setStatus("draft");
@@ -107,8 +125,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("只有未提交需求可以修改");
         }
-        if (reqDemand.getCreatorId() == null || current.getCreatorId() == null
-                || !current.getCreatorId().equals(reqDemand.getCreatorId()))
+        if (!isCurrentAdmin() && (current.getCreatorId() == null || !current.getCreatorId().equals(currentUserId())))
         {
             throw new ServiceException("只有需求创建人可以修改");
         }
@@ -120,6 +137,8 @@ public class ReqDemandServiceImpl implements IReqDemandService
         }
         reqDemand.setStatus(null);
         validateDemandContent(reqDemand);
+        Long developerUserId = reqDemand.getDeveloperUserId() == null ? current.getDeveloperUserId() : reqDemand.getDeveloperUserId();
+        validateDeveloperUser(developerUserId);
         Long projectId = reqDemand.getProjectId() == null ? current.getProjectId() : reqDemand.getProjectId();
         Long variantId = reqDemand.getVariantId() == null ? current.getVariantId() : reqDemand.getVariantId();
         validateDemandTargetInitialized(projectId, variantId);
@@ -166,6 +185,11 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("需求状态流转不允许");
         }
         validateStatusActionRole(status);
+        validateStatusActionParticipant(current, status);
+        if ("submitted".equals(status))
+        {
+            validateDeveloperUser(current.getDeveloperUserId());
+        }
         int rows = reqDemandMapper.updateReqDemandStatus(demandId, status, updateBy);
         if (rows > 0 && "submitted".equals(status))
         {
@@ -196,12 +220,43 @@ public class ReqDemandServiceImpl implements IReqDemandService
     }
 
     @Override
+    public void validateDemandReadable(Long demandId)
+    {
+        validateDemandReadable(reqDemandMapper.selectReqDemandByDemandId(demandId));
+    }
+
+    @Override
+    public void validateDemandPackageWritable(Long demandId, String artifactType)
+    {
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        if (demand == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        if (isCurrentAdmin())
+        {
+            return;
+        }
+        if (isCurrentDeveloper(demand))
+        {
+            return;
+        }
+        throw new ServiceException("只有指定开发人员可以回写该需求资料包");
+    }
+
+    @Override
     public ReqActionInstruction createRequirementPlanInstruction(Long demandId, String operator)
     {
         ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
         if (demand == null)
         {
             throw new ServiceException("需求不存在");
+        }
+        validateDeveloperInstructionAccess(demand);
+        if (!"submitted".equals(demand.getStatus()) && !"plan_pending".equals(demand.getStatus())
+                && !"plan_ready".equals(demand.getStatus()))
+        {
+            throw new ServiceException("当前状态不能生成需求设计指令");
         }
         String prompt = "请基于需求上下文生成需求设计，并通过 reqflow MCP 回写资料包。";
         ReqActionInstruction instruction = actionTokenService.createInstruction(
@@ -225,6 +280,12 @@ public class ReqDemandServiceImpl implements IReqDemandService
         if (demand == null)
         {
             throw new ServiceException("需求不存在");
+        }
+        validateDeveloperInstructionAccess(demand);
+        if (!"confirmed".equals(demand.getStatus()) && !"developing".equals(demand.getStatus())
+                && !"repairing".equals(demand.getStatus()) && !"review".equals(demand.getStatus()))
+        {
+            throw new ServiceException("当前状态不能生成执行任务指令");
         }
         String planPrompt = "请基于已确认需求设计生成执行计划，并通过 reqflow MCP 回写执行计划。";
         ReqActionInstruction planInstruction = actionTokenService.createInstruction(
@@ -380,6 +441,82 @@ public class ReqDemandServiceImpl implements IReqDemandService
             return ROLE_REQUIREMENT_DEVELOPER;
         }
         return null;
+    }
+
+    private void validateDemandReadable(ReqDemand demand)
+    {
+        if (demand == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        if (isCurrentAdmin() || isCurrentCreator(demand) || isCurrentDeveloper(demand))
+        {
+            return;
+        }
+        throw new ServiceException("当前用户不是该需求参与人");
+    }
+
+    private void validateStatusActionParticipant(ReqDemand demand, String targetStatus)
+    {
+        if (isCurrentAdmin())
+        {
+            return;
+        }
+        if ("submitted".equals(targetStatus) || "confirmed".equals(targetStatus)
+                || "repairing".equals(targetStatus) || "completed".equals(targetStatus))
+        {
+            if (isCurrentCreator(demand))
+            {
+                return;
+            }
+            throw new ServiceException("只有需求创建人可以执行该流程动作");
+        }
+        if ("plan_ready".equals(targetStatus) || "plan_pending".equals(targetStatus)
+                || "developing".equals(targetStatus) || "review".equals(targetStatus))
+        {
+            if (isCurrentDeveloper(demand))
+            {
+                return;
+            }
+            throw new ServiceException("只有指定开发人员可以执行该流程动作");
+        }
+    }
+
+    private void validateDeveloperInstructionAccess(ReqDemand demand)
+    {
+        if (isCurrentAdmin() || isCurrentDeveloper(demand))
+        {
+            return;
+        }
+        throw new ServiceException("只有指定开发人员可以生成该需求指令");
+    }
+
+    private boolean isCurrentCreator(ReqDemand demand)
+    {
+        return demand != null && sameUser(demand.getCreatorId(), currentUserId());
+    }
+
+    private boolean isCurrentDeveloper(ReqDemand demand)
+    {
+        return demand != null && !"draft".equals(demand.getStatus())
+                && sameUser(demand.getDeveloperUserId(), currentUserId());
+    }
+
+    private boolean sameUser(Long expectedUserId, Long actualUserId)
+    {
+        return expectedUserId != null && actualUserId != null && expectedUserId.equals(actualUserId);
+    }
+
+    private void validateDeveloperUser(Long developerUserId)
+    {
+        if (developerUserId == null)
+        {
+            throw new ServiceException("请选择指定开发人员");
+        }
+        if (reqDemandMapper.countEnabledUserByRoleKey(ROLE_REQUIREMENT_DEVELOPER, developerUserId) < 1)
+        {
+            throw new ServiceException("指定开发人员不存在或未启用开发人员角色");
+        }
     }
 
     private Long[] normalizeDemandIds(Long[] demandIds)

@@ -23,6 +23,7 @@ import com.ruoyi.requirement.mapper.ReqPackageVersionMapper;
 import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqDemandService;
 import com.ruoyi.requirement.service.IReqPackageService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
 import com.ruoyi.requirement.template.RequirementTemplateContext;
@@ -51,10 +52,12 @@ public class ReqPackageServiceImpl implements IReqPackageService
     @Autowired private ReqIndexModuleMapper reqIndexModuleMapper;
     @Autowired private RequirementTemplateService templateService;
     @Autowired private ReqActivityLogService activityLogService;
+    @Autowired private IReqDemandService reqDemandService;
 
     @Override
     public List<ReqPackageVersion> selectReqPackageVersionListByDemandId(Long demandId)
     {
+        reqDemandService.validateDemandReadable(demandId);
         return reqPackageVersionMapper.selectReqPackageVersionListByDemandId(demandId);
     }
 
@@ -62,6 +65,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
     public ReqPackageVersion selectLatest(Long demandId, String artifactType)
     {
         validateArtifactType(artifactType);
+        reqDemandService.validateDemandReadable(demandId);
         return reqPackageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId, artifactType);
     }
 
@@ -69,6 +73,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
     public ReqPackageVersion saveVersion(Long demandId, String artifactType, String content, String versionNote)
     {
         validateArtifactType(artifactType);
+        reqDemandService.validateDemandPackageWritable(demandId, artifactType);
         Integer maxVersion = reqPackageVersionMapper.selectMaxVersionNo(demandId, artifactType);
         ReqPackageVersion version = new ReqPackageVersion();
         version.setDemandId(demandId);
@@ -86,6 +91,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
     @Override
     public List<ReqPackageVersion> generateDraftPackage(Long demandId)
     {
+        reqDemandService.validateDemandPackageWritable(demandId, "requirement_draft");
         ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
         if (demand == null)
         {

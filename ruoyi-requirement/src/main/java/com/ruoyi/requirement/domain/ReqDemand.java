@@ -72,6 +72,18 @@ public class ReqDemand extends BaseEntity
     /** 创建人ID */
     private Long creatorId;
 
+    /** 指定开发人员ID */
+    private Long developerUserId;
+
+    /** 指定开发人员账号 */
+    private String developerUserName;
+
+    /** 指定开发人员昵称 */
+    private String developerNickName;
+
+    /** 当前登录用户参与过滤 */
+    private Long participantUserId;
+
     public Long getDemandId()
     {
         return demandId;
@@ -272,6 +284,46 @@ public class ReqDemand extends BaseEntity
         this.creatorId = creatorId;
     }
 
+    public Long getDeveloperUserId()
+    {
+        return developerUserId;
+    }
+
+    public void setDeveloperUserId(Long developerUserId)
+    {
+        this.developerUserId = developerUserId;
+    }
+
+    public String getDeveloperUserName()
+    {
+        return developerUserName;
+    }
+
+    public void setDeveloperUserName(String developerUserName)
+    {
+        this.developerUserName = developerUserName;
+    }
+
+    public String getDeveloperNickName()
+    {
+        return developerNickName;
+    }
+
+    public void setDeveloperNickName(String developerNickName)
+    {
+        this.developerNickName = developerNickName;
+    }
+
+    public Long getParticipantUserId()
+    {
+        return participantUserId;
+    }
+
+    public void setParticipantUserId(Long participantUserId)
+    {
+        this.participantUserId = participantUserId;
+    }
+
     @Override
     public String toString()
     {
@@ -296,6 +348,7 @@ public class ReqDemand extends BaseEntity
             .append("attachments", getAttachments())
             .append("status", getStatus())
             .append("creatorId", getCreatorId())
+            .append("developerUserId", getDeveloperUserId())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
             .append("updateBy", getUpdateBy())

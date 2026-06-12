@@ -44,14 +44,16 @@
 - 新增或编辑需求时，后端必须校验 `projectId + variantId` 属于同一项目，且项目分支已有仓库索引证据；新功能提需允许分支暂时没有既有模块知识。
 - 新增需求时后端必须覆盖请求体中的需求编号并生成 `REQ-001` 风格编号，不包含日期；后端必须覆盖客户端 `creatorId`，以当前登录用户作为创建人，并将新需求状态置为 `draft`。
 - 新增和修改需求必须提供 `demandSource`；业务背景允许保存富文本 HTML 和粘贴图片，背景图片及需求附件统一通过 `/requirement/demand/upload` 上传，服务端单文件最大 2MB。
+- 新增和修改草稿需求必须提供 `developerUserId`，且该用户必须是启用的 `requirement_developer`；该字段就是后续需求设计、执行开发和返修的同一个指定开发人员，不拆分对接人与实际开发人。
 - 普通需求编辑只允许 `draft` 状态且创建人匹配；状态变化必须通过状态流转接口，不得通过通用编辑接口绕过状态机。
+- 普通用户的需求列表、详情、资料包读取和 MCP 需求资源读取必须按参与人锁定：创建人可见自己创建的需求，指定开发人员仅在需求提交后可见分配给自己的需求；管理员不受参与人限制。
 - 删除需求只开放给管理员按钮权限 `req:demand:remove`，会同步删除该需求的资料包版本和动作 token；需求人员和开发人员角色脚本不得分配该权限。
 - 需求主状态流转为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，旧 `plan_pending`、`archived` 仅作为兼容状态保留；`submitted` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发。
-- 状态流转不仅校验 `req:demand:edit` 和状态机，还必须按角色隔离：`requirement_user` 执行提交需求、确认需求设计、返修和验收，`requirement_developer` 执行提交需求设计、开始开发、提交验收和返修验收，`admin` 可执行全部合法动作。
-- 开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令只能用于 MCP `save_requirement_package` 保存 `requirement` 需求设计，不能替代人员 `X-MCP-Key`。
-- 开发人员可通过需求详情获取 `requirement_develop` 动作 token 指令；该指令包含执行计划和执行报告两个一次性 actionToken，分别用于 MCP `save_development_plan` 和 `upload_execution_report`，不能替代人员 `X-MCP-Key`。
+- 状态流转不仅校验 `req:demand:edit` 和状态机，还必须按角色和参与人隔离：需求创建人执行提交需求、确认需求设计、返修和验收，指定开发人员执行提交需求设计、开始开发、提交验收和返修验收，`admin` 可执行全部合法动作。
+- 指定开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令只能用于 MCP `save_requirement_package` 保存 `requirement` 需求设计，不能替代人员 `X-MCP-Key`。
+- 指定开发人员可通过需求详情获取 `requirement_develop` 动作 token 指令；该指令包含执行计划和执行报告两个一次性 actionToken，分别用于 MCP `save_development_plan` 和 `upload_execution_report`，不能替代人员 `X-MCP-Key`。
 - 项目初始化、需求编排和开发执行动作 token 生成后 24 小时内有效且仅可使用一次；`last_used_time` 非空或 `expire_time` 过期时必须拒绝，重新执行需重新生成指令。
-- 需求资料包通过 `req_package_version` 追加版本记录，返修流程依赖同一需求下需求设计、执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新。
+- 需求资料包通过 `req_package_version` 追加版本记录，返修流程依赖同一需求下需求设计、执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新；保存和 MCP 回写只允许指定开发人员或管理员。
 - 管理员角色沿用 `role_key='admin'` 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，供 MCP 回写资料。
 - 需求未选择既有模块时，可以用备注承载新功能名称；执行包模块名解析顺序为人工模块、索引模块、备注。
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。

@@ -30,6 +30,7 @@ import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
 import com.ruoyi.requirement.service.IReqActionTokenService;
+import com.ruoyi.requirement.service.IReqDemandService;
 import com.ruoyi.requirement.service.IReqPackageService;
 import com.ruoyi.requirement.service.IReqRepositoryIndexService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
@@ -45,6 +46,7 @@ public class McpService
     @Autowired private ReqRepositoryMapper reqRepositoryMapper;
     @Autowired private ReqVariantMapper variantMapper;
     @Autowired private ReqMemoryIndexMapper memoryIndexMapper;
+    @Autowired private IReqDemandService reqDemandService;
     @Autowired private IReqPackageService reqPackageService;
     @Autowired private IReqRepositoryIndexService repositoryIndexService;
     @Autowired private ReqActivityLogService activityLogService;
@@ -215,6 +217,7 @@ public class McpService
         {
             return null;
         }
+        reqDemandService.validateDemandReadable(demand.getDemandId());
         activityLogService.record(currentUserId(), demand.getProjectId(), demand.getDemandId(), "mcp_read", "mcp", "读取需求资源：" + demandNo, null);
 
         String artifactType = requirementArtifactType(path);

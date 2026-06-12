@@ -35,6 +35,7 @@ import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
 import com.ruoyi.requirement.service.IReqActionTokenService;
+import com.ruoyi.requirement.service.IReqDemandService;
 import com.ruoyi.requirement.service.IReqRepositoryIndexService;
 import com.ruoyi.requirement.service.IReqPackageService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
@@ -204,10 +205,12 @@ class McpServiceTest
     void readsLatestRequirementDraftPackage()
     {
         ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        IReqDemandService demandService = mock(IReqDemandService.class);
         IReqPackageService packageService = mock(IReqPackageService.class);
         ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
         McpService service = new TestableMcpService(true);
         ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "reqDemandService", demandService);
         ReflectionTestUtils.setField(service, "reqPackageService", packageService);
         ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
 
@@ -217,6 +220,7 @@ class McpServiceTest
         McpResponse response = service.handle(request("resources/read", params("uri", "requirement://REQ-20260609-001/draft-package")));
 
         assertTrue(String.valueOf(response.getResult()).contains("需求草稿内容"));
+        verify(demandService).validateDemandReadable(5L);
         verify(packageService).selectLatest(5L, "requirement_draft");
     }
 
@@ -224,10 +228,12 @@ class McpServiceTest
     void readsLatestContextManifestPackage()
     {
         ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        IReqDemandService demandService = mock(IReqDemandService.class);
         IReqPackageService packageService = mock(IReqPackageService.class);
         ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
         McpService service = new TestableMcpService(true);
         ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "reqDemandService", demandService);
         ReflectionTestUtils.setField(service, "reqPackageService", packageService);
         ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
 
@@ -237,6 +243,7 @@ class McpServiceTest
         McpResponse response = service.handle(request("resources/read", params("uri", "requirement://REQ-20260609-001/context-manifest")));
 
         assertTrue(String.valueOf(response.getResult()).contains("context_manifest"));
+        verify(demandService).validateDemandReadable(6L);
         verify(packageService).selectLatest(6L, "context_manifest");
     }
 
