@@ -158,7 +158,7 @@ make_root() {
   printf '%s\n' '# local run' > "$root/docs/runbooks/local-run.md"
   write_module_doc "$root/docs/ai-harness/modules/demo.md"
   write_search_map "$root/docs/ai-harness/search-map.md"
-  printf '%s\n' '# meta' '' '- 状态：executing' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/REQ-001-演示需求/meta.md"
+  printf '%s\n' '# meta' '' '- 状态：executing' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：本地 Harness 模式' '- 需求 Key：无，本地流程' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/REQ-001-演示需求/meta.md"
   printf '%s\n' '# requirement' '' '- AC-001: demo' > "$root/docs/specs/active/REQ-001-演示需求/requirement.md"
   printf '%s\n' '# plan' '' '- AC-001: L0 L1 L2 L3' > "$root/docs/specs/active/REQ-001-演示需求/plan.md"
 }

@@ -69,7 +69,7 @@
 - `/requirement/mcp` 的协议级错误必须返回标准 JSON-RPC `error.code/error.message`，不能同时带 `result:null`；`tools/call` 内的业务错误必须返回 MCP tool result，并设置 `isError=true`。
 - 项目接入初始化由平台存储和下发 harness 模板，后端不直接执行 Git、shell 或写用户本地文件；执行初始化的 agent 必须在目标仓库先拉取默认基线分支最新代码，初始化校验通过后提交并推送 harness 文件，再登记初始化结果。
 - 项目接入初始化下发的 harness 必须包含 `docs/ai-harness/search-map.md`、`docs/process/local-harness-workflow.md`，并在 `harness-index.json` 登记 `searchMap` 和 `localHarnessWorkflow` 入口。
-- 本地 Harness 模式和 MCP 模式必须共享需求设计确认点：`planning` 阶段只允许迭代 `meta.md` 和 `requirement.md`；`plan.md`、`execution-report.md`、`review-report.md` 必须等明确执行授权后由 Execution Agent/Review Agent 按阶段生成。
+- 本地 Harness 模式和 MCP 接入模式必须共享需求设计确认点：`planning` 阶段只允许迭代 `meta.md` 和 `requirement.md`；`plan.md`、`execution-report.md`、`review-report.md` 必须等明确执行授权后由 Execution Agent/Review Agent 按阶段生成。
 - 项目接入初始化的模块知识库必须按前端页面业务功能优先生成：初始化 agent 先扫描前端路由、菜单、页面组件和 API 封装，再用 `publish_repository_index.modules` 按菜单目录、子菜单、隐藏页签或页面业务功能发布；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务发布。不得把仓库概览、技术层目录或空数组当作模块知识库。重复发布同一仓库分支索引是快照同步，旧模块和旧影响面会失效；前后端项目给需求人员提需求时应优先选择前端页面/菜单模块。
 - 用户可见系统名称统一为“统一需求流转平台”，但底层 RuoYi 包名、权限框架和通用基础能力保持兼容。
 

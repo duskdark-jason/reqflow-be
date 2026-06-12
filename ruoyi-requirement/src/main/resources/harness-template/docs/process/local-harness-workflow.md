@@ -16,7 +16,7 @@
 1. 读取 `AGENTS.md`、`docs/README.md`、`docs/ai-harness/harness-index.json`、`docs/ai-harness/search-map.md` 和 `docs/ai-harness/change-checklist.md`。
 2. 按 `search-map.md` 定位相关模块、契约、决策、数据库或运行手册。
 3. 新需求或 Bug 修复先创建 `docs/specs/active/REQ-001-中文需求标题/`，并填写 `meta.md`、`requirement.md`。
-4. `meta.md` 中 `流程模式` 写 `平台自身建设模式`，`需求 Key` 写“无，本地流程”，`平台关联远端` 写“未配置”或当前仓库远端。
+4. `meta.md` 中 `流程模式` 写 `本地 Harness 模式`，`需求 Key` 写“无，本地流程”，`平台关联远端` 写“未配置”或当前仓库远端。只有当前仓库就是需求平台自身、且正在自举建设平台能力时，才可写 `平台自身建设模式`，它必须按本流程执行。
 5. 未获得明确执行授权前，不写 `plan.md`、不改业务代码、不写执行报告和 Review 报告。
 
 ## 需求设计确认点
@@ -37,9 +37,9 @@
 | 返修复审 | `execution-report.md`、`review-report.md` | `RF-*` 必须同 ID 回填并复审到最终通过 |
 | 完成 | `meta.md`、验证结果 | `meta.md` 切到 `complete`，运行完成态门禁 |
 
-## 与 MCP 模式保持一致
+## 与 MCP 接入模式保持一致
 
-- 目录结构、验收 ID、模块知识库动作、Review 返修 ID 和验证分层必须和 MCP 模式一致。
+- 目录结构、验收 ID、模块知识库动作、Review 返修 ID 和验证分层必须和 MCP 接入模式一致。
 - 本地模式不得伪造 `upload_requirement_assessment`、`save_requirement_package`、`upload_execution_report` 或 `upload_review_report` 成功结果。
 - 如后续补接入 MCP，可以把本地 spec 作为输入补登记到平台，但必须明确记录真实需求 Key、分支、commit 和回写时间。
 - 本地模式下无法回写平台时，只写“未接入 MCP，本地文件闭环”，不要写“已上传需求平台”。

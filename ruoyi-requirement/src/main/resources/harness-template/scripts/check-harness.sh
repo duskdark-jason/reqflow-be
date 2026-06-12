@@ -184,7 +184,7 @@ check_spec_meta() {
   check_file "$meta_file"
   check_pattern "$meta_file" '状态[：:][[:space:]]*(planning|executing|review|repairing|complete)' "需求元信息缺少有效状态"
   check_pattern "$meta_file" '当前角色[：:][[:space:]]*(Plan Agent|Execution Agent|Review Agent|用户|人工)' "需求元信息缺少当前角色"
-  check_pattern "$meta_file" '流程模式[：:][[:space:]]*(需求平台需求设计模式|需求平台编排模式|需求平台开发模式|项目接入初始化模式|平台自身建设模式)' "需求元信息缺少有效流程模式"
+  check_pattern "$meta_file" '流程模式[：:][[:space:]]*(需求平台需求设计模式|需求平台编排模式|需求平台开发模式|项目接入初始化模式|本地 Harness 模式|平台自身建设模式)' "需求元信息缺少有效流程模式"
   check_pattern "$meta_file" '需求 Key[：:]' "需求元信息缺少需求 Key"
   check_pattern "$meta_file" '平台关联远端[：:]' "需求元信息缺少平台关联远端"
   check_pattern "$meta_file" '平台目标分支[：:]' "需求元信息缺少平台目标分支"
@@ -516,7 +516,7 @@ check_local_mode_mcp_claims() {
 
   [ -f "$meta_file" ] || return
   flow_mode=$(extract_meta_field "$meta_file" "流程模式")
-  [ "$flow_mode" = "平台自身建设模式" ] || return
+  [ "$flow_mode" = "本地 Harness 模式" ] || [ "$flow_mode" = "平台自身建设模式" ] || return
 
   for file in "$spec_dir/execution-report.md" "$spec_dir/review-report.md"; do
     [ -f "$file" ] || continue
@@ -525,7 +525,7 @@ check_local_mode_mcp_claims() {
         grep -v -E '(未执行|不适用|无需|没有|失败|未成功|不得|禁止|不能|不应|伪造|示例|模板|旧结论|错误结论)' || true
     )
     [ -n "$matches" ] || continue
-    printf '%s\n' "检查失败：本地 Harness 模式不得伪造 MCP 回写"
+    printf '%s\n' "检查失败：本地 Harness/平台自身建设模式不得伪造 MCP 回写"
     printf '%s\n' "$matches"
     FAILED=1
   done

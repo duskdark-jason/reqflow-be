@@ -30,7 +30,7 @@ active/REQ-001-中文需求标题/
 |---|---|---|
 | `meta.md` | 当前阶段负责人 | 状态、流程模式、需求 Key、平台远端、目标分支、当前分支、授权状态、companion 仓库和关联 spec |
 | `requirement.md` | Plan Agent | 业务目标、范围、影响面、验收标准 |
-| `plan.md` | Plan Agent | 可执行开发计划、验证路径、风险假设 |
+| `plan.md` | Execution Agent | 基于最终确认需求生成的可执行开发计划、验证路径、风险假设 |
 | `execution-report.md` | Execution Agent | 实现摘要、验证结果、偏差和阻断 |
 | `review-report.md` | Review Agent | 只读审查结论、验收覆盖矩阵和返修交接清单 |
 
@@ -46,7 +46,7 @@ REQ-001-中文需求标题.md
 
 1. 新需求开始前，在 `active/` 下创建需求目录，并复制 `meta.md`。
 2. 如果任务来自需求平台 Key，先按 `../process/platform-key-workflow.md` 校验模式；需求设计模式必须在最新基线创建或切换任务分支，先回写需求可行性评估，评估允许继续后只生成/调整 `requirement.md` 并回写平台版本；开发模式沿用该任务分支。
-3. Plan Agent 复制模板并填写 `requirement.md`；需求平台模式和本地 Harness 模式在需求设计确认前都不得生成 `plan.md`。
+3. Plan Agent 复制模板并填写 `requirement.md`；MCP 接入模式和本地 Harness 模式在需求设计确认前都不得生成 `plan.md`。
 4. Execution Agent 基于最终 `requirement.md` 先分析是否适合拆分为多个 subagent 并行执行，再生成或更新 `plan.md`，按 `plan.md` 实现，并填写 `execution-report.md`；除用户明确要求“只执行不 Review”外，执行结束后自动进入 Review 阶段。
 5. Review Agent 只读审查，并填写 `review-report.md`；需要返修时使用 `RF-001` 形式编号。
 6. Review Agent 产生 `RF-*` 后自动回到 Execution Agent；Execution Agent 修复 Review 问题后，在 `execution-report.md` 的 `Review 返修记录` 中用同一批 `RF-*` 编号回填处理结果。

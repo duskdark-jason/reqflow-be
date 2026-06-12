@@ -44,8 +44,8 @@
 14. 用户选择方案、确认方向或同意建议，只代表进入需求设计阶段；不得据此自动改业务代码、写执行报告或写 Review 报告。需求平台需求设计 Key 视为授权在最新基线创建或切换任务分支，但只能先回写需求可行性评估，评估结论允许继续后再写 `requirement.md` 并回写需求设计。
 15. 当前分支为 `main` 或 `master` 时，除只读分析、项目接入初始化和明确的小文档修正外，不得开始功能实现；需要执行新需求时，必须按子仓库 Git 工作流使用 ASCII 任务分支。
 16. Plan、Execution、Review 是独立阶段：Plan 完成可行性评估和需求设计后停止；Execution 不自我 Review；Review 只读审查并产出 `RF-*`；返修自动回到 Execution，复审自动回到 Review，直到最终 Review 通过。
-17. 出现需求平台需求设计 Key、开发 Key 或项目接入初始化 Key 时，必须优先按受影响子仓库的 `docs/process/platform-key-workflow.md` 执行；当前需求平台自身建设阶段允许使用平台自身建设模式，把阶段文档写入本地 `docs/specs`。
-18. 没有需求平台 Key、未接入 MCP 或 MCP 不可用时，必须按受影响子仓库的 `docs/process/local-harness-workflow.md` 执行；本地模式使用和 MCP 模式一致的 `docs/specs`、Review、返修和完成门禁，但不得伪造 MCP 回写结果。
+17. 出现需求平台需求设计 Key、开发 Key 或项目接入初始化 Key 时，必须优先按受影响子仓库的 `docs/process/platform-key-workflow.md` 执行；只有当前仓库就是需求平台自身、且正在自举建设平台能力时，才可使用平台自身建设模式，把阶段文档写入本地 `docs/specs`。
+18. 没有需求平台 Key、未接入 MCP 或 MCP 不可用时，必须按受影响子仓库的 `docs/process/local-harness-workflow.md` 执行；本地模式使用和 MCP 接入模式一致的 `docs/specs`、Review、返修和完成门禁，但不得伪造 MCP 回写结果。
 
 ## Harness 维护
 

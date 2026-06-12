@@ -6,7 +6,7 @@
 - 相关契约：【列出 ai-harness/contracts 文件】
 - 相关模块文档：【列出 ai-harness/modules 或 domains 文件】
 - 搜索导航：`docs/ai-harness/search-map.md`
-- 流程模式：【MCP 接入模式/本地 Harness 模式】
+- 流程模式：【需求平台开发模式/本地 Harness 模式/平台自身建设模式】
 - 目标客户与基线分支：【通用/main 或 客户标识/客户定制分支】
 - 影响模块：【菜单目录/子菜单/隐藏页签/后端能力】
 - 模块知识库动作：【新增/更新/无需更新】
@@ -54,7 +54,7 @@
 ## 执行约束
 
 - 本计划由 Execution Agent 基于最终 `requirement.md` 生成；开始实现必须已有明确执行授权。
-- 需求平台模式下，Execution Agent 必须沿用需求设计阶段创建的 ASCII 任务分支，不得在开发阶段重新生成不同任务分支；新需求不使用 worktree，也不得直接在 `main` 或 `master` 上实现。
+- MCP 接入模式下，Execution Agent 必须沿用需求设计阶段创建的 ASCII 任务分支，不得在开发阶段重新生成不同任务分支；新需求不使用 worktree，也不得直接在 `main` 或 `master` 上实现。
 - 本地 Harness 模式下使用相同的文件交接和完成门禁，但不得把本地文件写入伪造成 MCP 回写成功。
 - Execution Agent 必须按本计划执行，不得自行扩大范围。
 - 沿用任务分支前必须确认平台目标基线分支和任务分支；客户定制需求不得默认从主线恢复分支。

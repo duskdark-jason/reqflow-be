@@ -5,7 +5,7 @@
 - 状态：已完成
 - 分支：docs/req-019-harness-dual-mode
 - commit：本分支最终提交，见 `git log -1 HEAD`
-- 流程模式：本地 Harness 模式
+- 流程模式：平台自身建设模式（按本地 Harness 流程闭环）
 - MCP 回写：未接入 MCP，本地文件闭环
 
 ## 修改摘要
@@ -52,6 +52,9 @@
 | L2 | AC-003、AC-005 | `sh scripts/test-check-harness.sh` | 通过 |
 | L2 | AC-003、AC-005 | 前端 `sh scripts/test-check-harness.sh` | 通过 |
 | L2 | AC-001、AC-002、AC-003、AC-004、AC-006 | `rg "本地 Harness 模式|需求设计确认点|伪造 MCP 回写|search-map|localHarnessWorkflow|searchMap" ...` | 通过 |
+| L2 | AC-002、AC-003 | 旧术语和降级冲突描述扫描 | 无命中 |
+| L0 | AC-001、AC-002、AC-003、AC-004、AC-005、AC-006 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-019-harness双轨触发机制` | 通过 |
+| L0 | AC-001、AC-002、AC-003、AC-004、AC-005、AC-006 | 前端 `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-019-harness双轨触发机制` | 通过 |
 | L3 | AC-001、AC-002、AC-003、AC-004、AC-005、AC-006 | 不适用 | 本次不改运行态接口、页面、权限或配置 |
 | L4（可选） | AC-001、AC-002、AC-003、AC-004、AC-005、AC-006 | 不适用 | 本次不改跨端运行态流程 |
 
@@ -70,6 +73,7 @@
 
 - 原计划只包含后端；根据用户补充要求，扩展为后端模板、当前后端 harness 和前端 harness 同步。
 - 本地建设确认点从文档规则强化为脚本门禁：所有 `planning` 状态下提前出现 `plan.md` 都会失败。
+- 补充清理 harness 规范冲突：统一使用“MCP 接入模式”命名，普通无 Key/无 MCP 场景固定进入本地 Harness 模式，平台自身建设模式只保留给当前需求平台自举建设；脚本提示同步为本地 Harness/平台自身建设模式都不得伪造 MCP 回写。
 
 ## Review 返修记录
 
