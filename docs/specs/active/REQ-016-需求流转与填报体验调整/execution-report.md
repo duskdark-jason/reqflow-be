@@ -16,6 +16,7 @@
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/IReqDemandService.java` | 增加需求 MCP 评估与设计指令、执行开发指令、开发人员候选和参与人校验服务方法。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqDemandController.java` | 新增 `/requirement/demand/developer-options`、`/requirement/demand/{demandId}/plan-instruction`、`/requirement/demand/{demandId}/develop-instruction`、`/requirement/demand/upload` 和管理员删除接口，编辑时注入当前用户 ID，上传单文件限制 2MB。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/**` | 将需求管理 Controller 从 admin 模块迁移到需求模块；项目、分支、模块和索引模块只读上下文接口允许需求权限访问，管理类写接口仍保持原权限。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqIndexController.java` | 修复需求表单保存前影响面推荐接口仍只允许 `req:index:list` 的问题，放开为 `req:index:list` 或需求新增/编辑/查询权限，避免需求保存成功但前端弹权限不足。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | 支持 `actionToken` 解析需求上下文，并按需求分析、需求生成、开发执行和返修阶段限制可调用工具和有效状态。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 生成后写入 24 小时最长过期时间；需求分析和需求生成 token 一次性消费，开发阶段和返修阶段 token 可在当前阶段复用并刷新 `last_used_time`。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/ReqflowCodexGlobalSkillTemplate.java`、`ruoyi-requirement/src/main/resources/harness-template/**` | 同步全局 `reqflow-mcp` skill 和 harness 模板，拆分需求分析、需求生成、开发执行和返修阶段提示词。 |
@@ -23,7 +24,7 @@
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/**`、`templates/requirement/**` | 执行包上下文增加需求来源、纯文本业务背景和附件，JSON 模板对文本引号做转义。 |
 | `docs/db/sql/req_platform_req016_demand_form_fields.sql` | 新增需求来源和附件字段幂等升级脚本。 |
 | `docs/db/sql/req_platform_req017_demand_developer_lock.sql` | 新增指定开发人员字段和索引幂等升级脚本。 |
-| `ruoyi-requirement/src/test/java/**` | 覆盖编号、创建人、草稿编辑、状态主路径、MCP actionToken 回写、需求来源必填、上传 2MB 限制、模板文本转义、角色动作隔离和管理员删除权限 SQL。 |
+| `ruoyi-requirement/src/test/java/**` | 覆盖编号、创建人、草稿编辑、状态主路径、MCP actionToken 回写、需求来源必填、上传 2MB 限制、模板文本转义、角色动作隔离、管理员删除权限 SQL 和影响面推荐需求表单权限。 |
 | `docs/ai-harness/modules/requirement-platform.md`、`docs/ai-harness/contracts/requirement-platform-api.md`、`docs/db/table-dictionary.md`、`docs/db/relationship.md` | 同步 API、模块、状态、编号语义和 actionToken 阶段目标语义。 |
 
 ## 模块知识库沉淀
@@ -55,9 +56,11 @@
 | L1 | AC-001~AC-017 | `mvn -pl ruoyi-admin -am -DskipTests package` | 通过，Controller 迁移后 admin 整包编译成功。 |
 | L1 | AC-013、AC-015、AC-017 | 在前端 companion 执行 `npm run build:prod` | 通过，仅保留既有资产体积 warning。 |
 | L2 | AC-004、AC-006、AC-009、AC-011、AC-012 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，57 个测试覆盖需求分析/需求生成指令拆分、开发阶段同 token、返修阶段同 token、跨阶段工具拒绝和流程阶段失效。 |
+| L2 | AC-015 | `mvn -pl ruoyi-requirement -am -Dtest=ReqIndexControllerPermissionTest -Dsurefire.failIfNoSpecifiedTests=false test` | 先失败复现 `impact/suggest` 仅允许 `req:index:list`，修复后通过，锁定需求表单上下文权限。 |
 | L2 | AC-001~AC-017 | `mvn -pl ruoyi-requirement -am test` | 通过，116 个测试覆盖编号、创建人、状态、阶段指令、返修事件、来源必填、上传 2MB 限制、角色动作隔离、删除链路、参与人锁定、SQL 权限和全局 skill 模板。 |
 | L2 | AC-017 | 连接本机 `ry-vue` 执行 `docs/db/sql/req_platform_req017_demand_developer_lock.sql` 并查询字段/索引 | 通过，`req_demand.developer_user_id` 和 `idx_req_demand_developer` 已存在。 |
 | L3 | AC-004、AC-006、AC-007、AC-009、AC-017 | 使用 `xqr/123456` 和 `yfr/123456` 调用需求接口流转 | 通过，xqr 创建 draft 并指定 yfr；yfr 提交前不可见，提交后可见；xqr 生成计划/开发指令被拒绝，yfr 可生成计划和开发指令，指令包含阶段有效 token 规则。 |
+| L3 | AC-015 | 使用 `xqr/123456` 登录后调用 `/requirement/index/impact/suggest?projectId=1&variantId=1&moduleId=16` | 通过，返回 HTTP 200 和 `code=200`，不再触发权限不足。 |
 | L4（可选） | AC-013、AC-015、AC-017 | 打开前端 companion `http://127.0.0.1:1024/requirement/demand` 和详情页 | 通过，xqr 需求列表展示开发人员 `研发人员（yfr）`，详情内嵌 Agent 交接资料包并展示当前需求标题和文档页签，xqr 不展示开发指令按钮。 |
 
 ## 运行态证据
@@ -65,7 +68,7 @@
 - 执行目录：当前子仓库根目录
 - 启动命令：复用本机已运行 RuoYi 后端服务，前端 dev server 通过 `/dev-api` 代理调用。
 - profile/env/mode：本地开发环境。
-- 检查命令：`mvn -pl ruoyi-requirement -am test`、`mvn -pl ruoyi-admin -am -DskipTests package`、前端 companion `npm run build:prod`、`git diff --check`
+- 检查命令：`mvn -pl ruoyi-requirement -am test`、`mvn -pl ruoyi-admin -am -DskipTests package`、`mvn -pl ruoyi-requirement -am -Dtest=ReqIndexControllerPermissionTest -Dsurefire.failIfNoSpecifiedTests=false test`、`curl -H "Authorization: Bearer <xqr-token>" "/requirement/index/impact/suggest?projectId=1&variantId=1&moduleId=16"`、前端 companion `npm run build:prod`、`git diff --check`
 - 原始错误摘要：无后端编译或测试失败；曾因 MCP actionToken 未接入包保存工具、执行开发指令未实现、token 未限制重复使用触发失败用例，已实现并复验通过。
 - 运行态 trace：`xqr/yfr` 接口流转测试生成本地需求 `REQ-001`，状态推进到 `developing`；前端 companion 详情页可见 Agent 交接资料包。
 - 是否代表用户环境：否，仅代表当前执行 agent 环境
@@ -89,7 +92,7 @@
 | AC-012 | 已完成 | `ReqDemandServiceImplTest` 覆盖开发阶段一个开发阶段 token 和返修阶段一个返修阶段 token；`McpServiceTest` 覆盖开发 token 可回写执行计划、执行报告和 Review 报告，返修 token 只可回写执行报告和 Review 报告。 |
 | AC-013 | 已完成 | `ReqPackageController` 权限允许 `req:demand:query` 读取当前需求资料包。 |
 | AC-014 | 已完成 | `ReqDemandServiceImplTest` 覆盖来源必填，`ReqDemandSchemaSqlTest` 覆盖字段脚本，`ReqDemandControllerUploadTest` 覆盖 2MB 上传限制，`RequirementTemplateServiceTest` 覆盖文本转义。 |
-| AC-015 | 已完成 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController` 和 `ReqIndexController` 的只读上下文接口接受需求权限；`xqr` 账号进入需求列表接口无权限不足；前端首页快捷入口按权限过滤。 |
+| AC-015 | 已完成 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController` 和 `ReqIndexController` 的只读上下文接口接受需求权限；`xqr` 账号进入需求列表接口无权限不足，`/requirement/index/impact/suggest` 运行态返回 HTTP 200；前端首页快捷入口按权限过滤。 |
 | AC-016 | 已完成 | `ReqDemandServiceImplTest` 覆盖需求人员/开发人员状态动作互斥、管理员合法流转和删除关联数据；`ReqPlatformRoleSqlTest` 覆盖角色脚本不分配删除权限。 |
 | AC-017 | 已完成 | `ReqDemandServiceImplTest` 覆盖未指定开发人员拒绝、指定开发人员可执行开发动作、非参与人拒绝读取；`xqr/yfr` 真实接口流转验证提交前后可见性、指令权限和同一开发人员进入开发中。 |
 

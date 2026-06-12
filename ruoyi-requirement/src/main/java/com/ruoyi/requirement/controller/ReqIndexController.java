@@ -43,7 +43,7 @@ public class ReqIndexController extends BaseController
         return success(repositoryIndexService.selectModuleList(module));
     }
 
-    @PreAuthorize("@ss.hasPermi('req:index:list')")
+    @PreAuthorize("@ss.hasAnyPermi('req:index:list,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping("/impact/suggest")
     public AjaxResult suggest(ReqImpactSuggestQuery query)
     {
