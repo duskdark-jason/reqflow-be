@@ -22,6 +22,7 @@
 | 【前端/页面/组件/交互】 | `【frontend-repo/】` | `AGENTS.md`、`docs/README.md`、`docs/process/new-requirement-flow.md` |
 | 【跨端联调/接口字段/权限联动/导出一致性】 | 相关子仓库都要读 | 各自的 `AGENTS.md`、`docs/process/agent-workflow.md` 和 `docs/ai-harness/README.md` |
 | 【需求平台需求设计 Key、开发 Key 或接入初始化 Key】 | 需求平台返回的目标子仓库 | 各自的 `AGENTS.md`、`docs/process/platform-key-workflow.md`、`docs/process/git-workflow.md` |
+| 【无 MCP/本地需求执行/纯 harness 维护】 | 受影响子仓库 | 各自的 `AGENTS.md`、`docs/process/local-harness-workflow.md`、`docs/ai-harness/search-map.md` |
 
 如果实际目录变化，请先根据构建文件判断子项目类型。
 
@@ -43,7 +44,8 @@
 14. 用户选择方案、确认方向或同意建议，只代表进入需求设计阶段；不得据此自动改业务代码、写执行报告或写 Review 报告。需求平台需求设计 Key 视为授权在最新基线创建或切换任务分支，但只能先回写需求可行性评估，评估结论允许继续后再写 `requirement.md` 并回写需求设计。
 15. 当前分支为 `main` 或 `master` 时，除只读分析、项目接入初始化和明确的小文档修正外，不得开始功能实现；需要执行新需求时，必须按子仓库 Git 工作流使用 ASCII 任务分支。
 16. Plan、Execution、Review 是独立阶段：Plan 完成可行性评估和需求设计后停止；Execution 不自我 Review；Review 只读审查并产出 `RF-*`；返修自动回到 Execution，复审自动回到 Review，直到最终 Review 通过。
-17. 出现需求平台需求设计 Key、开发 Key 或项目接入初始化 Key 时，必须优先按受影响子仓库的 `docs/process/platform-key-workflow.md` 执行；当前需求平台自身建设阶段允许使用平台自身建设模式，把阶段文档写入本地 `docs/specs`。
+17. 出现需求平台需求设计 Key、开发 Key 或项目接入初始化 Key 时，必须优先按受影响子仓库的 `docs/process/platform-key-workflow.md` 执行。
+18. 没有需求平台 Key、未接入 MCP 或 MCP 不可用时，必须按受影响子仓库的 `docs/process/local-harness-workflow.md` 执行；本地模式使用和 MCP 接入模式一致的 `docs/specs`、Review、返修和完成门禁，但不得伪造 MCP 回写结果。
 
 ## Harness 维护
 
@@ -54,8 +56,9 @@
 - 数据库表、字段、join、统计口径或分页粒度。
 - 权限、菜单、路由或按钮权限。
 - 核心业务流程、不变量或验收路径。
+- 搜索关键词、模块拆分、入口文档或长期决策。
 
-功能模块文档应优先和前端菜单对应，记录菜单目录、子菜单或隐藏页签、功能接口、权限标识和涉及文件。项目接入初始化时，对应子仓库必须至少生成一个非模板 `docs/ai-harness/modules/*.md`。
+功能模块文档应优先和前端菜单对应，记录菜单目录、子菜单或隐藏页签、功能接口、权限标识和涉及文件。项目接入初始化时，对应子仓库必须至少生成一个非模板 `docs/ai-harness/modules/*.md`，并同步维护 `docs/ai-harness/search-map.md`。
 
 Harness 初始化或纯文档接入时，必须先拉取默认基线最新代码；初始化完成后，在受影响子仓库运行：
 

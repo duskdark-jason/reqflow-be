@@ -149,6 +149,29 @@ check_index_file_target() {
   fi
 }
 
+check_search_map_content() {
+  search_map="$REPO_ROOT/docs/ai-harness/search-map.md"
+
+  check_file "$search_map"
+  check_pattern "$search_map" '关键词' "Harness 搜索导航缺少关键词列"
+  check_pattern "$search_map" '功能/场景|功能场景' "Harness 搜索导航缺少功能场景列"
+  check_pattern "$search_map" '入口文档' "Harness 搜索导航缺少入口文档列"
+  check_pattern "$search_map" '代码入口' "Harness 搜索导航缺少代码入口列"
+  check_pattern "$search_map" 'docs/ai-harness/modules/' "Harness 搜索导航必须指向模块知识库"
+}
+
+check_module_docs_initialized() {
+  modules_dir="$REPO_ROOT/docs/ai-harness/modules"
+  [ -d "$modules_dir" ] || return
+
+  matches=$(grep -nH '初始化待补齐' "$modules_dir"/*.md 2>/dev/null || true)
+  if [ -n "$matches" ]; then
+    printf '%s\n' "检查失败：模块知识库文档仍含初始化待补齐，请先替换为真实模块信息"
+    printf '%s\n' "$matches"
+    FAILED=1
+  fi
+}
+
 list_ac_ids() {
   file=$1
   grep -Eo 'AC-[A-Z0-9-]*[0-9][0-9][0-9]|AC-[0-9][0-9][0-9]' "$file" 2>/dev/null | sort -u || true
@@ -161,7 +184,7 @@ check_spec_meta() {
   check_file "$meta_file"
   check_pattern "$meta_file" '状态[：:][[:space:]]*(planning|executing|review|repairing|complete)' "需求元信息缺少有效状态"
   check_pattern "$meta_file" '当前角色[：:][[:space:]]*(Plan Agent|Execution Agent|Review Agent|用户|人工)' "需求元信息缺少当前角色"
-  check_pattern "$meta_file" '流程模式[：:][[:space:]]*(需求平台需求设计模式|需求平台编排模式|需求平台开发模式|项目接入初始化模式|平台自身建设模式)' "需求元信息缺少有效流程模式"
+  check_pattern "$meta_file" '流程模式[：:][[:space:]]*(需求平台需求设计模式|需求平台编排模式|需求平台开发模式|项目接入初始化模式|本地 Harness 模式)' "需求元信息缺少有效流程模式"
   check_pattern "$meta_file" '需求 Key[：:]' "需求元信息缺少需求 Key"
   check_pattern "$meta_file" '平台关联远端[：:]' "需求元信息缺少平台关联远端"
   check_pattern "$meta_file" '平台目标分支[：:]' "需求元信息缺少平台目标分支"
@@ -208,6 +231,7 @@ check_spec_state() {
 
   status=$(extract_spec_status "$meta_file")
   role=$(extract_spec_role "$meta_file")
+  flow_mode=$(extract_meta_field "$meta_file" "流程模式")
   execution_mode=$(extract_meta_field "$meta_file" "执行模式")
   branch=$(extract_meta_field "$meta_file" "当前分支")
   execution_auth=$(extract_meta_field "$meta_file" "执行授权")
@@ -228,6 +252,9 @@ check_spec_state() {
 
   case "$status" in
     planning)
+      if [ -f "$spec_dir/plan.md" ]; then
+        fail "需求设计确认点前不得生成执行计划，plan.md 必须由 Execution Agent 在执行阶段编写：$spec_dir/plan.md"
+      fi
       if [ -f "$execution_file" ]; then
         fail "meta 状态为 planning，但已有执行报告：$execution_file"
       fi
@@ -249,6 +276,24 @@ check_spec_state() {
       check_file "$review_file"
       ;;
   esac
+
+  if [ "$flow_mode" = "需求平台需求设计模式" ]; then
+    if [ "$status" != "planning" ]; then
+      fail "需求平台需求设计模式必须停留在 planning，等待需求人确认后再进入开发模式：$meta_file"
+    fi
+    if [ "$role" != "Plan Agent" ] && [ "$role" != "用户" ] && [ "$role" != "人工" ]; then
+      fail "需求平台需求设计模式当前角色必须是 Plan Agent、用户或人工：$meta_file"
+    fi
+    if [ -f "$spec_dir/plan.md" ]; then
+      fail "需求平台需求设计确认前不得生成 plan.md；执行计划必须由 Execution Agent 在开发阶段编写：$spec_dir/plan.md"
+    fi
+    if [ -f "$execution_file" ]; then
+      fail "需求平台需求设计确认前不得生成 execution-report.md：$execution_file"
+    fi
+    if [ -f "$review_file" ]; then
+      fail "需求平台需求设计确认前不得生成 review-report.md：$review_file"
+    fi
+  fi
 
   case "$status" in
     executing|repairing|complete)
@@ -465,6 +510,27 @@ check_requirement_assessment_record() {
   check_pattern "$target_file" '可继续设计|需澄清|需调整|暂不可实现' "需求可行性评估缺少有效结论类型"
 }
 
+check_local_mode_mcp_claims() {
+  spec_dir=$1
+  meta_file="$spec_dir/meta.md"
+
+  [ -f "$meta_file" ] || return
+  flow_mode=$(extract_meta_field "$meta_file" "流程模式")
+  [ "$flow_mode" = "本地 Harness 模式" ] || return
+
+  for file in "$spec_dir/execution-report.md" "$spec_dir/review-report.md"; do
+    [ -f "$file" ] || continue
+    matches=$(
+      grep -nH -E '((MCP|需求平台).*(回写|上传|登记).*(成功|已成功|完成|已完成|已上传|已回写|已登记)|upload_(requirement_assessment|requirement_package|execution_report|review_report).*成功)' "$file" 2>/dev/null |
+        grep -v -E '(未执行|不适用|无需|没有|失败|未成功|不得|禁止|不能|不应|伪造|示例|模板|旧结论|错误结论)' || true
+    )
+    [ -n "$matches" ] || continue
+    printf '%s\n' "检查失败：本地 Harness 模式不得伪造 MCP 回写"
+    printf '%s\n' "$matches"
+    FAILED=1
+  done
+}
+
 check_one_spec() {
   spec_dir=$1
   meta_file="$spec_dir/meta.md"
@@ -493,6 +559,7 @@ check_one_spec() {
   check_db_change_record "$spec_dir"
   check_code_comment_record "$spec_dir"
   check_requirement_assessment_record "$spec_dir"
+  check_local_mode_mcp_claims "$spec_dir"
 
   if [ -f "$spec_dir/review-report.md" ] && [ ! -f "$spec_dir/execution-report.md" ]; then
     fail "存在 Review 报告但缺少执行报告：$spec_dir/execution-report.md"
@@ -579,15 +646,20 @@ check_required_docs() {
   check_file "$REPO_ROOT/docs/ai-harness/verification.md"
   check_file "$index_file"
   check_file "$REPO_ROOT/docs/process/agent-workflow.md"
+  check_file "$REPO_ROOT/docs/process/local-harness-workflow.md"
   check_file "$REPO_ROOT/docs/process/platform-key-workflow.md"
   check_dir "$REPO_ROOT/docs/ai-harness/contracts"
   check_dir "$REPO_ROOT/docs/ai-harness/decisions"
   check_dir "$REPO_ROOT/docs/ai-harness/modules"
+  check_search_map_content
+  check_module_docs_initialized
   check_pattern "$index_file" '"schemaVersion"[[:space:]]*:' "harness 索引缺少 schemaVersion"
   check_pattern "$index_file" '"template"[[:space:]]*:' "harness 索引缺少 template"
   check_pattern "$index_file" '"initialized"[[:space:]]*:' "harness 索引缺少 initialized"
   check_pattern "$index_file" '"repository"[[:space:]]*:' "harness 索引缺少 repository"
   check_pattern "$index_file" '"entrypoints"[[:space:]]*:' "harness 索引缺少 entrypoints"
+  check_pattern "$index_file" '"searchMap"[[:space:]]*:' "harness 索引缺少 searchMap"
+  check_pattern "$index_file" '"localHarnessWorkflow"[[:space:]]*:' "harness 索引缺少 localHarnessWorkflow"
   check_pattern "$index_file" '"platformKeyWorkflow"[[:space:]]*:' "harness 索引缺少 platformKeyWorkflow"
   check_pattern "$index_file" '"commands"[[:space:]]*:' "harness 索引缺少 commands"
   check_pattern "$index_file" '"customization"[[:space:]]*:' "harness 索引缺少 customization"
@@ -597,6 +669,8 @@ check_required_docs() {
   check_pattern "$index_file" '"localRunTemplate"[[:space:]]*:' "harness 索引缺少 localRunTemplate"
   check_pattern "$index_file" '"localRunDetected"[[:space:]]*:' "harness 索引缺少 localRunDetected"
   check_pattern "$index_file" '"localRunConfirmed"[[:space:]]*:' "harness 索引缺少 localRunConfirmed"
+  check_index_file_target "$index_file" "searchMap"
+  check_index_file_target "$index_file" "localHarnessWorkflow"
   check_index_file_target "$index_file" "localRun"
   check_index_file_target "$index_file" "platformKeyWorkflow"
 

@@ -496,8 +496,8 @@ public class McpService
         content.append("\n## 初始化要求\n");
         content.append("1. 进入目标仓库后先校验远端和当前分支。\n");
         content.append("2. 切换默认基线分支并拉取最新代码：git switch <default-branch> && git pull --ff-only。\n");
-        content.append("3. 下发或更新仓库 AGENTS.md、docs/ai-harness、docs/process、docs/templates 和 scripts。\n");
-        content.append("4. 先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能生成模块知识库；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n");
+        content.append("3. 下发或更新仓库 AGENTS.md、docs/ai-harness、docs/process、docs/templates 和 scripts，确保包含 docs/ai-harness/search-map.md 与 docs/process/local-harness-workflow.md。\n");
+        content.append("4. 先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能生成模块知识库；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块，并同步更新 docs/ai-harness/search-map.md。\n");
         content.append("5. 运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。\n");
         content.append("6. 校验通过后提交并推送初始化生成或升级的 AGENTS.md、docs/ 和 scripts/。\n");
         content.append("7. 通过 mcp__reqflow.publish_repository_index 发布结构化索引，modules 必须是一行一个前端页面业务功能或后端主能力，pages/apis/permissions/tables/documents 通过 moduleCode 归属；重复发布按当前仓库当前分支快照同步，平台会让旧模块和旧影响面失效。\n");
@@ -637,6 +637,8 @@ public class McpService
         builder.append("  \"entrypoints\": {\n");
         builder.append("    \"workflow\": \"docs/process/agent-workflow.md\",\n");
         builder.append("    \"platformKeyWorkflow\": \"docs/process/platform-key-workflow.md\",\n");
+        builder.append("    \"localHarnessWorkflow\": \"docs/process/local-harness-workflow.md\",\n");
+        builder.append("    \"searchMap\": \"docs/ai-harness/search-map.md\",\n");
         builder.append("    \"verification\": \"docs/ai-harness/verification.md\",\n");
         builder.append("    \"localRun\": \"docs/runbooks/local-run-template.md\",\n");
         builder.append("    \"localRunTemplate\": \"docs/runbooks/local-run-template.md\",\n");
@@ -698,6 +700,7 @@ public class McpService
         return "# Reqflow MCP 项目接入初始化技能\n\n"
                 + "## 触发条件\n\n"
                 + "- 用户要求项目接入初始化、harness 初始化或发布项目索引。\n"
+                + "- 用户要求模板支持未接入 MCP、本地 Harness 模式或平台自身建设模式。\n"
                 + "- 指令中出现 `actionToken`、`mcpServer: reqflow`、`mcpTool: reqflow.publish_repository_index` 或 `publish_repository_index`。\n\n"
                 + "## 必须使用的 MCP 工具\n\n"
                 + "- 读取模板：`mcp__reqflow.get_harness_template`。\n"
@@ -708,12 +711,13 @@ public class McpService
                 + "2. 调用 `get_harness_template` 获取 `workspaceFiles` 和 `repositoryHarnessInstructions[].files`。\n"
                 + "3. 在目标 workspace 校验远端后，切换默认基线分支并执行 `git pull --ff-only`。\n"
                 + "4. 写入或合并本地 harness 文件，不允许只调用发布索引工具。\n"
-                + "5. 在每个子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
-                + "6. 校验通过后提交并推送初始化生成或升级的 `AGENTS.md`、`docs/` 和 `scripts/`。\n"
-                + "7. 发布索引前，先扫描前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或前端页面业务功能生成 `modules`；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n"
-                + "8. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。重复发布按当前仓库当前分支快照同步，平台会让旧模块和旧影响面失效。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
-                + "9. 调用 `register_harness_init_result` 回写 harness 初始化状态、commit、push 结果和失败原因。\n"
-                + "10. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
+                + "5. 在每个子仓库维护 `docs/ai-harness/search-map.md`，把关键词、入口文档和代码入口指向真实模块、契约、决策或流程。\n"
+                + "6. 在每个子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
+                + "7. 校验通过后提交并推送初始化生成或升级的 `AGENTS.md`、`docs/` 和 `scripts/`。\n"
+                + "8. 发布索引前，先扫描前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或前端页面业务功能生成 `modules`；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n"
+                + "9. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。重复发布按当前仓库当前分支快照同步，平台会让旧模块和旧影响面失效。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
+                + "10. 调用 `register_harness_init_result` 回写 harness 初始化状态、commit、push 结果和失败原因。\n"
+                + "11. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
     }
 
     private String escapeJson(String value)

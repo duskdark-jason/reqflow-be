@@ -16,6 +16,8 @@
 
 涉及需求平台需求设计 Key、需求开发 Key、项目接入初始化 Key 或 MCP 回写时，先读 `process/platform-key-workflow.md`。
 
+没有需求平台 Key、未接入 MCP 或 MCP 不可用时，先读 `process/local-harness-workflow.md`，本地模式仍使用 `specs/active`、Review、返修和完成门禁。
+
 涉及多 agent 协作时，先读 `process/agent-workflow.md`。
 
 涉及分支、commit、merge 或 rebase 时，先读 `process/git-workflow.md`。
@@ -26,9 +28,11 @@
 
 1. `process/new-requirement-flow.md`
 2. `process/platform-key-workflow.md`，如果任务来自需求平台 Key 或需要 MCP 回写
-3. `process/agent-workflow.md`，如果计划、执行和 review 由不同 agent 或工具完成
-4. `ai-harness/README.md`
-5. 与任务相关的 `ai-harness/modules/`、`ai-harness/contracts/`、`domains/` 文档
+3. `process/local-harness-workflow.md`，如果任务没有需求平台 Key、未接入 MCP 或 MCP 不可用
+4. `process/agent-workflow.md`，如果计划、执行和 review 由不同 agent 或工具完成
+5. `ai-harness/README.md`
+6. `ai-harness/search-map.md`
+7. 与任务相关的 `ai-harness/modules/`、`ai-harness/contracts/`、`domains/` 文档
 
 ## 文档维护原则
 
@@ -36,6 +40,7 @@
 - 单次需求过程文档优先写入 `specs/active/REQ-001-中文需求标题/` 目录。
 - 已完成但仍有参考价值的方案移入 `specs/done/`。
 - 重要技术或业务决策写入 `ai-harness/decisions/`。
+- 模块、契约、决策或数据库口径新增、拆分、重命名时，同步更新 `ai-harness/search-map.md`。
 - 不要把个人本机路径、临时草稿和过期计划作为新需求默认入口。
 - Harness 初始化完成后运行 `sh scripts/check-harness.sh init`；Review Agent 刚写完 `review-report.md`、尚未返修时运行 `sh scripts/check-harness.sh review` 作为中间交接检查；Execution Agent 完成返修、Review Agent 最终复审通过后，运行 `sh scripts/check-harness.sh complete`。
 - Windows 原生命令行可通过 `scripts\check-docs.cmd` 与 `scripts\check-harness.cmd init|review|complete` 调用 Git Bash；WSL 用户进入 WSL shell 后直接运行同名 `.sh`。

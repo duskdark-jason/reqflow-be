@@ -10,18 +10,20 @@
 
 1. 先读项目 `AGENTS.md`。
 2. 读取 `harness-index.json`，确认仓库角色、companion 仓库和文档入口。
-3. 如果 `template` 仍为 `true` 或 `initialized` 不是 `true`，先完成 harness 初始化，不要开始真实需求开发。
-4. 判断任务类型。
-5. 按下表继续读取对应文件。
-6. 小范围修改。
-7. 按 `verification.md` 运行最小必要验证。
+3. 读取 `search-map.md`，用关键词定位模块、契约、决策、数据库或流程入口。
+4. 如果 `template` 仍为 `true` 或 `initialized` 不是 `true`，先完成 harness 初始化，不要开始真实需求开发。
+5. 判断任务类型。
+6. 按下表继续读取对应文件。
+7. 小范围修改。
+8. 按 `verification.md` 运行最小必要验证。
 
 ## 任务入口
 
 | 任务类型 | 必读文件 |
 |---|---|
-| 任意修改 | `harness-index.json`、`change-checklist.md`、`verification.md` |
+| 任意修改 | `harness-index.json`、`search-map.md`、`change-checklist.md`、`verification.md` |
 | 需求平台 Key、项目接入初始化或 MCP 回写 | `../process/platform-key-workflow.md` |
+| 无需求平台 Key、未接入 MCP 或 MCP 不可用 | `../process/local-harness-workflow.md` |
 | 业务模块、菜单或页面 | `modules/【菜单目录或模块名】.md` |
 | 接口、结果结构、UI 状态 | `contracts/【契约名】.md` |
 | 数据库、SQL、统计口径 | `../db/README.md`、`../db/table-dictionary.md`、`../db/relationship.md`，如果项目存在 |
@@ -37,8 +39,11 @@
 - 权限、菜单、路由或按钮行为。
 - 新模块、新页面、新报表、新导出或新异步工作流。
 - 构建、测试、联调或验收方式。
+- 搜索关键词、入口文档、模块拆分或长期决策。
 
 模块文档必须尽量对齐前端菜单结构，写清一级菜单、子菜单或隐藏页签、用户动作、前端文件、API 封装、后端接口、权限标识和核心后端文件。纯后端能力也要说明它服务哪个菜单、MCP 能力或后台流程。
+
+`search-map.md` 是面向初次接触模型的功能导航。新增模块文档、契约文档、决策文档、数据库口径、接口、菜单、权限、任务或 MCP 工具时，必须同步补充关键词、入口文档和代码入口。模块文档拆分或重命名时，也必须同步迁移关键词。
 
 项目接入初始化时，不能只保留 `modules/.gitkeep`；必须至少落地一个非模板模块文档。初始内容必须来自前端路由、菜单、页面组件和 API 封装分析，按菜单目录、子菜单、隐藏页签或页面业务功能沉淀为具体业务知识库；纯后端项目按 companion 前端菜单、MCP 能力或后台任务沉淀，不得只生成仓库概览。
 

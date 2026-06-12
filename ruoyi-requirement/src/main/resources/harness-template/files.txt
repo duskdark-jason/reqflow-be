@@ -7,6 +7,7 @@ docs/ai-harness/contracts/.gitkeep
 docs/ai-harness/decisions/.gitkeep
 docs/ai-harness/harness-index.json
 docs/ai-harness/modules/.gitkeep
+docs/ai-harness/search-map.md
 docs/ai-harness/templates/contract-template.md
 docs/ai-harness/templates/decision-template.md
 docs/ai-harness/templates/module-template.md
@@ -16,6 +17,7 @@ docs/process/agent-workflow.md
 docs/process/code-guidelines.md
 docs/process/doc-governance.md
 docs/process/git-workflow.md
+docs/process/local-harness-workflow.md
 docs/process/new-requirement-flow.md
 docs/process/platform-key-workflow.md
 docs/runbooks/local-run-template.md

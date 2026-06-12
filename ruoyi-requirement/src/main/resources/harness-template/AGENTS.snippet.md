@@ -11,10 +11,12 @@
 - `docs/README.md`
 - `docs/process/new-requirement-flow.md`
 - `docs/process/platform-key-workflow.md`，如果任务包含需求平台需求设计 Key、需求开发 Key、项目接入初始化或 MCP 回写
+- `docs/process/local-harness-workflow.md`，如果任务没有需求平台 Key、未接入 MCP 或 MCP 不可用
 - `docs/process/agent-workflow.md`
 - `docs/process/code-guidelines.md`，如果涉及代码实现
 - `docs/process/git-workflow.md`，如果涉及分支、commit、merge 或 rebase
 - `docs/ai-harness/README.md`
+- `docs/ai-harness/search-map.md`
 - `docs/ai-harness/change-checklist.md`
 
 按任务类型追加阅读：
@@ -36,11 +38,11 @@
 
 新需求、接口变更、数据库变更或跨端联调开始前，必须先按 `docs/process/new-requirement-flow.md` 判断影响范围、补充需求说明和确认文档联动。
 
-如果任务由多个 agent 或工具协作完成，必须按 `docs/process/agent-workflow.md` 使用文件交接：需求平台模式下计划 agent 先写并回写需求可行性评估，结论允许继续后只写清 `requirement.md`，执行 agent 先基于最终需求设计判断是否适合拆分多个 subagent 并行执行，再生成或更新 `plan.md`，按计划实现并写 `execution-report.md`，review agent 只审查并写 `review-report.md`。
+如果任务由多个 agent 或工具协作完成，必须按 `docs/process/agent-workflow.md` 使用文件交接：MCP 接入模式下计划 agent 先写并回写需求可行性评估，结论允许继续后只写清 `requirement.md`；本地 Harness 模式下使用同一套 `docs/specs` 文件和阶段门禁，但不伪造 MCP 回写。执行 agent 先基于最终需求设计判断是否适合拆分多个 subagent 并行执行，再生成或更新 `plan.md`，按计划实现并写 `execution-report.md`，review agent 只审查并写 `review-report.md`。
 
 阶段授权必须明确记录：用户选择方案、确认方向或同意建议，只代表进入需求设计阶段；不得据此自动改业务代码、写 `plan.md`、写 `execution-report.md` 或写 `review-report.md`。需求平台需求设计 Key 视为授权在最新基线创建或切换到平台建议的 ASCII 任务分支，但必须先通过 MCP 回写需求可行性评估；评估结论为需澄清、需调整或暂不可实现时，把结论反馈给需求人并停止，评估允许继续后才生成/调整 `requirement.md` 并回写需求设计版本。开始实现必须得到明确的执行授权，例如“开始执行”“按计划实现”或“允许改代码”。执行授权默认包含“执行完成后自动进入 Review、发现问题自动返修并复审直到最终 Review 通过”的闭环；用户明确要求只执行不 Review 时除外。新需求执行不使用 worktree，开发阶段必须沿用需求设计阶段创建的任务分支；当前分支为 `main` 或 `master` 时，除只读分析、项目接入初始化和明确的小文档修正外，不得开始功能实现。Execution Agent 不得自我 Review；Review Agent 只读审查并产出 `RF-*`，返修必须回到 Execution Agent。
 
-需求平台 Key 流程必须按 `docs/process/platform-key-workflow.md` 执行：需求设计模式通过 MCP 获取需求和补充指令，在本地最新基线上创建任务分支，先生成并回写需求可行性评估，评估允许继续后只生成/调整需求设计并回写平台版本；开发模式必须校验需求平台关联远端和任务分支，沿用需求设计阶段任务分支生成执行计划、开发和自动 Review；项目接入初始化模式由平台下发 harness 模板和 workspace `AGENTS.md` 给 Codex 落地，必须先拉取最新代码，初始化校验通过后提交并推送初始化文件。当前需求平台自身建设阶段可使用平台自身建设模式，不强制 MCP 回写，按阶段写本地 `docs/specs`。
+需求平台 Key 流程必须按 `docs/process/platform-key-workflow.md` 执行：需求设计模式通过 MCP 获取需求和补充指令，在本地最新基线上创建任务分支，先生成并回写需求可行性评估，评估允许继续后只生成/调整需求设计并回写平台版本；开发模式必须校验需求平台关联远端和任务分支，沿用需求设计阶段任务分支生成执行计划、开发和自动 Review；项目接入初始化模式由平台下发 harness 模板和 workspace `AGENTS.md` 给 Codex 落地，必须先拉取最新代码，初始化校验通过后提交并推送初始化文件。没有需求平台 Key、未接入 MCP 或 MCP 不可用时，按 `docs/process/local-harness-workflow.md` 使用本地 Harness 模式，阶段文件和 Review 闭环与 MCP 接入模式一致，但不得声明平台回写成功。
 
 新增或修改以下内容时，必须同步更新 `docs/ai-harness`；如果不需要更新，请在 `meta.md` 和完成说明中写明原因：
 
@@ -51,6 +53,8 @@
 5. 验证命令、联调方式或验收路径。
 
 功能模块文档应优先和前端菜单对应：写清菜单目录、子菜单或隐藏页签、功能说明、前端文件、API 封装、后端接口、权限标识和后端核心文件。新需求的 `meta.md` 必须记录影响模块、模块知识库动作和模块文档路径；项目接入初始化时必须至少生成一个非模板 `docs/ai-harness/modules/*.md`。
+
+`docs/ai-harness/search-map.md` 是模型查找功能的第一层索引。新增、拆分或重命名模块文档、契约文档、决策文档、菜单、接口、权限、数据库口径或核心流程时，必须同步更新搜索关键词、入口文档和代码入口。
 
 Harness 初始化或纯文档接入只运行 L0/init 检查，不启动项目、不跑业务测试：
 

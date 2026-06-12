@@ -20,7 +20,7 @@
 - 需要执行 agent 处理的问题，必须在对应仓库 `review-report.md` 的 `返修交接清单` 中写 `RF-*`。
 - 产生 `RF-*` 后停止当前 Review 并自动交回 Execution Agent，不直接修代码。
 - Execution Agent 回填返修记录后，自动复审并更新 `review-report.md` 的 `复审记录`；只有最终结论为 `通过` 才允许进入完成态。
-- 需求平台模式下，每次 Review、返修复审或补充验收都必须更新同一个 `review-report.md`，并通过 MCP `upload_review_report` 回写新版本；不要另建并行 Review 文件。
+- MCP 接入模式下，每次 Review、返修复审或补充验收都必须更新同一个 `review-report.md`，并通过 MCP `upload_review_report` 回写新版本；本地 Harness 模式下也更新同一个 `review-report.md`，但只记录本地文件闭环，不得伪造 MCP 回写。不要另建并行 Review 文件。
 - 如果只是 companion 仓库需要修复，也要在当前仓库 Review 中说明跨仓风险和对方 spec 路径。
 
 完成输出：
@@ -28,4 +28,4 @@
 - 列出每个仓库 Review 结论。
 - 列出阻断项和 `RF-*`。
 - 说明是否最终通过并允许进入完成态；如未通过，明确自动返回 Execution Agent 的 RF 清单。
-- 需求平台模式下说明是否已通过 MCP 回写 Review 报告新版本。
+- MCP 接入模式下说明是否已通过 MCP 回写 Review 报告新版本；本地 Harness 模式下写明“未接入 MCP，本地文件闭环”，不得伪造回写。
