@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqActionToken;
+import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqImpactItem;
 import com.ruoyi.requirement.domain.ReqIndexModule;
 import com.ruoyi.requirement.domain.ReqRepository;
@@ -25,6 +26,7 @@ import com.ruoyi.requirement.dto.ReqIndexModulePayload;
 import com.ruoyi.requirement.dto.ReqRepositoryIndexImportRequest;
 import com.ruoyi.requirement.mapper.ReqImpactItemMapper;
 import com.ruoyi.requirement.mapper.ReqIndexModuleMapper;
+import com.ruoyi.requirement.mapper.ReqDemandMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
@@ -40,6 +42,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     @Autowired private ReqImpactItemMapper impactMapper;
     @Autowired private ReqRepositoryMapper repositoryMapper;
     @Autowired private ReqVariantMapper variantMapper;
+    @Autowired private ReqDemandMapper demandMapper;
     @Autowired private ReqActivityLogService activityLogService;
     @Autowired private IReqActionTokenService actionTokenService;
 
@@ -469,8 +472,12 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
     private ReqVariant resolveBranchByActionToken(String actionToken, ReqRepositoryIndexImportRequest request)
     {
         ReqActionToken token = actionTokenService.resolveToken(actionToken);
+        if (!IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX.equals(token.getTargetMethod()))
+        {
+            throw new ServiceException("动作Token不能用于仓库索引发布");
+        }
         if (!IReqActionTokenService.ACTION_PROJECT_INIT.equals(token.getActionType())
-                || !"publish_repository_index".equals(token.getTargetMethod()))
+                && !IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType()))
         {
             throw new ServiceException("动作Token不能用于仓库索引发布");
         }
@@ -487,9 +494,35 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             throw new ServiceException("动作Token项目与分支不一致");
         }
+        if (IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType()))
+        {
+            validateCloseoutActionToken(token, branch);
+        }
         request.setProjectId(branch.getProjectId());
         request.setBranchName(branch.getBaselineBranch());
         return branch;
+    }
+
+    private void validateCloseoutActionToken(ReqActionToken token, ReqVariant branch)
+    {
+        if (token.getDemandId() == null)
+        {
+            throw new ServiceException("归档动作Token未绑定需求");
+        }
+        ReqDemand demand = demandMapper.selectReqDemandByDemandId(token.getDemandId());
+        if (demand == null)
+        {
+            throw new ServiceException("归档动作Token绑定的需求不存在");
+        }
+        if (!"closeout_pending".equals(demand.getStatus()))
+        {
+            throw new ServiceException("归档动作Token所属流程阶段已结束，请重新生成指令");
+        }
+        if (!branch.getProjectId().equals(demand.getProjectId())
+                || !branch.getVariantId().equals(demand.getVariantId()))
+        {
+            throw new ServiceException("归档动作Token与需求项目分支不一致");
+        }
     }
 
     private ReqVariant resolveBranchByMcpKey(String mcpKey)

@@ -2,7 +2,7 @@
 
 你从 workspace 根目录启动，是 Workspace Execution Agent。先分流，再进入受影响子仓库按计划执行；不要自行扩大需求。
 
-如果用户提供需求平台开发 Key，先通过需求平台 MCP 读取最终需求设计、任务分支、目标仓库、开发基线分支和验收要求，并按 `docs/process/platform-key-workflow.md` 的开发模式执行。必须校验当前 workspace 仓库远端与平台关联远端一致，并切换到需求设计阶段已经创建的任务分支；开发阶段不得重新生成不同任务分支。`developing` 阶段使用开发阶段 actionToken，先基于最终 `requirement.md` 生成或更新 `plan.md`，再落地开发，并依次回写执行计划、执行报告和 Review 报告。`repairing` 阶段使用返修阶段 actionToken，只处理返修项或需求人返修说明并补充 `execution-report.md` 和 `review-report.md`，不得重新生成需求设计或执行计划。
+如果用户提供需求平台开发 Key，先通过需求平台 MCP 读取最终需求设计、任务分支、目标仓库、开发基线分支和验收要求，并按 `docs/process/platform-key-workflow.md` 的开发模式执行。必须校验当前 workspace 仓库远端与平台关联远端一致，并切换到需求设计阶段已经创建的任务分支；开发阶段不得重新生成不同任务分支。`developing` 阶段使用开发阶段 actionToken，先基于最终 `requirement.md` 判断是否适合拆分为多个 subagent 并行执行；只有职责边界清晰、无共享状态且可独立验证时才拆分，否则保持单执行路径。随后生成或更新 `plan.md`，再落地开发，并依次回写执行计划、执行报告和 Review 报告。`repairing` 阶段使用返修阶段 actionToken，只处理返修项或需求人返修说明并补充 `execution-report.md` 和 `review-report.md`，不得重新生成需求设计或执行计划。`closeout_pending` 阶段使用合并归档指令，在每个目标仓库 squash merge 任务分支到需求基线分支、push、调用 `publish_repository_index` 更新平台知识库并等待平台验证后，才能删除本地开发分支并确认完成。
 
 如果用户提供项目接入初始化 Key，只执行 harness 初始化下发：先切换默认基线分支并 `git pull --ff-only`，写入 workspace `AGENTS.md`、子仓库 `AGENTS.md`、`docs/` 和 `scripts/`，运行 init 校验，校验通过后提交并推送初始化生成或升级的文件，再回写结果；不得改业务代码。
 
@@ -18,7 +18,7 @@
 执行规则：
 
 - 只实现 `plan.md` 覆盖的 `AC-*`。
-- `plan.md` 不存在时，先基于最终 `requirement.md` 生成执行计划，再开始实现。
+- `plan.md` 不存在时，先基于最终 `requirement.md` 分析是否适合多个 subagent 并行执行，再生成执行计划并开始实现。
 - `meta.md` 必须写清流程模式、需求 Key、平台关联远端、平台目标分支、`执行模式：任务分支模式`、`执行授权：已授权`；当前分支不得是 `main` 或 `master`。
 - `meta.md` 必须写清影响模块、模块知识库动作、模块知识库文档和无需更新原因；不要把模块知识库判断留到完成说明里临时补。
 - 跨仓需求按依赖顺序执行：后端契约/DDL/接口优先，前端再按契约接入。

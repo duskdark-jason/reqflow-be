@@ -25,7 +25,10 @@
 11. 删除与流程隔离：新增 `req:demand:remove` 管理员删除接口和按钮权限，服务层按角色拦截具体状态动作，覆盖 AC-016。
 12. 单一指定开发人员锁定：新增 `developer_user_id` 字段、开发人员候选接口、参与人列表过滤和资料包读写校验，覆盖 AC-017。
 13. 设计确认调整说明：扩展补充说明接口，使 `plan_ready` 阶段需求创建人可提交需求设计调整说明，追加 `requirement_supplement` 版本并回到 `plan_pending`，覆盖 AC-019。
-14. 文档同步：更新 API 契约、模块文档、表字典和关系说明，覆盖 AC-005、AC-010~AC-019。
+14. 合并归档闭环：新增 `review -> closeout_pending -> completed` 状态路径、合并归档指令、`requirement_closeout/publish_repository_index` token 校验和平台归档验证，覆盖 AC-022、AC-023。
+15. 执行计划 harness：更新开发执行指令、全局 `reqflow-mcp` skill 和 harness 模板，要求生成 `plan.md` 前先分析是否适合拆分多个 subagent 并行执行，覆盖 AC-024。
+16. MCP 服务地址配置：移除项目 yml 中 MCP 请求地址，改由系统参数 `reqflow.mcp.public-host` 提供 `IP:端口`，补充幂等系统参数脚本和 Controller 测试，覆盖 AC-025。
+17. 文档同步：更新 API 契约、模块文档、表字典和关系说明，覆盖 AC-005、AC-010~AC-025。
 
 ## 文件改动范围
 
@@ -41,19 +44,22 @@
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 需求设计动作 token、执行开发动作 token 和返修事件记录。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 阶段有效期、最长 24 小时兜底、一次性消费和开发阶段 token 复用。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | MCP 工具与 actionToken 阶段边界。 |
+| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqRepositoryIndexServiceImpl.java`、`ReqActionTokenMapper.xml` | 合并归档指令、归档 token 统计和平台知识库归档验证。 |
+| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqMcpKeyController.java`、`ruoyi-admin/src/main/resources/application.yml` | MCP 服务地址从系统参数读取，项目 yml 不再配置请求地址。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqPackageController.java` | 需求详情嵌入资料包读取权限。 |
 | 迁移 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/**` | 将需求管理 Controller 从 admin 模块迁移到需求模块，需求页面只读上下文接口按需求权限放行。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/domain/ReqDemand.java`、`ReqDemandMapper.xml` | 指定开发人员字段回显、候选查询和非管理员参与人过滤。 |
 | 新增 | `docs/db/sql/req_platform_req016_role_permissions.sql` | 平台三类角色菜单权限。 |
 | 新增 | `docs/db/sql/req_platform_req017_demand_developer_lock.sql` | 指定开发人员字段和索引幂等升级脚本。 |
+| 新增 | `docs/db/sql/req_platform_req017_mcp_public_host_config.sql` | MCP 服务 IP 端口系统参数幂等初始化脚本。 |
 | 新增 | `ruoyi-requirement/src/test/java/com/ruoyi/requirement/service/impl/ReqPlatformRoleSqlTest.java` | 角色 SQL 契约测试。 |
 | 修改 | `docs/ai-harness/contracts/requirement-platform-api.md`、`docs/ai-harness/modules/requirement-platform.md`、`docs/db/table-dictionary.md`、`docs/db/relationship.md` | 长期契约同步。 |
 
 ## 模块知识库计划
 
-- 更新 `docs/ai-harness/modules/requirement-platform.md`，记录编号、创建人、状态流转、返修分支、MCP 指令、角色权限和 actionToken 生命周期。
-- 更新 `docs/ai-harness/contracts/requirement-platform-api.md`，记录接口语义、状态流转、生成需求设计指令、执行任务指令、角色权限和 actionToken 一次性/有效期。
-- 更新 `docs/db/table-dictionary.md` 和 `docs/db/relationship.md`，记录状态枚举、编号语义、执行包版本链、角色权限 SQL 和 `expire_time`/`last_used_time` 边界。
+- 更新 `docs/ai-harness/modules/requirement-platform.md`，记录编号、创建人、状态流转、返修分支、合并归档、MCP 指令、角色权限和 actionToken 生命周期。
+- 更新 `docs/ai-harness/contracts/requirement-platform-api.md`，记录接口语义、状态流转、生成需求设计指令、执行任务指令、合并归档指令、角色权限和 actionToken 一次性/有效期。
+- 更新 `docs/db/table-dictionary.md` 和 `docs/db/relationship.md`，记录状态枚举、编号语义、执行包版本链、角色权限 SQL、系统参数脚本和 `expire_time`/`last_used_time` 边界。
 
 ## 代码注释计划
 
@@ -90,9 +96,15 @@
 | AC-017 | 单一指定开发人员和参与人锁定 | `ReqDemandServiceImplTest`、`ReqDemandSchemaSqlTest`、接口账号冒烟 |
 | AC-018 | 自动需求草稿、结论分支和需求人补充说明 | `ReqDemandStatusTransitionTest`、`ReqDemandServiceImplTest`、`McpServiceTest` |
 | AC-019 | 需求设计待确认阶段补充调整说明并多轮迭代 | `ReqDemandStatusTransitionTest`、`ReqDemandServiceImplTest` |
+| AC-020 | MCP Key 绑定和安装指令 | `ReqMcpUserKeyServiceImplTest`、`ReqMcpKeyControllerTest` |
+| AC-021 | 项目知识库快照同步 | `ReqRepositoryIndexServiceImplTest`、`ReqIndexModuleMapperXmlTest` |
+| AC-022 | 需求人验收后进入待合并归档并生成合并归档指令 | `ReqDemandStatusTransitionTest`、`ReqDemandServiceImplTest` |
+| AC-023 | 平台验证归档结果后才允许办结 | `ReqDemandServiceImplTest`、`ReqRepositoryIndexServiceImplTest` |
+| AC-024 | 生成执行计划前分析 subagent 拆分可能性 | `ReqDemandServiceImplTest`、`ReqflowCodexGlobalSkillTemplateTest` |
+| AC-025 | MCP 服务地址由系统参数配置 IP 端口 | `ReqMcpKeyControllerTest`、配置脚本复核 |
 
 ## 执行约束
 
 - 本需求使用任务分支 `feature/req-016-demand-flow-ux`，不在 `main` 直接实现。
-- 新增 `demand_source`、`attachments`、`developer_user_id` 字段脚本和角色权限脚本均为幂等升级脚本。
+- 新增 `demand_source`、`attachments`、`developer_user_id` 字段脚本、角色权限脚本和 MCP 服务 IP 端口系统参数脚本均为幂等升级脚本。
 - 完成修改和验证后直接 commit；merge、push、rebase 仍需用户确认。

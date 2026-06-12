@@ -24,7 +24,8 @@ public final class ReqDemandStatusTransition
             "developing->review",
             "review->repairing",
             "repairing->review",
-            "review->completed",
+            "review->closeout_pending",
+            "closeout_pending->completed",
             "completed->archived",
             "rejected->archived"));
 

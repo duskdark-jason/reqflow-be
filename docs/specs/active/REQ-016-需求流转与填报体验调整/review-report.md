@@ -43,6 +43,12 @@
 | AC-017 | 单一指定开发人员和参与人锁定 | `ReqDemandServiceImpl`、`ReqDemandMapper.xml`、`ReqPackageServiceImpl`、`McpService`、前端状态按钮过滤 | 单测覆盖指定开发人员、非参与人拒绝和 SQL 字段；前端构建通过 | 通过 |
 | AC-018 | 自动需求草稿、结论分支和需求人补充说明 | `ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqDemandController`、`McpService` | `ReqDemandServiceImplTest` 覆盖提交需求自动生成草稿和补充说明；`ReqDemandStatusTransitionTest` 覆盖分支；`McpServiceTest` 覆盖补充说明资源 | 通过 |
 | AC-019 | 需求设计待确认阶段补充调整说明 | `ReqDemandServiceImpl`、`ReqDemandStatusTransition` | `ReqDemandServiceImplTest` 覆盖 `plan_ready` 提交调整说明并追加 `requirement_supplement`；`ReqDemandStatusTransitionTest` 覆盖 `plan_ready -> plan_pending` | 通过 |
+| AC-020 | MCP Key 绑定和安装指令 | `ReqMcpKeyController`、`ReqMcpUserKeyServiceImpl`、`ReqflowCodexSetupPackageTemplate` | `ReqMcpKeyControllerTest`、`ReqMcpUserKeyServiceImplTest` 覆盖普通用户绑定自己、管理员指定用户和安装指令模板 | 通过 |
+| AC-021 | 项目知识库快照同步 | `ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper.xml`、`ReqImpactItemMapper.xml` | `ReqRepositoryIndexServiceImplTest`、`ReqIndexModuleMapperXmlTest` 覆盖重复发布快照失效和最新 imported 批次查询 | 通过 |
+| AC-022 | 验收后进入待合并归档并生成归档指令 | `ReqDemandStatusTransition`、`ReqDemandServiceImpl` | `ReqDemandStatusTransitionTest`、`ReqDemandServiceImplTest` 覆盖 `review -> closeout_pending` 和合并归档指令内容 | 通过 |
+| AC-023 | 平台验证归档结果后才允许办结 | `ReqDemandServiceImpl`、`ReqRepositoryIndexServiceImpl`、`ReqActionTokenMapper.xml` | `ReqDemandServiceImplTest` 覆盖归档未验证拒绝和验证后办结；`ReqRepositoryIndexServiceImplTest` 覆盖归档 token 发布索引 | 通过 |
+| AC-024 | 执行计划前分析 subagent 拆分 | `ReqDemandServiceImpl`、`ReqflowCodexGlobalSkillTemplate`、harness 模板 | `ReqDemandServiceImplTest` 和 `ReqflowCodexGlobalSkillTemplateTest` 覆盖开发指令与全局 skill 文案 | 通过 |
+| AC-025 | MCP 服务地址由系统参数配置 IP 端口 | `ReqMcpKeyController`、`application.yml`、`req_platform_req017_mcp_public_host_config.sql` | `ReqMcpKeyControllerTest` 覆盖系统参数优先和请求头兜底；代码复核 yml 不再配置 MCP 请求地址 | 通过 |
 
 ## 验收复核
 
@@ -65,6 +71,12 @@
 - AC-017：通过，需求只锁定一个指定开发人员，该人员同时负责需求设计、执行开发和返修；普通访问与操作限制在创建人和该开发人员之间。
 - AC-018：通过，提交需求自动生成草稿和上下文清单，需求分析/设计结论可进入补充或无法实现分支，需求人可提交补充说明。
 - AC-019：通过，需求设计待确认阶段需求人可提交补充调整说明并回到待生成需求设计。
+- AC-020：通过，普通用户新增 MCP Key 绑定自己，管理员可指定用户，创建结果明文展示 Key，历史指令只打开安装模板。
+- AC-021：通过，项目知识库重复发布按完整快照同步，需求提需模块优先使用最新 imported 批次。
+- AC-022：通过，需求人确认验收后进入待合并归档，指定开发人员可生成合并归档指令。
+- AC-023：通过，平台未验证所有有效仓库归档索引前拒绝办结，验证后允许指定开发人员完成。
+- AC-024：通过，开发执行指令和 harness 模板要求生成执行计划前分析 subagent 拆分可能性。
+- AC-025：通过，MCP 服务请求地址不再放入项目 yml，系统参数只维护 `IP:端口`。
 
 ## 返修交接清单
 
@@ -74,6 +86,7 @@
 | RF-003 | 中 | AC-009 | 用户补充 actionToken 应按流程阶段有效，转到下一流程即失效 | 补齐 token 过期时间、普通 token 已使用拒绝、开发阶段 token 复用、需求状态阶段校验和指令文案 | 单测、接口冒烟、文档门禁 |
 | RF-004 | 中 | AC-004、AC-006、AC-011、AC-012 | 用户反馈需求分析阶段、需求生成阶段、返修阶段也应像开发阶段一样只包含当前阶段内容，token 随流程流转失效 | 拆分需求分析、需求生成、开发执行和返修指令；需求分析只回写评估，需求生成只回写需求设计，返修只回写执行和 Review 报告 | 单测、文档门禁、前端构建 |
 | RF-005 | 中 | AC-019 | 用户反馈需求设计确认阶段不能只确认，还要支持补充调整说明进行多轮迭代 | 扩展补充说明接口支持 `plan_ready`，追加补充版本并回到 `plan_pending` | 状态机单测、服务层单测、文档门禁 |
+| RF-006 | 中 | AC-022、AC-023、AC-024、AC-025 | 用户追加验收后合并归档、平台验证归档结果、执行计划 subagent 分析和 MCP 服务地址系统配置 | 增加 `closeout_pending` 阶段、归档 token、归档验证、全局 skill/harness 文案和系统参数配置 | 单测、打包、文档门禁、harness complete |
 
 ## 复审记录
 
@@ -83,5 +96,6 @@
 | RF-003 | 已完成 actionToken 流程阶段有效、24 小时兜底和开发阶段复用限制 | 通过 | `ReqActionTokenServiceImplTest`、`McpServiceTest`、接口冒烟、`check-docs` |
 | RF-004 | 已完成四个阶段的工具集合、actionToken target 和模板文档同步 | 通过 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | RF-005 | 已完成 `plan_ready` 调整说明回退和补充版本记录 | 通过 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
+| RF-006 | 已完成待合并归档阶段、平台归档验证、subagent 执行计划指引和 MCP 服务地址系统参数配置 | 通过 | `mvn -pl ruoyi-requirement -am test`、`mvn -pl ruoyi-admin -am -DskipTests package`、`sh scripts/check-docs.sh` |
 
 - 最终结论：通过

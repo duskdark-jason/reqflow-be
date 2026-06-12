@@ -353,6 +353,30 @@ class McpServiceTest
     }
 
     @Test
+    void publishRepositoryIndexToolAllowsActionTokenWithoutGlobalIndexPermission()
+    {
+        IReqRepositoryIndexService indexService = mock(IReqRepositoryIndexService.class);
+        ReqIndexImportResult importResult = new ReqIndexImportResult();
+        importResult.setBatchId(10L);
+        when(indexService.importRepositoryIndex(any(ReqRepositoryIndexImportRequest.class), eq("mcp"), any(), any()))
+                .thenReturn(importResult);
+        McpService service = new TestableMcpService(false);
+        ReflectionTestUtils.setField(service, "repositoryIndexService", indexService);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_closeout");
+        arguments.put("remoteUrl", "git@example.com:reqflow-ui.git");
+        arguments.put("commitHash", "abc123");
+        arguments.put("indexVersion", "v1");
+
+        service.handle(request("tools/call", toolParams("publish_repository_index", arguments)));
+
+        ArgumentCaptor<ReqRepositoryIndexImportRequest> captor = forClass(ReqRepositoryIndexImportRequest.class);
+        verify(indexService).importRepositoryIndex(captor.capture(), eq("mcp"), any(), any());
+        assertEquals("reqflow_action_closeout", captor.getValue().getActionToken());
+    }
+
+    @Test
     void publishRepositoryIndexToolBusinessErrorReturnsMcpToolErrorResult()
     {
         IReqRepositoryIndexService indexService = mock(IReqRepositoryIndexService.class);

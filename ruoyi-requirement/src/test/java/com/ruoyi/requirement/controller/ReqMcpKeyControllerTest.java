@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
+import com.ruoyi.system.service.ISysConfigService;
 
 class ReqMcpKeyControllerTest
 {
@@ -28,16 +29,18 @@ class ReqMcpKeyControllerTest
     }
 
     @Test
-    void mcpAddressUsesConfiguredPublicUrlBeforeRequestHost()
+    void mcpAddressUsesSystemConfiguredHostPortBeforeRequestHost()
     {
         ReqMcpKeyController controller = new ReqMcpKeyController();
-        ReflectionTestUtils.setField(controller, "mcpPublicUrl", " http://localhost:8080/requirement/mcp/ ");
+        ISysConfigService configService = mock(ISysConfigService.class);
+        ReflectionTestUtils.setField(controller, "configService", configService);
+        when(configService.selectConfigByKey("reqflow.mcp.public-host")).thenReturn(" 10.0.0.12:18080 ");
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getHeader("X-Forwarded-Proto")).thenReturn("http");
         when(request.getHeader("X-Forwarded-Host")).thenReturn("localhost:1024");
 
-        assertEquals("http://localhost:8080/requirement/mcp",
+        assertEquals("http://10.0.0.12:18080/requirement/mcp",
                 ReflectionTestUtils.invokeMethod(controller, "mcpAddress", request));
     }
 
@@ -45,7 +48,9 @@ class ReqMcpKeyControllerTest
     void mcpAddressFallsBackToForwardedHostWhenPublicUrlIsBlank()
     {
         ReqMcpKeyController controller = new ReqMcpKeyController();
-        ReflectionTestUtils.setField(controller, "mcpPublicUrl", " ");
+        ISysConfigService configService = mock(ISysConfigService.class);
+        ReflectionTestUtils.setField(controller, "configService", configService);
+        when(configService.selectConfigByKey("reqflow.mcp.public-host")).thenReturn(" ");
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getHeader("X-Forwarded-Proto")).thenReturn("https");

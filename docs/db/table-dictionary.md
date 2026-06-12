@@ -23,7 +23,7 @@
 | `req_index_module` | 仓库索引模块知识 | `index_module_id` | `idx_req_index_module_variant(project_id, variant_id, module_code)` | 与人工模块不同，是索引产物；按项目分支过滤，不能混入旧批次。 |
 | `req_impact_item` | 模块影响面条目 | `impact_id` | `idx_req_impact_project_module(project_id, module_code)`、`idx_req_impact_variant_branch(variant_id, branch_name)`、`idx_req_impact_repo(repo_id)`、`idx_req_impact_type(item_type)` | 页面、接口、表、权限和文档资源统一记录在此表，推荐时必须按最新批次和分支去重。 |
 | `req_mcp_user_key` | 人员 MCP 访问 Key | `key_id` | `uk_req_mcp_user_key_hash(key_hash)`、`idx_req_mcp_user_key_user(user_id)`、`idx_req_mcp_user_key_status(status)` | 只保存哈希和前缀；明文 Key 只能在创建响应中出现。 |
-| `req_action_token` | MCP 动作 Token | `token_id` | `uk_req_action_token_hash(token_hash)`、`idx_req_action_token_context(action_type, project_id, variant_id, demand_id, status)` | 用于项目初始化、需求分析、需求生成、开发和返修动作上下文，不代表人员身份。 |
+| `req_action_token` | MCP 动作 Token | `token_id` | `uk_req_action_token_hash(token_hash)`、`idx_req_action_token_context(action_type, project_id, variant_id, demand_id, status)` | 用于项目初始化、需求分析、需求生成、开发、返修和合并归档动作上下文，不代表人员身份。 |
 | `req_activity_log` | 需求平台业务事件 | `id` | `idx_req_activity_user(user_id)`、`idx_req_activity_project(project_id)`、`idx_req_activity_demand(demand_id)`、`idx_req_activity_time(event_time)` | 审计和活动流使用；敏感明文、Key 和本机路径不得写入 `metadata_json`。 |
 
 ## 关键字段说明
@@ -54,7 +54,7 @@
 |---|---|---|---|
 | `req_demand` | `demand_no` | 稳定需求编号 | 与本地 spec 目录中的 `REQ-001` 类编号保持可追踪关系。 |
 | `req_demand` | `demand_source` | 需求来源 | 新增和修改需求必填；历史数据通过 `req_platform_req016_demand_form_fields.sql` 默认补为 `BUSINESS`。 |
-| `req_demand` | `status` | 需求状态 | 新增默认 `draft`；主流程为 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed`，其中 `submitted` 为待需求分析、`plan_pending` 为待生成需求设计、`plan_ready` 为需求设计待确认、`confirmed` 为待执行开发；验收返修分支为 `review -> repairing -> review`，`archived` 为归档状态。 |
+| `req_demand` | `status` | 需求状态 | 新增默认 `draft`；主流程为 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> closeout_pending -> completed`，其中 `submitted` 为待需求分析、`plan_pending` 为待生成需求设计、`plan_ready` 为需求设计待确认、`confirmed` 为待执行开发、`closeout_pending` 为待合并归档；验收返修分支为 `review -> repairing -> review`，`archived` 为兼容归档状态。 |
 | `req_demand` | `creator_id` | 需求创建人用户 ID | 新增时由服务端当前登录用户写入；普通编辑只允许创建人在 `draft` 状态修改。 |
 | `req_demand` | `developer_user_id` | 指定开发人员用户 ID | 新增或修改草稿需求时必须指向启用的 `requirement_developer` 用户；需求提交后普通访问、流程按钮、MCP 指令和资料包回写锁定在创建人与该开发人员之间，管理员不受该参与人限制。 |
 | `req_demand` | `project_id`、`variant_id`、`module_id` | 需求归属 | 保存前必须校验项目分支归属和仓库索引证据；新功能提需可以没有既有模块知识。 |
@@ -79,9 +79,9 @@
 |---|---|---|---|
 | `req_mcp_user_key` | `user_id` | 绑定系统用户 | 关联 RuoYi `sys_user.user_id`；权限仍按用户菜单权限判断。 |
 | `req_mcp_user_key` | `key_prefix`、`key_hash` | Key 前缀和哈希 | 明文不得落库、不得写日志、不得进入活动记录。 |
-| `req_action_token` | `action_type`、`target_method` | 动作类型和阶段目标 | `requirement_plan` 使用 `target_method=requirement_analysis` 表示需求分析阶段，只允许 `upload_requirement_assessment`；使用 `target_method=requirement_generate` 表示需求生成阶段，只允许 `save_requirement_package`。`requirement_develop` 使用 `target_method=requirement_develop` 表示开发阶段，可用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；使用 `target_method=requirement_repair` 表示返修阶段，只允许 `upload_execution_report` 和 `upload_review_report`；动作 token 不替代 `X-MCP-Key` 认证。 |
+| `req_action_token` | `action_type`、`target_method` | 动作类型和阶段目标 | `requirement_plan` 使用 `target_method=requirement_analysis` 表示需求分析阶段，只允许 `upload_requirement_assessment`；使用 `target_method=requirement_generate` 表示需求生成阶段，只允许 `save_requirement_package`。`requirement_develop` 使用 `target_method=requirement_develop` 表示开发阶段，可用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；使用 `target_method=requirement_repair` 表示返修阶段，只允许 `upload_execution_report` 和 `upload_review_report`。`requirement_closeout` 使用 `target_method=publish_repository_index` 表示合并归档阶段，只允许在 `closeout_pending` 状态发布需求基线分支的完整知识库快照；动作 token 不替代 `X-MCP-Key` 认证。 |
 | `req_action_token` | `project_id`、`variant_id`、`demand_id` | 动作上下文 | 必须和平台返回的项目、分支和需求一致。 |
-| `req_action_token` | `expire_time`、`last_used_time` | 有效期和使用记录 | 动作 token 以流程阶段为有效边界，流转到下一流程即失效；`expire_time` 是最长 24 小时兜底。项目初始化、需求分析和需求生成 token 一次性消费，开发阶段 token 在 `developing` 内可多次刷新 `last_used_time`，返修阶段 token 在 `repairing` 内可多次刷新 `last_used_time`。 |
+| `req_action_token` | `expire_time`、`last_used_time` | 有效期和使用记录 | 动作 token 以流程阶段为有效边界，流转到下一流程即失效；`expire_time` 是最长 24 小时兜底。项目初始化、需求分析、需求生成和合并归档 token 一次性消费，开发阶段 token 在 `developing` 内可多次刷新 `last_used_time`，返修阶段 token 在 `repairing` 内可多次刷新 `last_used_time`。 |
 | `req_activity_log` | `event_type`、`metadata_json` | 事件类型和扩展信息 | 扩展 JSON 只存可审计摘要，不写敏感明文。 |
 
 ## 系统表关联点
@@ -91,6 +91,7 @@
 | `sys_user` | `req_mcp_user_key.user_id`、需求创建人、指定开发人员、活动用户 | 查询用户显示信息时避免因角色表 join 放大行数。 |
 | `sys_menu` | 需求平台菜单、按钮权限和 MCP Key 菜单 | 菜单 SQL 保留在 `docs/db/sql/req_platform_menu.sql` 和增量 SQL 中，权限标识需与 Controller 注解一致。 |
 | `sys_role`、`sys_role_menu` | 需求人员、开发人员和管理员菜单授权 | 角色授权脚本为 `docs/db/sql/req_platform_req016_role_permissions.sql`；开发人员有隐藏 `req:package:save` 供 MCP 回写资料，需求人员不分配 MCP 管理和独立执行包菜单。 |
+| `sys_config` | MCP 服务对外 IP 端口 | 系统参数初始化脚本为 `docs/db/sql/req_platform_req017_mcp_public_host_config.sql`；管理员只填写 `reqflow.mcp.public-host=IP:端口`，服务端拼接协议和 `/requirement/mcp`。 |
 
 ## 更新检查
 

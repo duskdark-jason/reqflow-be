@@ -24,6 +24,7 @@ import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.requirement.domain.ReqActionToken;
+import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqImpactItem;
 import com.ruoyi.requirement.domain.ReqIndexModule;
 import com.ruoyi.requirement.domain.ReqRepository;
@@ -37,6 +38,7 @@ import com.ruoyi.requirement.dto.ReqIndexModulePayload;
 import com.ruoyi.requirement.dto.ReqRepositoryIndexImportRequest;
 import com.ruoyi.requirement.mapper.ReqImpactItemMapper;
 import com.ruoyi.requirement.mapper.ReqIndexModuleMapper;
+import com.ruoyi.requirement.mapper.ReqDemandMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
@@ -484,6 +486,69 @@ class ReqRepositoryIndexServiceImplTest
     }
 
     @Test
+    void importsCloseoutIndexByDemandScopedActionToken()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, moduleMapper, impactMapper, repositoryMapper,
+                variantMapper, mock(ReqActivityLogService.class), actionTokenService, demandMapper);
+
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT);
+        token.setProjectId(1L);
+        token.setVariantId(8L);
+        token.setDemandId(6L);
+        token.setTargetMethod(IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
+        when(actionTokenService.resolveToken("reqflow_action_closeout")).thenReturn(token);
+
+        ReqVariant branch = new ReqVariant();
+        branch.setVariantId(8L);
+        branch.setProjectId(1L);
+        branch.setBaselineBranch("release/main");
+        branch.setStatus("0");
+        when(variantMapper.selectReqVariantByVariantId(8L)).thenReturn(branch);
+        ReqDemand demand = new ReqDemand();
+        demand.setDemandId(6L);
+        demand.setProjectId(1L);
+        demand.setVariantId(8L);
+        demand.setStatus("closeout_pending");
+        when(demandMapper.selectReqDemandByDemandId(6L)).thenReturn(demand);
+
+        ReqRepository repository = new ReqRepository();
+        repository.setRepoId(2L);
+        repository.setProjectId(1L);
+        repository.setRepoUrl("git@example.com:reqflow-ui.git");
+        repository.setRepoType("FRONTEND");
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository));
+        doAnswer(invocation -> {
+            ReqRepositoryIndexBatch batch = invocation.getArgument(0);
+            batch.setBatchId(105L);
+            return 1;
+        }).when(batchMapper).insertReqRepositoryIndexBatch(any(ReqRepositoryIndexBatch.class));
+
+        ReqRepositoryIndexImportRequest request = new ReqRepositoryIndexImportRequest();
+        request.setActionToken("reqflow_action_closeout");
+        request.setRemoteUrl("git@example.com:reqflow-ui.git");
+        request.setCommitHash("abc123");
+        request.setIndexVersion("v1");
+        request.setModules(Collections.singletonList(module("requirement-demand", "需求提交")));
+
+        ReqIndexImportResult result = service.importRepositoryIndex(request, "mcp", "tester", 7L);
+
+        assertEquals(105L, result.getBatchId());
+        ArgumentCaptor<ReqRepositoryIndexBatch> batchCaptor = forClass(ReqRepositoryIndexBatch.class);
+        verify(batchMapper).insertReqRepositoryIndexBatch(batchCaptor.capture());
+        assertEquals("release/main", batchCaptor.getValue().getBranchName());
+        assertEquals(1L, batchCaptor.getValue().getProjectId());
+        verify(actionTokenService).resolveToken("reqflow_action_closeout");
+    }
+
+    @Test
     void rejectsProjectInitImpactWhenModuleCodeIsNotInPublishedModules()
     {
         ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
@@ -631,12 +696,22 @@ class ReqRepositoryIndexServiceImplTest
             ReqImpactItemMapper impactMapper, ReqRepositoryMapper repositoryMapper, ReqVariantMapper variantMapper,
             ReqActivityLogService activityLogService, IReqActionTokenService actionTokenService)
     {
+        return newService(batchMapper, moduleMapper, impactMapper, repositoryMapper, variantMapper, activityLogService,
+                actionTokenService, mock(ReqDemandMapper.class));
+    }
+
+    private ReqRepositoryIndexServiceImpl newService(ReqRepositoryIndexBatchMapper batchMapper, ReqIndexModuleMapper moduleMapper,
+            ReqImpactItemMapper impactMapper, ReqRepositoryMapper repositoryMapper, ReqVariantMapper variantMapper,
+            ReqActivityLogService activityLogService, IReqActionTokenService actionTokenService,
+            ReqDemandMapper demandMapper)
+    {
         ReqRepositoryIndexServiceImpl service = new ReqRepositoryIndexServiceImpl();
         ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
         ReflectionTestUtils.setField(service, "moduleMapper", moduleMapper);
         ReflectionTestUtils.setField(service, "impactMapper", impactMapper);
         ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
         ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "demandMapper", demandMapper);
         ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
         ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
         return service;

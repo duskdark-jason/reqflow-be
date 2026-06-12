@@ -3,7 +3,6 @@ package com.ruoyi.requirement.controller;
 import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +19,7 @@ import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
 import com.ruoyi.requirement.service.IReqMcpUserKeyService;
+import com.ruoyi.system.service.ISysConfigService;
 
 /**
  * MCP人员Key管理Controller
@@ -28,11 +28,13 @@ import com.ruoyi.requirement.service.IReqMcpUserKeyService;
 @RequestMapping("/requirement/mcp/key")
 public class ReqMcpKeyController extends BaseController
 {
+    private static final String MCP_PUBLIC_HOST_CONFIG_KEY = "reqflow.mcp.public-host";
+
     @Autowired
     private IReqMcpUserKeyService reqMcpUserKeyService;
 
-    @Value("${reqflow.mcp.public-url:}")
-    private String mcpPublicUrl;
+    @Autowired
+    private ISysConfigService configService;
 
     @PreAuthorize("@ss.hasPermi('req:mcp:key:list')")
     @GetMapping("/list")
@@ -82,13 +84,13 @@ public class ReqMcpKeyController extends BaseController
 
     private String mcpAddress(HttpServletRequest request)
     {
-        String configuredMcpAddress = normalizeMcpPublicUrl();
-        if (StringUtils.isNotEmpty(configuredMcpAddress))
+        String configuredMcpHost = normalizeMcpPublicHost();
+        if (StringUtils.isNotEmpty(configuredMcpHost))
         {
-            return configuredMcpAddress;
+            return requestScheme(request) + "://" + configuredMcpHost + contextPath(request) + "/requirement/mcp";
         }
 
-        String scheme = StringUtils.defaultIfEmpty(request.getHeader("X-Forwarded-Proto"), request.getScheme());
+        String scheme = requestScheme(request);
         String host = StringUtils.defaultIfEmpty(request.getHeader("X-Forwarded-Host"), request.getHeader("Host"));
         if (StringUtils.isEmpty(host))
         {
@@ -99,17 +101,42 @@ public class ReqMcpKeyController extends BaseController
                 host = host + ":" + port;
             }
         }
-        return scheme + "://" + host + request.getContextPath() + "/requirement/mcp";
+        return scheme + "://" + host + contextPath(request) + "/requirement/mcp";
     }
 
-    private String normalizeMcpPublicUrl()
+    private String normalizeMcpPublicHost()
     {
-        String publicUrl = StringUtils.trim(mcpPublicUrl);
-        while (StringUtils.isNotEmpty(publicUrl) && publicUrl.endsWith("/") && !publicUrl.endsWith("://"))
+        String publicHost = configService == null ? null : StringUtils.trim(configService.selectConfigByKey(MCP_PUBLIC_HOST_CONFIG_KEY));
+        if (StringUtils.isEmpty(publicHost))
         {
-            publicUrl = publicUrl.substring(0, publicUrl.length() - 1);
+            return "";
         }
-        return publicUrl;
+        publicHost = publicHost.replaceFirst("^https?://", "");
+        int slashIndex = publicHost.indexOf('/');
+        if (slashIndex >= 0)
+        {
+            publicHost = publicHost.substring(0, slashIndex);
+        }
+        while (publicHost.endsWith("/"))
+        {
+            publicHost = publicHost.substring(0, publicHost.length() - 1);
+        }
+        return publicHost;
+    }
+
+    private String contextPath(HttpServletRequest request)
+    {
+        String contextPath = request == null ? "" : request.getContextPath();
+        return StringUtils.isEmpty(contextPath) || "/".equals(contextPath) ? "" : contextPath;
+    }
+
+    private String requestScheme(HttpServletRequest request)
+    {
+        if (request == null)
+        {
+            return "http";
+        }
+        return StringUtils.defaultIfEmpty(request.getHeader("X-Forwarded-Proto"), request.getScheme());
     }
 
     private boolean isDefaultPort(String scheme, int port)

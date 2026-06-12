@@ -16,7 +16,8 @@ class ReqDemandStatusTransitionTest
         assertTrue(ReqDemandStatusTransition.isAllowed("plan_ready", "confirmed"));
         assertTrue(ReqDemandStatusTransition.isAllowed("confirmed", "developing"));
         assertTrue(ReqDemandStatusTransition.isAllowed("developing", "review"));
-        assertTrue(ReqDemandStatusTransition.isAllowed("review", "completed"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("review", "closeout_pending"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("closeout_pending", "completed"));
         assertTrue(ReqDemandStatusTransition.isAllowed("completed", "archived"));
     }
 
@@ -45,6 +46,7 @@ class ReqDemandStatusTransitionTest
         assertFalse(ReqDemandStatusTransition.isAllowed("draft", "completed"));
         assertFalse(ReqDemandStatusTransition.isAllowed("submitted", "plan_ready"));
         assertFalse(ReqDemandStatusTransition.isAllowed("developing", "submitted"));
+        assertFalse(ReqDemandStatusTransition.isAllowed("review", "completed"));
         assertFalse(ReqDemandStatusTransition.isAllowed("archived", "submitted"));
     }
 }

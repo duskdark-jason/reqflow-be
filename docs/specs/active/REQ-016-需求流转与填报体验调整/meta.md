@@ -14,7 +14,7 @@
 - 基线分支：main
 - companion 仓库：../reqflow-ui/docs/specs/active/REQ-016-需求流转与填报体验调整
 - 关联 spec：../reqflow-ui/docs/specs/active/REQ-016-需求流转与填报体验调整
-- 影响模块：需求管理/需求接口、需求管理/需求执行包、MCP动作Token、需求状态流转、角色菜单权限、系统MCP工具链、需求来源和附件上传
+- 影响模块：需求管理/需求接口、需求管理/需求执行包、MCP动作Token、需求状态流转、角色菜单权限、系统MCP工具链、MCP服务地址配置、需求来源和附件上传、合并归档
 - 模块知识库动作：更新
 - 模块知识库文档：docs/ai-harness/modules/requirement-platform.md
 - 无需更新原因：不适用

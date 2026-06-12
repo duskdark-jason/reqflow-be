@@ -47,7 +47,7 @@ REQ-001-中文需求标题.md
 1. 新需求开始前，在 `active/` 下创建需求目录，并复制 `meta.md`。
 2. 如果任务来自需求平台 Key，先按 `../process/platform-key-workflow.md` 校验模式；需求设计模式必须在最新基线创建或切换任务分支，先回写需求可行性评估，评估允许继续后只生成/调整 `requirement.md` 并回写平台版本；开发模式沿用该任务分支。
 3. Plan Agent 复制模板并填写 `requirement.md`；需求平台模式下不得生成 `plan.md`。
-4. Execution Agent 基于最终 `requirement.md` 生成或更新 `plan.md`，再按 `plan.md` 实现，并填写 `execution-report.md`；除用户明确要求“只执行不 Review”外，执行结束后自动进入 Review 阶段。
+4. Execution Agent 基于最终 `requirement.md` 先分析是否适合拆分为多个 subagent 并行执行，再生成或更新 `plan.md`，按 `plan.md` 实现，并填写 `execution-report.md`；除用户明确要求“只执行不 Review”外，执行结束后自动进入 Review 阶段。
 5. Review Agent 只读审查，并填写 `review-report.md`；需要返修时使用 `RF-001` 形式编号。
 6. Review Agent 产生 `RF-*` 后自动回到 Execution Agent；Execution Agent 修复 Review 问题后，在 `execution-report.md` 的 `Review 返修记录` 中用同一批 `RF-*` 编号回填处理结果。
 7. Execution Agent 回填返修记录后自动回到 Review Agent 复审；Review Agent 在 `review-report.md` 的 `复审记录` 中更新每个 `RF-*` 的复审结论。

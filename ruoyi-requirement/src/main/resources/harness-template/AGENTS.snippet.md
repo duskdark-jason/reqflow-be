@@ -36,7 +36,7 @@
 
 新需求、接口变更、数据库变更或跨端联调开始前，必须先按 `docs/process/new-requirement-flow.md` 判断影响范围、补充需求说明和确认文档联动。
 
-如果任务由多个 agent 或工具协作完成，必须按 `docs/process/agent-workflow.md` 使用文件交接：需求平台模式下计划 agent 先写并回写需求可行性评估，结论允许继续后只写清 `requirement.md`，执行 agent 先基于最终需求设计生成或更新 `plan.md`，再按计划实现并写 `execution-report.md`，review agent 只审查并写 `review-report.md`。
+如果任务由多个 agent 或工具协作完成，必须按 `docs/process/agent-workflow.md` 使用文件交接：需求平台模式下计划 agent 先写并回写需求可行性评估，结论允许继续后只写清 `requirement.md`，执行 agent 先基于最终需求设计判断是否适合拆分多个 subagent 并行执行，再生成或更新 `plan.md`，按计划实现并写 `execution-report.md`，review agent 只审查并写 `review-report.md`。
 
 阶段授权必须明确记录：用户选择方案、确认方向或同意建议，只代表进入需求设计阶段；不得据此自动改业务代码、写 `plan.md`、写 `execution-report.md` 或写 `review-report.md`。需求平台需求设计 Key 视为授权在最新基线创建或切换到平台建议的 ASCII 任务分支，但必须先通过 MCP 回写需求可行性评估；评估结论为需澄清、需调整或暂不可实现时，把结论反馈给需求人并停止，评估允许继续后才生成/调整 `requirement.md` 并回写需求设计版本。开始实现必须得到明确的执行授权，例如“开始执行”“按计划实现”或“允许改代码”。执行授权默认包含“执行完成后自动进入 Review、发现问题自动返修并复审直到最终 Review 通过”的闭环；用户明确要求只执行不 Review 时除外。新需求执行不使用 worktree，开发阶段必须沿用需求设计阶段创建的任务分支；当前分支为 `main` 或 `master` 时，除只读分析、项目接入初始化和明确的小文档修正外，不得开始功能实现。Execution Agent 不得自我 Review；Review Agent 只读审查并产出 `RF-*`，返修必须回到 Execution Agent。
 

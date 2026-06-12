@@ -853,6 +853,8 @@ class ReqDemandServiceImplTest
         assertTrue(instruction.getContent().contains("流转到待验收后即失效"));
         assertTrue(instruction.getContent().contains("多次用于执行计划、执行报告和 Review 报告回写"));
         assertTrue(instruction.getContent().contains("不得重新生成不同任务分支"));
+        assertTrue(instruction.getContent().contains("先分析需求是否可以拆分为多个 subagent"));
+        assertTrue(instruction.getContent().contains("互不共享状态"));
         assertFalse(instruction.getContent().contains("返修要求"));
         assertTrue(instruction.getContent().contains("执行计划"));
         assertTrue(instruction.getContent().contains("执行报告"));
@@ -958,6 +960,162 @@ class ReqDemandServiceImplTest
 
         verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_repairing"),
                 eq("web"), contains("提交返修"), isNull());
+    }
+
+    @Test
+    void creatorAcceptanceMovesDemandToCloseoutPending()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("review");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(reqDemandMapper.updateReqDemandStatus(5L, "closeout_pending", "creator")).thenReturn(1);
+        mockLoginUser(7L, "requirement_user");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.updateReqDemandStatus(5L, "closeout_pending", "creator"));
+
+        verify(reqDemandMapper).updateReqDemandStatus(5L, "closeout_pending", "creator");
+        verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_closeout_pending"),
+                eq("web"), contains("进入合并归档"), isNull());
+    }
+
+    @Test
+    void rejectsCompletingCloseoutUntilPlatformVerifiesPublishedIndexes()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqActionTokenMapper actionTokenMapper = mock(ReqActionTokenMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("closeout_pending");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L), repository(22L)));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
+        when(actionTokenMapper.countUsedActionToken("requirement_closeout", "publish_repository_index", 10L, 31L, 5L))
+                .thenReturn(1);
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "actionTokenMapper", actionTokenMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.updateReqDemandStatus(5L, "completed", "developer"));
+
+        assertTrue(exception.getMessage().contains("归档结果未通过平台验证"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
+    }
+
+    @Test
+    void selectedDeveloperCanCompleteCloseoutAfterPlatformVerification()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqActionTokenMapper actionTokenMapper = mock(ReqActionTokenMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("closeout_pending");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(reqDemandMapper.updateReqDemandStatus(5L, "completed", "developer")).thenReturn(1);
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L), repository(22L)));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Arrays.asList(batch(21L, "main"), batch(22L, "main")));
+        when(actionTokenMapper.countUsedActionToken("requirement_closeout", "publish_repository_index", 10L, 31L, 5L))
+                .thenReturn(2);
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "actionTokenMapper", actionTokenMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.updateReqDemandStatus(5L, "completed", "developer"));
+
+        verify(reqDemandMapper).updateReqDemandStatus(5L, "completed", "developer");
+        verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_completed"),
+                eq("web"), contains("归档完成"), isNull());
+    }
+
+    @Test
+    void createsRequirementCloseoutInstructionForCloseoutPendingDemand()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqDemand demand = demand(10L, 31L);
+        demand.setDemandId(6L);
+        demand.setDemandNo("REQ-006");
+        demand.setTitle("Demand");
+        demand.setStatus("closeout_pending");
+        when(reqDemandMapper.selectReqDemandByDemandId(6L)).thenReturn(demand);
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "release/main"));
+        ReqRepository backend = repository(21L);
+        backend.setRepoName("后端仓库");
+        ReqRepository frontend = repository(22L);
+        frontend.setRepoName("前端仓库");
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(backend, frontend));
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqActionInstruction first = new ReqActionInstruction();
+        first.setActionType("requirement_closeout");
+        first.setTargetMethod("publish_repository_index");
+        first.setToken("reqflow_action_closeout_backend");
+        first.setPrompt("归档发布后端仓库索引。");
+        ReqActionInstruction second = new ReqActionInstruction();
+        second.setActionType("requirement_closeout");
+        second.setTargetMethod("publish_repository_index");
+        second.setToken("reqflow_action_closeout_frontend");
+        second.setPrompt("归档发布前端仓库索引。");
+        when(actionTokenService.createInstruction(eq("requirement_closeout"), eq(10L), eq(31L), eq(6L),
+                eq("publish_repository_index"), any(), eq("生成合并归档指令"), eq("developer")))
+                .thenReturn(first, second);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+
+        ReqActionInstruction instruction = service.createRequirementDevelopInstruction(6L, "developer");
+
+        assertEquals("requirement_closeout", instruction.getActionType());
+        assertEquals("publish_repository_index", instruction.getTargetMethod());
+        assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
+        assertTrue(instruction.getContent().contains("需求分支: release/main"));
+        assertTrue(instruction.getContent().contains("本地开发分支: feature/req-6-demand"));
+        assertTrue(instruction.getContent().contains("git merge --squash feature/req-6-demand"));
+        assertTrue(instruction.getContent().contains("git push"));
+        assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));
+        assertTrue(instruction.getContent().contains("后端仓库"));
+        assertTrue(instruction.getContent().contains("reqflow_action_closeout_backend"));
+        assertTrue(instruction.getContent().contains("前端仓库"));
+        assertTrue(instruction.getContent().contains("reqflow_action_closeout_frontend"));
+        assertTrue(instruction.getContent().contains("arguments.actionToken"));
+        assertTrue(instruction.getContent().contains("一次性"));
+        assertTrue(instruction.getContent().contains("平台验证"));
+        assertTrue(instruction.getContent().contains("git branch -d feature/req-6-demand"));
     }
 
     private ReqDemand demand(Long projectId, Long variantId)

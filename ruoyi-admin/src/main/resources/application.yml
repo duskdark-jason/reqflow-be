@@ -13,12 +13,6 @@ ruoyi:
   # 验证码类型 math 数字计算 char 字符验证
   captchaType: math
 
-# 需求平台配置
-reqflow:
-  mcp:
-    # MCP 对外访问完整地址；为空时按请求头 Host / X-Forwarded-Host 自动推导
-    public-url: http://127.0.0.1:8080/requirement/mcp
-
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080

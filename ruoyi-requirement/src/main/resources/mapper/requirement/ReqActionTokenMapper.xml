@@ -112,6 +112,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where token_id = #{tokenId}
     </update>
 
+    <select id="countUsedActionToken" resultType="int">
+        select count(1)
+        from req_action_token
+        where action_type = #{actionType}
+          and target_method = #{targetMethod}
+          and project_id = #{projectId}
+          and variant_id = #{variantId}
+          and demand_id = #{demandId}
+          and status = '0'
+          and last_used_time is not null
+    </select>
+
     <delete id="deleteReqActionTokenByDemandIds" parameterType="Long">
         delete from req_action_token where demand_id in
         <foreach item="demandId" collection="array" open="(" separator="," close=")">

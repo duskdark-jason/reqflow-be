@@ -10,11 +10,13 @@ public interface IReqActionTokenService
     String ACTION_PROJECT_INIT = "project_init";
     String ACTION_REQUIREMENT_PLAN = "requirement_plan";
     String ACTION_REQUIREMENT_DEVELOP = "requirement_develop";
+    String ACTION_REQUIREMENT_CLOSEOUT = "requirement_closeout";
 
     String TARGET_REQUIREMENT_ANALYSIS = "requirement_analysis";
     String TARGET_REQUIREMENT_GENERATE = "requirement_generate";
     String TARGET_REQUIREMENT_DEVELOP = "requirement_develop";
     String TARGET_REQUIREMENT_REPAIR = "requirement_repair";
+    String TARGET_PUBLISH_REPOSITORY_INDEX = "publish_repository_index";
 
     ReqActionInstruction createProjectInitInstruction(ReqProject project, ReqVariant variant, String operator);
 

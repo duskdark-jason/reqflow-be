@@ -408,9 +408,13 @@ public class McpService
         }
         if ("publish_repository_index".equals(name))
         {
-            // 仓库索引发布会写入模块/影响面知识库，权限必须独立于普通文档保存能力校验。
-            requirePermission("publish_repository_index", "req:index:import");
-            return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(toIndexRequest(arguments), "mcp", currentUsername(), currentUserId())));
+            ReqRepositoryIndexImportRequest indexRequest = toIndexRequest(arguments);
+            // 有 actionToken 时由索引服务按项目初始化或需求归档上下文做一次性校验；无 token 的管理导入仍要求全局索引权限。
+            if (indexRequest.getActionToken() == null || indexRequest.getActionToken().isEmpty())
+            {
+                requirePermission("publish_repository_index", "req:index:import");
+            }
+            return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(indexRequest, "mcp", currentUsername(), currentUserId())));
         }
         requirePermission(name, "req:package:save");
         Long demandId = resolvePackageDemandId(name, arguments);

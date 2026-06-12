@@ -14,7 +14,9 @@
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqDemandStatusTransition.java` | 本轮追加需求分析/设计结论分支：开发人员可流转到待补充说明或需求无法实现；需求人补充说明后回到待生成需求设计；提交需求时自动生成需求草稿和上下文清单。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqDemandStatusTransition.java` | 本轮追加 `plan_ready -> plan_pending` 设计调整回退路径，需求人可在确认需求设计阶段提交调整说明并追加 `requirement_supplement` 版本。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | 本轮收紧执行开发指令：`confirmed` 仅允许指定开发人员开始开发，进入 `developing` 后才生成/使用开发阶段 actionToken；补充调整后必须回写新的 `requirement` 版本才能再次提交设计完成。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqDemandStatusTransition.java`、`ReqRepositoryIndexServiceImpl.java`、`McpService.java` | 本轮追加验收后合并归档流程：需求人确认验收后进入 `closeout_pending`，指定开发人员获取合并归档指令，按仓库使用 `requirement_closeout/publish_repository_index` token 更新知识库；平台验证归档索引后才允许 `completed`。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqMcpKeyController.java`、`ReqMcpUserKeyServiceImpl.java`、`ReqflowCodexSetupPackageTemplate.java` | 本轮调整 MCP Key 管理：普通用户新增默认绑定自己，管理员才可指定用户；删除修改和重置接口，新增安装指令包接口，创建响应继续明文展示 Key。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqMcpKeyController.java`、`ruoyi-admin/src/main/resources/application.yml`、`docs/db/sql/req_platform_req017_mcp_public_host_config.sql` | 本轮移除项目 yml 中 MCP 服务请求地址配置，改为系统参数 `reqflow.mcp.public-host`，管理员只填写 `IP:端口`，后端按请求协议和上下文路径生成 `/requirement/mcp`。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqDemandController.java`、`dto/ReqDemandSupplementRequest.java` | 本轮新增 `/requirement/demand/{demandId}/supplement` 需求补充说明接口，供需求人在待补充说明状态回填内容。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/domain/ReqDemand.java`、`ReqDemandMapper.xml` | 增加指定开发人员字段回显、开发人员候选查询和非管理员参与人列表过滤。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandStatusTransition.java` | 调整主状态流转为提需、资料生成、确认、开发、验收、办结。 |
@@ -26,7 +28,7 @@
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqRepositoryIndexServiceImpl.java`、`ReqIndexModuleMapper.xml`、`ReqImpactItemMapper.xml`、`McpService.java`、`ReqflowCodexGlobalSkillTemplate.java` | 本轮补充项目知识库快照同步：重复发布同仓库同分支索引会停用旧模块和旧影响面，模块知识查询只返回最新 imported 批次，并在 MCP schema 和初始化指令中说明完整快照语义。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java`、`ReqPackageServiceImpl.java` | 本轮新增 `requirement_supplement` 产物类型和 `requirement://{demandNo}/supplement` MCP 资源，保留上下文清单给 MCP 使用但不作为页面默认标签。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 生成后写入 24 小时最长过期时间；需求分析和需求生成 token 一次性消费，开发阶段和返修阶段 token 可在当前阶段复用并刷新 `last_used_time`。 |
-| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/ReqflowCodexGlobalSkillTemplate.java`、`ruoyi-requirement/src/main/resources/harness-template/**` | 同步全局 `reqflow-mcp` skill 和 harness 模板，拆分需求分析、需求生成、开发执行和返修阶段提示词。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/ReqflowCodexGlobalSkillTemplate.java`、`ruoyi-requirement/src/main/resources/harness-template/**` | 同步全局 `reqflow-mcp` skill 和 harness 模板，拆分需求分析、需求生成、开发执行、返修和合并归档阶段提示词，并要求生成执行计划前先分析是否适合拆分为多个 subagent 并行执行。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mapper/ReqDemandMapper.java`、`ReqDemandMapper.xml` | 编号统计改为全量需求计数，不按日期生成，并读写需求来源和附件字段。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/**`、`templates/requirement/**` | 执行包上下文增加需求来源、纯文本业务背景和附件，JSON 模板对文本引号做转义。 |
 | `docs/db/sql/req_platform_req016_demand_form_fields.sql` | 新增需求来源和附件字段幂等升级脚本。 |
@@ -37,7 +39,7 @@
 
 ## 模块知识库沉淀
 
-- 影响模块：需求管理/需求接口、需求管理/需求执行包、MCP动作Token、需求状态流转、返修版本记录、需求补充说明、自动需求草稿、actionToken 阶段有效期、需求来源和附件上传、参与人锁定、MCP Key 管理、项目知识库索引
+- 影响模块：需求管理/需求接口、需求管理/需求执行包、MCP动作Token、需求状态流转、返修版本记录、需求补充说明、自动需求草稿、actionToken 阶段有效期、需求来源和附件上传、参与人锁定、MCP Key 管理、MCP服务地址配置、项目知识库索引、合并归档
 - 模块知识库动作：更新
 - 模块知识库文档：docs/ai-harness/modules/requirement-platform.md
 - 无需更新原因：不适用
@@ -45,9 +47,9 @@
 ## 数据库变更沉淀
 
 - 数据库影响：是
-- SQL 脚本路径：docs/db/sql/req_platform_req016_demand_form_fields.sql、docs/db/sql/req_platform_req017_demand_developer_lock.sql
+- SQL 脚本路径：docs/db/sql/req_platform_req016_demand_form_fields.sql、docs/db/sql/req_platform_req017_demand_developer_lock.sql、docs/db/sql/req_platform_req017_mcp_public_host_config.sql
 - 数据库文档路径：docs/db/table-dictionary.md、docs/db/relationship.md
-- 数据库变更说明：新增 `req_demand.demand_source`、`req_demand.attachments` 和 `req_demand.developer_user_id`；历史来源默认 `BUSINESS`，历史需求允许指定开发人员为空，新建和草稿编辑由服务层强制指定。
+- 数据库变更说明：新增 `req_demand.demand_source`、`req_demand.attachments` 和 `req_demand.developer_user_id`；历史来源默认 `BUSINESS`，历史需求允许指定开发人员为空，新建和草稿编辑由服务层强制指定；新增系统参数 `reqflow.mcp.public-host` 初始化脚本，供管理员维护 MCP 服务 `IP:端口`。
 - 无需更新原因：不适用。
 
 ## 代码注释处理
@@ -69,6 +71,7 @@
 | L2 | AC-003、AC-004、AC-011、AC-017 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，59 个测试覆盖结论分支、自动需求草稿、需求人补充说明和 MCP 补充资源。 |
 | L2 | AC-019、AC-020 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,McpServiceTest,ReqMcpUserKeyServiceImplTest,ReqMcpKeyControllerTest,ReqPlatformRoleSqlTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮补充：覆盖执行指令必须进入 `developing` 后生成和使用、补充说明后必须回写新需求设计、MCP Key 普通用户绑定自己、安装指令不反向恢复明文、Controller 不暴露修改/重置入口、开发人员不分配 `req:mcp:key:edit`。 |
 | L2 | AC-021 | `mvn -pl ruoyi-requirement -am -Dtest=ReqRepositoryIndexServiceImplTest,ReqIndexModuleMapperXmlTest,ReqflowCodexGlobalSkillTemplateTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，18 个测试覆盖索引重复发布快照失效、模块查询最新批次过滤、前端范围过滤 SQL 和全局 skill 快照同步说明。 |
+| L2 | AC-022、AC-023、AC-024、AC-025 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,ReqRepositoryIndexServiceImplTest,ReqMcpKeyControllerTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，91 个测试覆盖验收后进入待合并归档、归档未验证拒绝办结、归档验证后指定开发人员办结、合并归档指令、`publish_repository_index` 合并归档 token 和 MCP 地址系统参数。 |
 | L2 | AC-017 | 连接本机 `ry-vue` 执行 `docs/db/sql/req_platform_req017_demand_developer_lock.sql` 并查询字段/索引 | 通过，`req_demand.developer_user_id` 和 `idx_req_demand_developer` 已存在。 |
 | L3 | AC-004、AC-006、AC-007、AC-009、AC-017 | 使用 `xqr/123456` 和 `yfr/123456` 调用需求接口流转 | 通过，xqr 创建 draft 并指定 yfr；yfr 提交前不可见，提交后可见；xqr 生成计划/开发指令被拒绝，yfr 可生成计划和开发指令，指令包含阶段有效 token 规则。 |
 | L3 | AC-015 | 使用 `xqr/123456` 登录后调用 `/requirement/index/impact/suggest?projectId=1&variantId=1&moduleId=16` | 通过，返回 HTTP 200 和 `code=200`，不再触发权限不足。 |
@@ -110,12 +113,16 @@
 | AC-019 | 已完成 | 本轮补充：`plan_ready` 需求设计待确认阶段可由需求创建人提交需求设计调整说明，服务端追加 `requirement_supplement` 版本并回到 `plan_pending`，且开发人员必须回写晚于补充说明的新 `requirement` 版本后才能再次提交设计完成，支持多轮设计迭代。 |
 | AC-020 | 已完成 | 本轮补充：普通用户新增 MCP Key 强制绑定自己，管理员可指定用户；后端删除修改/重置入口并新增安装指令包接口；创建响应明文展示 Key，历史指令不反向恢复明文。 |
 | AC-021 | 已完成 | 本轮补充：`publish_repository_index` 对同仓库同分支重复发布按完整快照同步，旧模块和旧影响面停用；模块知识查询限制每个仓库和真实分支最新 imported 批次，并支持按 `repoScope=FRONTEND` 过滤前端页面模块。 |
+| AC-022 | 已完成 | 本轮补充：`review -> closeout_pending` 由需求创建人确认验收触发；合并归档指令包含 squash merge、push、`publish_repository_index`、平台验证和删除本地开发分支步骤。 |
+| AC-023 | 已完成 | 本轮补充：`closeout_pending -> completed` 前校验有效仓库在需求基线分支的 imported 索引批次，并校验本需求合并归档 token 使用记录；未验证时拒绝办结，验证后指定开发人员可办结。 |
+| AC-024 | 已完成 | 本轮补充：执行开发指令和全局 `reqflow-mcp` skill 要求生成 `plan.md` 前分析是否可拆分多个 subagent 并行执行，边界不清时保持单执行路径。 |
+| AC-025 | 已完成 | 本轮补充：`ReqMcpKeyController` 不再读取项目 yml 的 `reqflow.mcp.public-url`，改为读取系统参数 `reqflow.mcp.public-host` 并拼接 `/requirement/mcp`；新增幂等系统参数初始化脚本。 |
 
 ## 计划偏差
 
 - MCP 阶段指令没有修改 `ReqActionTokenServiceImpl` 的通用模板，而是在需求服务中生成面向需求分析、需求生成、开发执行和返修的专用指令文本。
 - 同步扩展 MCP 包保存工具的 `actionToken` 解析能力，让开发人员复制指令后可以不手填 `demandId`。
-- 根据用户返修反馈，额外增加初始化式指令字段、执行开发指令、返修状态事件和 actionToken 生命周期限制。
+- 根据用户返修反馈，额外增加初始化式指令字段、执行开发指令、返修状态事件、合并归档闭环和 actionToken 生命周期限制。
 
 ## Review 返修记录
 
@@ -125,11 +132,12 @@
 | RF-003 | 已修复 | 已补充 actionToken 流程阶段有效期、24 小时最长兜底、普通 token 一次性消费、开发阶段 token 复用、并发条件更新、指令文案和文档。 | `ReqActionTokenServiceImplTest` 通过；`mvn -pl ruoyi-requirement -am test` 通过 |
 | RF-004 | 已修复 | 已按用户反馈把需求分析、需求生成、开发执行和返修阶段的指令内容与 actionToken 拆分为当前阶段最小工具集合；返修阶段只包含执行报告和 Review 报告。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
 | RF-005 | 已修复 | 已扩展补充说明接口支持需求设计待确认阶段提交调整说明，追加补充版本并回到待生成需求设计阶段。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
+| RF-006 | 已修复 | 已增加验收后的合并归档阶段，平台验证索引归档结果后才允许办结；同时把 MCP 服务地址改为系统参数维护，并在开发计划指令中加入 subagent 拆分判断。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,ReqRepositoryIndexServiceImplTest,ReqMcpKeyControllerTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
 
 ## 风险与后续
 
 - 新编号基于当前需求总数递增；如果线上已经存在旧日期编号，新建数据会从当前总数后继续生成 `REQ-###`，历史编号不迁移。
 - 状态推进接口仍沿用 `req:demand:edit` 和状态机约束；前端按角色过滤具体流程按钮。
 - 新增管理员删除需求权限 `req:demand:remove`，删除时清理资料包版本和动作 token；需求人员和开发人员角色脚本不分配删除权限。
-- 本轮已在本机 `ry-vue` 执行 `docs/db/sql/req_platform_req017_demand_developer_lock.sql`；部署其他环境时仍需按顺序执行 `docs/db/sql/req_platform_req016_demand_form_fields.sql` 和 `docs/db/sql/req_platform_req017_demand_developer_lock.sql`。
+- 本轮已在本机 `ry-vue` 执行 `docs/db/sql/req_platform_req017_demand_developer_lock.sql`；部署其他环境时仍需按顺序执行 `docs/db/sql/req_platform_req016_demand_form_fields.sql`、`docs/db/sql/req_platform_req017_demand_developer_lock.sql` 和 `docs/db/sql/req_platform_req017_mcp_public_host_config.sql`。
 - 返修历史复用 `req_package_version` 追加版本，不新增返修表；如后续需要对每轮返修单独命名，可再扩展版本元数据。

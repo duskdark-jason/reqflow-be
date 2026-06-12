@@ -30,12 +30,12 @@
 - 必须检查当前 workspace 内仓库的 Git 远端是否与需求平台关联的系统一致；不一致时停止，除非能自动切换到明确匹配的本地仓库。
 - 必须检查当前分支是否为需求平台需求设计阶段创建的任务分支；不一致时优先自动切换到同名任务分支，切换失败必须停止并说明当前分支、期望任务分支和处理建议。
 - 开发阶段不得重新生成不同任务分支；如本地任务分支缺失，只能按需求平台记录的同名任务分支恢复，不能自行创造新分支名。
-- 进入开发阶段后，将最终需求设计落地或校准到 `docs/specs/active/REQ-001-中文需求标题/requirement.md`，再由 Execution Agent 基于最终需求设计生成或更新 `plan.md`，然后按计划执行开发。
+- 进入开发阶段后，将最终需求设计落地或校准到 `docs/specs/active/REQ-001-中文需求标题/requirement.md`，再由 Execution Agent 基于最终需求设计先判断是否适合拆分为多个 subagent 并行执行；只有职责边界清晰、无共享状态且可独立验证时才拆分，否则保持单执行路径。随后生成或更新 `plan.md`，然后按计划执行开发。
 - 落地 `meta.md` 时必须记录需求平台返回的影响模块，并声明模块知识库动作。涉及菜单、页面、接口、权限、核心流程或数据口径时，必须更新 `docs/ai-harness/modules/*.md`。
 - 开发阶段使用同一个开发阶段 actionToken 完成 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 回写；该 token 只在 `developing` 流程阶段有效，转入待验收后失效。
 - 开发完成后进入自动 Review 循环：Execution Agent 持续追加或更新 `execution-report.md` 并通过 MCP `upload_execution_report` 回写新版本；Review Agent 只读审查、追加或更新 `review-report.md` 并通过 MCP `upload_review_report` 回写新版本。发现 `RF-*` 后自动切回执行阶段修复并回填 `execution-report.md`，再自动复审，直到最终 Review 结论为 `通过`。
 - 返修阶段沿用同一任务分支和同一 spec 目录；需求人补充返修说明后，开发人员复制新的返修任务提示词，使用同一个返修阶段 actionToken 持续补充 `execution-report.md` 和 `review-report.md` 并回写平台。返修阶段不得重新生成 `requirement.md` 或 `plan.md`，需求平台按版本保留每次执行和 Review 资料。
-- 完成后通知开发人员确认；merge、push、rebase 或删除远端分支仍需明确授权。
+- 需求人验收通过后，需求平台进入待合并归档阶段并给指定开发人员下发合并归档指令。开发人员必须在每个目标仓库把本地任务分支 squash merge 到需求基线分支，push 基线分支，再通过 `publish_repository_index` 使用合并归档 actionToken 发布当前完整知识库快照；平台验证所有有效仓库归档索引通过后，才允许确认完成并删除本地开发分支。
 
 ## 模式三：项目接入初始化模式
 
