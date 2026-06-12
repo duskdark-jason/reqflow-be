@@ -21,7 +21,7 @@
 - 需求创建或草稿修改时指定一个开发人员；提交后普通访问、流程动作、MCP 指令和资料包回写锁定在需求创建人与该指定开发人员之间，管理员不受参与人限制。
 - 调整 MCP 项目知识库同步语义：同仓库同分支重复发布索引视为当前快照，旧模块和旧影响面失效；前后端项目提需求时以前端页面/菜单模块作为需求人员主选择。
 - 需求人确认验收后不直接办结，先流转到待合并归档，由指定开发人员按指令 squash merge 本地任务分支到需求基线分支、push、更新平台知识库并删除本地开发分支。
-- 平台必须验证合并归档结果：有效仓库在需求基线分支均有最新 imported 索引批次，且本需求合并归档 token 已使用后，才允许结束任务流。
+- 平台必须验证合并归档结果：每个有效仓库都必须使用自身绑定的本需求合并归档 token 发布需求基线分支完整索引，并产生带本需求归档上下文的 imported 批次后，才允许结束任务流。
 - 生成执行计划前必须先分析需求是否能拆分给多个 subagent 并行执行，只有边界清晰、无共享状态且可独立验证时才拆分。
 - MCP 服务请求地址不再配置在项目 yml 中，改由系统管理员登录系统参数维护 `reqflow.mcp.public-host`，仅填写 `IP:端口`。
 
@@ -72,7 +72,7 @@
 - 执行阶段：`confirmed` 状态只允许指定开发人员点击开始开发；进入 `developing` 后，`develop-instruction` 才给出一个当前开发阶段有效的 actionToken，可用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，流转到 `review` 后立即失效；该指令不包含返修说明。
 - 执行计划：生成 `plan.md` 前必须先判断需求是否适合拆分为多个 subagent 并行执行；只有职责边界清晰、无共享状态且可独立验证时才拆分，否则记录不拆分原因并保持单执行路径。
 - 返修阶段：`develop-instruction` 在 `repairing` 状态只给出一个当前返修阶段有效的 actionToken，可用于 `upload_execution_report` 和 `upload_review_report`，流转回 `review` 后立即失效；该指令不包含 `save_development_plan`。
-- 合并归档阶段：需求创建人在 `review` 确认验收后进入 `closeout_pending`；指定开发人员通过 `develop-instruction` 获取合并归档指令，按仓库使用一次性 `requirement_closeout/publish_repository_index` token 发布需求基线分支完整索引。平台确认所有有效仓库均有最新 imported 索引批次且归档 token 已使用后，才允许流转到 `completed`。
+- 合并归档阶段：需求创建人在 `review` 确认验收后进入 `closeout_pending`；指定开发人员通过 `develop-instruction` 获取合并归档指令，按仓库使用一次性 `requirement_closeout/publish_repository_index` token 发布需求基线分支完整索引。平台确认每个有效仓库的归档 token 已使用，且对应仓库产生带本需求归档上下文的 imported 批次后，才允许流转到 `completed`。
 - MCP 服务地址：`codexSetupPackage` 内 MCP 地址优先使用系统参数 `reqflow.mcp.public-host`，管理员只填写 `IP:端口`；后端按请求协议和 context-path 拼接 `/requirement/mcp`，系统参数为空时按请求头推导。
 - 资料包读取：需求详情内嵌资料包读取可使用 `req:demand:query`，独立 Agent 资料包页面仍使用 `req:package:list` 菜单权限。
 - 管理员删除：管理员拥有 `req:demand:remove` 删除需求按钮权限，删除时清理需求资料包版本和动作 token；需求人员、开发人员不展示也不能调用删除。

@@ -1,5 +1,6 @@
 package com.ruoyi.requirement.service.impl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -531,7 +532,8 @@ public class ReqDemandServiceImpl implements IReqDemandService
                         IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
                         prompt + "目标仓库：" + repository.getRepoName(),
                         "生成合并归档指令",
-                        operator))
+                        operator,
+                        ReqCloseoutContext.tokenRemark(repository.getRepoId())))
                 .collect(Collectors.toList());
         ReqActionInstruction firstInstruction = repositoryInstructions.get(0);
         firstInstruction.setContent(requirementCloseoutInstructionContent(prompt, demand, variant, repositories,
@@ -570,6 +572,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             ReqActionInstruction instruction = repositoryInstructions.get(i);
             content.append("\n- 仓库：").append(firstNotEmpty(repository.getRepoName(), repository.getRepoUrl()))
                     .append("\n  remoteUrl: ").append(text(repository.getRepoUrl()))
+                    .append("\n  repoId: ").append(repository.getRepoId())
                     .append("\n  repoType: ").append(text(repository.getRepoType()))
                     .append("\n  归档 actionToken: ").append(instruction.getToken())
                     .append("\n  调用要求：mcpTool: reqflow.publish_repository_index，arguments.actionToken 填上面的归档 actionToken。");
@@ -779,20 +782,63 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 .map(ReqRepository::getRepoId)
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
-        Set<Long> indexedRepositoryIds = loadImportedBatches(demand.getProjectId(), variant.getBaselineBranch()).stream()
+        Set<Long> closeoutIndexedRepositoryIds = loadCloseoutImportedBatches(demand, variant.getBaselineBranch(),
+                repositoryIds).stream()
                 .map(ReqRepositoryIndexBatch::getRepoId)
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
-        int usedCloseoutTokens = actionTokenMapper.countUsedActionToken(
-                IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
-                IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
-                demand.getProjectId(),
-                demand.getVariantId(),
-                demand.getDemandId());
-        if (!indexedRepositoryIds.containsAll(repositoryIds) || usedCloseoutTokens < repositoryIds.size())
+        if (!closeoutIndexedRepositoryIds.containsAll(repositoryIds) || !hasUsedCloseoutTokensForAllRepositories(demand,
+                repositoryIds))
         {
             throw new ServiceException("归档结果未通过平台验证：请先按合并归档指令完成全部仓库 push 和知识库发布");
         }
+    }
+
+    private List<ReqRepositoryIndexBatch> loadCloseoutImportedBatches(ReqDemand demand, String branchName,
+            Set<Long> repositoryIds)
+    {
+        List<ReqRepositoryIndexBatch> batches = new ArrayList<>();
+        for (Long repositoryId : repositoryIds)
+        {
+            ReqRepositoryIndexBatch query = new ReqRepositoryIndexBatch();
+            query.setProjectId(demand.getProjectId());
+            query.setRepoId(repositoryId);
+            query.setBranchName(branchName);
+            query.setStatus("imported");
+            query.setRemark(ReqCloseoutContext.batchRemark(demand.getDemandId(), repositoryId));
+            try
+            {
+                batches.addAll(safeList(batchMapper.selectReqRepositoryIndexBatchList(query)));
+            }
+            catch (DataAccessException e)
+            {
+                if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_repository_index_batch"))
+                {
+                    return Collections.emptyList();
+                }
+                throw e;
+            }
+        }
+        return batches;
+    }
+
+    private boolean hasUsedCloseoutTokensForAllRepositories(ReqDemand demand, Set<Long> repositoryIds)
+    {
+        for (Long repositoryId : repositoryIds)
+        {
+            int usedTokenCount = actionTokenMapper.countUsedActionTokenByRemark(
+                    IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
+                    IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
+                    demand.getProjectId(),
+                    demand.getVariantId(),
+                    demand.getDemandId(),
+                    ReqCloseoutContext.tokenRemark(repositoryId));
+            if (usedTokenCount < 1)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean isPackageVersionNotEarlier(ReqPackageVersion candidate, ReqPackageVersion baseline)

@@ -56,14 +56,16 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         assertIndexTablesReady();
 
         // actionToken/mcpKey 会把请求补齐到平台登记的项目分支，兼容路径仍支持显式 projectId/repoId。
-        ReqVariant branchVariant = resolveRequestContext(request);
-        resolveRepository(request);
+        ResolvedRequestContext context = resolveRequestContext(request);
+        ReqVariant branchVariant = context.branchVariant;
+        ReqRepository repository = resolveRepository(request);
+        validateCloseoutRepositoryScope(context.actionToken, repository);
         if (branchVariant == null)
         {
             branchVariant = resolveBranchVariant(request);
         }
         validateModuleKnowledgeForProjectInit(request);
-        ReqRepositoryIndexBatch batch = buildBatch(request, sourceType, username);
+        ReqRepositoryIndexBatch batch = buildBatch(request, sourceType, username, context.actionToken);
         batchMapper.insertReqRepositoryIndexBatch(batch);
         Long batchId = batch.getBatchId();
 
@@ -311,7 +313,8 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         }
     }
 
-    private ReqRepositoryIndexBatch buildBatch(ReqRepositoryIndexImportRequest request, String sourceType, String username)
+    private ReqRepositoryIndexBatch buildBatch(ReqRepositoryIndexImportRequest request, String sourceType,
+            String username, ReqActionToken actionToken)
     {
         ReqRepositoryIndexBatch batch = new ReqRepositoryIndexBatch();
         batch.setProjectId(request.getProjectId());
@@ -330,6 +333,10 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         batch.setDocumentCount(safeList(request.getDocuments()).size());
         batch.setStatus("imported");
         batch.setCreateBy(username);
+        if (isCloseoutActionToken(actionToken))
+        {
+            batch.setRemark(ReqCloseoutContext.batchRemark(actionToken.getDemandId(), request.getRepoId()));
+        }
         return batch;
     }
 
@@ -452,7 +459,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         return variants == null || variants.isEmpty() ? null : variants.get(0);
     }
 
-    private ReqVariant resolveRequestContext(ReqRepositoryIndexImportRequest request)
+    private ResolvedRequestContext resolveRequestContext(ReqRepositoryIndexImportRequest request)
     {
         if (StringUtils.isNotEmpty(request.getActionToken()))
         {
@@ -461,15 +468,15 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         }
         if (StringUtils.isEmpty(request.getMcpKey()))
         {
-            return null;
+            return new ResolvedRequestContext(null, null);
         }
         ReqVariant branch = resolveBranchByMcpKey(request.getMcpKey());
         request.setProjectId(branch.getProjectId());
         request.setBranchName(branch.getBaselineBranch());
-        return branch;
+        return new ResolvedRequestContext(branch, null);
     }
 
-    private ReqVariant resolveBranchByActionToken(String actionToken, ReqRepositoryIndexImportRequest request)
+    private ResolvedRequestContext resolveBranchByActionToken(String actionToken, ReqRepositoryIndexImportRequest request)
     {
         ReqActionToken token = actionTokenService.resolveToken(actionToken);
         if (!IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX.equals(token.getTargetMethod()))
@@ -500,7 +507,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         }
         request.setProjectId(branch.getProjectId());
         request.setBranchName(branch.getBaselineBranch());
-        return branch;
+        return new ResolvedRequestContext(branch, token);
     }
 
     private void validateCloseoutActionToken(ReqActionToken token, ReqVariant branch)
@@ -522,6 +529,41 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
                 || !branch.getVariantId().equals(demand.getVariantId()))
         {
             throw new ServiceException("归档动作Token与需求项目分支不一致");
+        }
+    }
+
+    private void validateCloseoutRepositoryScope(ReqActionToken token, ReqRepository repository)
+    {
+        if (!isCloseoutActionToken(token))
+        {
+            return;
+        }
+        Long expectedRepoId = ReqCloseoutContext.repoIdFromTokenRemark(token.getRemark());
+        if (expectedRepoId == null)
+        {
+            throw new ServiceException("归档动作Token未绑定目标仓库");
+        }
+        if (repository == null || repository.getRepoId() == null || !expectedRepoId.equals(repository.getRepoId()))
+        {
+            throw new ServiceException("归档动作Token与目标仓库不一致");
+        }
+    }
+
+    private boolean isCloseoutActionToken(ReqActionToken token)
+    {
+        return token != null && IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType());
+    }
+
+    private static class ResolvedRequestContext
+    {
+        private final ReqVariant branchVariant;
+
+        private final ReqActionToken actionToken;
+
+        private ResolvedRequestContext(ReqVariant branchVariant, ReqActionToken actionToken)
+        {
+            this.branchVariant = branchVariant;
+            this.actionToken = actionToken;
         }
     }
 

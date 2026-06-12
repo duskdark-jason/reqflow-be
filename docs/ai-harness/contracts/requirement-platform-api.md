@@ -173,7 +173,7 @@ rejected -> archived
 
 `develop-instruction` 接口返回 `ReqActionInstruction`。`developing` 和 `repairing` 状态返回 `actionType=requirement_develop`，`closeout_pending` 状态返回 `actionType=requirement_closeout`；仅指定开发人员或管理员可生成。`confirmed` 待执行开发阶段只允许指定开发人员点击“开始开发”流转到 `developing`，不生成执行指令。`developing` 返回开发执行指令，`targetMethod=requirement_develop`，复制内容包含 `reqflow-mcp`、`mcpServer: reqflow`、`mcpTool: reqflow.save_development_plan`、`mcpTool: reqflow.upload_execution_report`、`mcpTool: reqflow.upload_review_report`、`demandId`、`demandNo`、任务分支、开发阶段 `actionToken`、`arguments.actionToken` 使用说明，以及“当前开发阶段内有效、流转到待验收后即失效、最长保留 24 小时、可在本阶段多次回写”的提示；生成 `plan.md` 前必须先分析该需求是否可以拆分给多个 subagent 并行执行，只有模块边界清晰、无共享状态、可独立验证时才拆分。同一个开发阶段 actionToken 可用于执行计划、执行报告和 Review 报告回写。`repairing` 返回返修指令，`targetMethod=requirement_repair`，复制内容只包含 `upload_execution_report`、`upload_review_report`、返修阶段 `actionToken` 和返修阶段有效期提示；本阶段不得重新生成需求设计或执行计划。开发阶段和返修阶段 actionToken 都不能替代人员 `X-MCP-Key`。
 
-`closeout_pending` 返回合并归档指令，`actionType=requirement_closeout`，`targetMethod=publish_repository_index`，复制内容包含需求基线分支、建议任务分支、本地 squash merge、push、按当前完整快照调用 `reqflow.publish_repository_index` 更新知识库、平台验证和删除本地开发分支的顺序。服务端会按当前项目分支下每个有效仓库生成一个合并归档 actionToken；该 token 只用于对应需求的 `publish_repository_index`，最长 24 小时且只能使用一次。需求从 `closeout_pending` 流转到 `completed` 前，服务端必须确认目标分支每个有效仓库存在最新 `imported` 索引批次，并且本需求生成的合并归档 token 已被使用；否则返回 `归档结果未通过平台验证` 类业务异常。
+`closeout_pending` 返回合并归档指令，`actionType=requirement_closeout`，`targetMethod=publish_repository_index`，复制内容包含需求基线分支、建议任务分支、本地 squash merge、push、按当前完整快照调用 `reqflow.publish_repository_index` 更新知识库、平台验证和删除本地开发分支的顺序。服务端会按当前项目分支下每个有效仓库生成一个合并归档 actionToken；该 token 只用于对应需求和对应仓库的 `publish_repository_index`，最长 24 小时且只能使用一次。需求从 `closeout_pending` 流转到 `completed` 前，服务端必须逐仓确认本需求对应仓库的合并归档 token 已使用，且该 token 成功产生带本需求归档上下文的 `imported` 索引批次；否则返回 `归档结果未通过平台验证` 类业务异常。
 
 ## 执行包接口
 
@@ -224,7 +224,7 @@ harness_init_result
 
 ## MCP动作Token接口与数据模型
 
-项目分支初始化、需求分析、需求生成、开发执行、返修和合并归档 token 统一使用 `req_action_token` 表保存动作上下文。复制给 MCP 的明文 token 只在指令响应中出现，服务端落库字段为 SHA-256 哈希、token 前缀、动作类型、目标 MCP 方法、项目、分支、需求、状态、过期时间和最近使用时间。
+项目分支初始化、需求分析、需求生成、开发执行、返修和合并归档 token 统一使用 `req_action_token` 表保存动作上下文。复制给 MCP 的明文 token 只在指令响应中出现，服务端落库字段为 SHA-256 哈希、token 前缀、动作类型、目标 MCP 方法、项目、分支、需求、状态、过期时间和最近使用时间。合并归档 token 还会在 `remark` 中绑定目标仓库，合并归档索引批次会在 `req_repository_index_batch.remark` 中记录本需求和仓库上下文，用于办结前的平台校验。
 
 `req_action_token.action_type` 当前支持：
 
@@ -347,6 +347,6 @@ MCP 安全边界：
 - 不允许执行 Git、shell、clone、branch、文件系统写入或大模型调用。
 - `get_harness_template` 必须校验 `req:project:query`，返回项目、仓库、项目分支、`reqflowMcpSkill`、`workspaceFiles`、workspace `AGENTS.md` 内容和每个仓库的 harness 初始化指令及文件清单；该工具只读平台配置，不写仓库文件、不执行 Git 或 shell。
 - `register_harness_init_result` 只更新 `req_repository` 的 harness 字段，必须校验 `req:package:save`。
-- `publish_repository_index` 无 actionToken 时必须校验 `req:index:import`；携带项目初始化或需求合并归档 actionToken 时，可跳过宽泛索引导入权限，由索引服务校验 token 绑定项目、分支、仓库、需求状态和有效期。该工具优先接收 `actionToken + remoteUrl`，兼容旧 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
+- `publish_repository_index` 无 actionToken 时必须校验 `req:index:import`；携带项目初始化或需求合并归档 actionToken 时，可跳过宽泛索引导入权限，由索引服务校验 token 绑定项目、分支、仓库、需求状态和有效期。合并归档 token 只能发布到自身绑定仓库，发布成功后索引批次必须记录本需求归档上下文，供 `closeout_pending -> completed` 逐仓校验。该工具优先接收 `actionToken + remoteUrl`，兼容旧 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
 - 报告上传、计划保存和执行资料类工具必须校验 `req:package:save`，并且只追加 `req_package_version`。`upload_requirement_assessment` 支持需求分析 actionToken 定位需求；`save_requirement_package` 支持需求生成 actionToken 定位需求；`save_development_plan`、`upload_execution_report` 和 `upload_review_report` 支持开发阶段 actionToken 定位需求；返修阶段只支持 `upload_execution_report` 和 `upload_review_report` 使用同一个返修阶段 actionToken 定位需求；actionToken 不能替代人员鉴权。
 - `artifactType` 必须属于本文列出的支持类型。

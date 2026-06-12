@@ -504,6 +504,7 @@ class ReqRepositoryIndexServiceImplTest
         token.setVariantId(8L);
         token.setDemandId(6L);
         token.setTargetMethod(IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
+        token.setRemark("closeoutRepoId=2");
         when(actionTokenService.resolveToken("reqflow_action_closeout")).thenReturn(token);
 
         ReqVariant branch = new ReqVariant();
@@ -545,7 +546,64 @@ class ReqRepositoryIndexServiceImplTest
         verify(batchMapper).insertReqRepositoryIndexBatch(batchCaptor.capture());
         assertEquals("release/main", batchCaptor.getValue().getBranchName());
         assertEquals(1L, batchCaptor.getValue().getProjectId());
+        assertEquals("closeoutDemandId=6;repoId=2", batchCaptor.getValue().getRemark());
         verify(actionTokenService).resolveToken("reqflow_action_closeout");
+    }
+
+    @Test
+    void rejectsCloseoutIndexWhenActionTokenBelongsToAnotherRepository()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, moduleMapper, impactMapper, repositoryMapper,
+                variantMapper, mock(ReqActivityLogService.class), actionTokenService, demandMapper);
+
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT);
+        token.setProjectId(1L);
+        token.setVariantId(8L);
+        token.setDemandId(6L);
+        token.setTargetMethod(IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
+        token.setRemark("closeoutRepoId=2");
+        when(actionTokenService.resolveToken("reqflow_action_closeout")).thenReturn(token);
+
+        ReqVariant branch = new ReqVariant();
+        branch.setVariantId(8L);
+        branch.setProjectId(1L);
+        branch.setBaselineBranch("release/main");
+        branch.setStatus("0");
+        when(variantMapper.selectReqVariantByVariantId(8L)).thenReturn(branch);
+        ReqDemand demand = new ReqDemand();
+        demand.setDemandId(6L);
+        demand.setProjectId(1L);
+        demand.setVariantId(8L);
+        demand.setStatus("closeout_pending");
+        when(demandMapper.selectReqDemandByDemandId(6L)).thenReturn(demand);
+
+        ReqRepository repository = new ReqRepository();
+        repository.setRepoId(3L);
+        repository.setProjectId(1L);
+        repository.setRepoUrl("git@example.com:reqflow-be.git");
+        repository.setRepoType("BACKEND");
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository));
+
+        ReqRepositoryIndexImportRequest request = new ReqRepositoryIndexImportRequest();
+        request.setActionToken("reqflow_action_closeout");
+        request.setRemoteUrl("git@example.com:reqflow-be.git");
+        request.setCommitHash("abc123");
+        request.setIndexVersion("v1");
+        request.setModules(Collections.singletonList(module("requirement-demand", "需求提交")));
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.importRepositoryIndex(request, "mcp", "tester", 7L));
+
+        assertTrue(exception.getMessage().contains("归档动作Token与目标仓库不一致"));
+        verify(batchMapper, never()).insertReqRepositoryIndexBatch(any());
     }
 
     @Test

@@ -23,5 +23,8 @@ public interface IReqActionTokenService
     ReqActionInstruction createInstruction(String actionType, Long projectId, Long variantId, Long demandId,
             String targetMethod, String prompt, String copyLabel, String operator);
 
+    ReqActionInstruction createInstruction(String actionType, Long projectId, Long variantId, Long demandId,
+            String targetMethod, String prompt, String copyLabel, String operator, String remark);
+
     ReqActionToken resolveToken(String plainToken);
 }

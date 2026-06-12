@@ -67,11 +67,11 @@
 | L1 | AC-013、AC-015、AC-017 | 在前端 companion 执行 `npm run build:prod` | 通过，仅保留既有资产体积 warning。 |
 | L2 | AC-004、AC-006、AC-009、AC-011、AC-012 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，57 个测试覆盖需求分析/需求生成指令拆分、开发阶段同 token、返修阶段同 token、跨阶段工具拒绝和流程阶段失效。 |
 | L2 | AC-015 | `mvn -pl ruoyi-requirement -am -Dtest=ReqIndexControllerPermissionTest -Dsurefire.failIfNoSpecifiedTests=false test` | 先失败复现 `impact/suggest` 仅允许 `req:index:list`，修复后通过，锁定需求表单上下文权限。 |
-| L2 | AC-001~AC-021 | `mvn -pl ruoyi-requirement -am test` | 本轮通过，136 个测试覆盖编号、创建人、状态、阶段指令、返修事件、来源必填、上传 2MB 限制、角色动作隔离、删除链路、参与人锁定、SQL 权限、全局 skill 模板和项目知识库快照同步。 |
+| L2 | AC-001~AC-025 | `mvn -pl ruoyi-requirement -am test` | 本轮通过，144 个测试覆盖编号、创建人、状态、阶段指令、返修事件、来源必填、上传 2MB 限制、角色动作隔离、删除链路、参与人锁定、SQL 权限、全局 skill 模板、项目知识库快照同步和合并归档逐仓验证。 |
 | L2 | AC-003、AC-004、AC-011、AC-017 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，59 个测试覆盖结论分支、自动需求草稿、需求人补充说明和 MCP 补充资源。 |
 | L2 | AC-019、AC-020 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,McpServiceTest,ReqMcpUserKeyServiceImplTest,ReqMcpKeyControllerTest,ReqPlatformRoleSqlTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮补充：覆盖执行指令必须进入 `developing` 后生成和使用、补充说明后必须回写新需求设计、MCP Key 普通用户绑定自己、安装指令不反向恢复明文、Controller 不暴露修改/重置入口、开发人员不分配 `req:mcp:key:edit`。 |
 | L2 | AC-021 | `mvn -pl ruoyi-requirement -am -Dtest=ReqRepositoryIndexServiceImplTest,ReqIndexModuleMapperXmlTest,ReqflowCodexGlobalSkillTemplateTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，18 个测试覆盖索引重复发布快照失效、模块查询最新批次过滤、前端范围过滤 SQL 和全局 skill 快照同步说明。 |
-| L2 | AC-022、AC-023、AC-024、AC-025 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,ReqRepositoryIndexServiceImplTest,ReqMcpKeyControllerTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，91 个测试覆盖验收后进入待合并归档、归档未验证拒绝办结、归档验证后指定开发人员办结、合并归档指令、`publish_repository_index` 合并归档 token 和 MCP 地址系统参数。 |
+| L2 | AC-022、AC-023、AC-024、AC-025 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqRepositoryIndexServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，93 个测试覆盖验收后进入待合并归档、归档未验证拒绝办结、归档验证后指定开发人员办结、合并归档指令、`publish_repository_index` 仓库绑定归档 token、MCP schema 和动作 token 生命周期。 |
 | L2 | AC-017 | 连接本机 `ry-vue` 执行 `docs/db/sql/req_platform_req017_demand_developer_lock.sql` 并查询字段/索引 | 通过，`req_demand.developer_user_id` 和 `idx_req_demand_developer` 已存在。 |
 | L3 | AC-004、AC-006、AC-007、AC-009、AC-017 | 使用 `xqr/123456` 和 `yfr/123456` 调用需求接口流转 | 通过，xqr 创建 draft 并指定 yfr；yfr 提交前不可见，提交后可见；xqr 生成计划/开发指令被拒绝，yfr 可生成计划和开发指令，指令包含阶段有效 token 规则。 |
 | L3 | AC-015 | 使用 `xqr/123456` 登录后调用 `/requirement/index/impact/suggest?projectId=1&variantId=1&moduleId=16` | 通过，返回 HTTP 200 和 `code=200`，不再触发权限不足。 |
@@ -114,7 +114,7 @@
 | AC-020 | 已完成 | 本轮补充：普通用户新增 MCP Key 强制绑定自己，管理员可指定用户；后端删除修改/重置入口并新增安装指令包接口；创建响应明文展示 Key，历史指令不反向恢复明文。 |
 | AC-021 | 已完成 | 本轮补充：`publish_repository_index` 对同仓库同分支重复发布按完整快照同步，旧模块和旧影响面停用；模块知识查询限制每个仓库和真实分支最新 imported 批次，并支持按 `repoScope=FRONTEND` 过滤前端页面模块。 |
 | AC-022 | 已完成 | 本轮补充：`review -> closeout_pending` 由需求创建人确认验收触发；合并归档指令包含 squash merge、push、`publish_repository_index`、平台验证和删除本地开发分支步骤。 |
-| AC-023 | 已完成 | 本轮补充：`closeout_pending -> completed` 前校验有效仓库在需求基线分支的 imported 索引批次，并校验本需求合并归档 token 使用记录；未验证时拒绝办结，验证后指定开发人员可办结。 |
+| AC-023 | 已完成 | 本轮补充：`closeout_pending -> completed` 前逐仓校验本需求合并归档 token 使用记录，以及对应仓库产生的本需求归档 imported 索引批次；旧批次或重复发布同一仓库不能替代其他仓库归档。 |
 | AC-024 | 已完成 | 本轮补充：执行开发指令和全局 `reqflow-mcp` skill 要求生成 `plan.md` 前分析是否可拆分多个 subagent 并行执行，边界不清时保持单执行路径。 |
 | AC-025 | 已完成 | 本轮补充：`ReqMcpKeyController` 不再读取项目 yml 的 `reqflow.mcp.public-url`，改为读取系统参数 `reqflow.mcp.public-host` 并拼接 `/requirement/mcp`；新增幂等系统参数初始化脚本。 |
 
@@ -133,6 +133,7 @@
 | RF-004 | 已修复 | 已按用户反馈把需求分析、需求生成、开发执行和返修阶段的指令内容与 actionToken 拆分为当前阶段最小工具集合；返修阶段只包含执行报告和 Review 报告。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
 | RF-005 | 已修复 | 已扩展补充说明接口支持需求设计待确认阶段提交调整说明，追加补充版本并回到待生成需求设计阶段。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
 | RF-006 | 已修复 | 已增加验收后的合并归档阶段，平台验证索引归档结果后才允许办结；同时把 MCP 服务地址改为系统参数维护，并在开发计划指令中加入 subagent 拆分判断。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,ReqRepositoryIndexServiceImplTest,ReqMcpKeyControllerTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
+| RF-007 | 已修复 | PR 前 review 发现合并归档校验可被多个 token 重复发布同一仓库加旧批次绕过；已将合并归档 token 绑定目标仓库，并要求办结前每个仓库都有本需求归档上下文的 imported 批次。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest#rejectsCompletingCloseoutWhenOnlyOldRepositoryBatchesExist,ReqRepositoryIndexServiceImplTest#rejectsCloseoutIndexWhenActionTokenBelongsToAnotherRepository -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
 
 ## 风险与后续
 

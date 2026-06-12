@@ -81,6 +81,8 @@
 | `req_mcp_user_key` | `key_prefix`、`key_hash` | Key 前缀和哈希 | 明文不得落库、不得写日志、不得进入活动记录。 |
 | `req_action_token` | `action_type`、`target_method` | 动作类型和阶段目标 | `requirement_plan` 使用 `target_method=requirement_analysis` 表示需求分析阶段，只允许 `upload_requirement_assessment`；使用 `target_method=requirement_generate` 表示需求生成阶段，只允许 `save_requirement_package`。`requirement_develop` 使用 `target_method=requirement_develop` 表示开发阶段，可用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；使用 `target_method=requirement_repair` 表示返修阶段，只允许 `upload_execution_report` 和 `upload_review_report`。`requirement_closeout` 使用 `target_method=publish_repository_index` 表示合并归档阶段，只允许在 `closeout_pending` 状态发布需求基线分支的完整知识库快照；动作 token 不替代 `X-MCP-Key` 认证。 |
 | `req_action_token` | `project_id`、`variant_id`、`demand_id` | 动作上下文 | 必须和平台返回的项目、分支和需求一致。 |
+| `req_action_token` | `remark` | 合并归档仓库绑定 | `requirement_closeout/publish_repository_index` token 通过 `remark=closeoutRepoId={repoId}` 绑定目标仓库；办结校验必须按仓库逐项确认对应 token 已使用。 |
+| `req_repository_index_batch` | `remark` | 合并归档批次上下文 | 合并归档阶段通过 actionToken 发布索引时写入 `remark=closeoutDemandId={demandId};repoId={repoId}`；`closeout_pending -> completed` 必须逐仓确认存在该上下文的 `imported` 批次，旧索引批次不能替代本轮归档。 |
 | `req_action_token` | `expire_time`、`last_used_time` | 有效期和使用记录 | 动作 token 以流程阶段为有效边界，流转到下一流程即失效；`expire_time` 是最长 24 小时兜底。项目初始化、需求分析、需求生成和合并归档 token 一次性消费，开发阶段 token 在 `developing` 内可多次刷新 `last_used_time`，返修阶段 token 在 `repairing` 内可多次刷新 `last_used_time`。 |
 | `req_activity_log` | `event_type`、`metadata_json` | 事件类型和扩展信息 | 扩展 JSON 只存可审计摘要，不写敏感明文。 |
 

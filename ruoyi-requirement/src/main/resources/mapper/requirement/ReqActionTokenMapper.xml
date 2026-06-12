@@ -112,7 +112,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where token_id = #{tokenId}
     </update>
 
-    <select id="countUsedActionToken" resultType="int">
+    <select id="countUsedActionTokenByRemark" resultType="int">
         select count(1)
         from req_action_token
         where action_type = #{actionType}
@@ -120,6 +120,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and project_id = #{projectId}
           and variant_id = #{variantId}
           and demand_id = #{demandId}
+          and remark = #{remark}
           and status = '0'
           and last_used_time is not null
     </select>

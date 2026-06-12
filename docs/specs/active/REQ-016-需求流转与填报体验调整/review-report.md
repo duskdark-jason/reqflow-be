@@ -46,7 +46,7 @@
 | AC-020 | MCP Key 绑定和安装指令 | `ReqMcpKeyController`、`ReqMcpUserKeyServiceImpl`、`ReqflowCodexSetupPackageTemplate` | `ReqMcpKeyControllerTest`、`ReqMcpUserKeyServiceImplTest` 覆盖普通用户绑定自己、管理员指定用户和安装指令模板 | 通过 |
 | AC-021 | 项目知识库快照同步 | `ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper.xml`、`ReqImpactItemMapper.xml` | `ReqRepositoryIndexServiceImplTest`、`ReqIndexModuleMapperXmlTest` 覆盖重复发布快照失效和最新 imported 批次查询 | 通过 |
 | AC-022 | 验收后进入待合并归档并生成归档指令 | `ReqDemandStatusTransition`、`ReqDemandServiceImpl` | `ReqDemandStatusTransitionTest`、`ReqDemandServiceImplTest` 覆盖 `review -> closeout_pending` 和合并归档指令内容 | 通过 |
-| AC-023 | 平台验证归档结果后才允许办结 | `ReqDemandServiceImpl`、`ReqRepositoryIndexServiceImpl`、`ReqActionTokenMapper.xml` | `ReqDemandServiceImplTest` 覆盖归档未验证拒绝和验证后办结；`ReqRepositoryIndexServiceImplTest` 覆盖归档 token 发布索引 | 通过 |
+| AC-023 | 平台验证归档结果后才允许办结 | `ReqDemandServiceImpl`、`ReqRepositoryIndexServiceImpl`、`ReqActionTokenMapper.xml`、`ReqRepositoryIndexBatchMapper.xml` | `ReqDemandServiceImplTest` 覆盖旧批次不能替代本轮归档、归档未验证拒绝和验证后办结；`ReqRepositoryIndexServiceImplTest` 覆盖归档 token 仓库绑定和发布索引 | 通过 |
 | AC-024 | 执行计划前分析 subagent 拆分 | `ReqDemandServiceImpl`、`ReqflowCodexGlobalSkillTemplate`、harness 模板 | `ReqDemandServiceImplTest` 和 `ReqflowCodexGlobalSkillTemplateTest` 覆盖开发指令与全局 skill 文案 | 通过 |
 | AC-025 | MCP 服务地址由系统参数配置 IP 端口 | `ReqMcpKeyController`、`application.yml`、`req_platform_req017_mcp_public_host_config.sql` | `ReqMcpKeyControllerTest` 覆盖系统参数优先和请求头兜底；代码复核 yml 不再配置 MCP 请求地址 | 通过 |
 
@@ -87,6 +87,7 @@
 | RF-004 | 中 | AC-004、AC-006、AC-011、AC-012 | 用户反馈需求分析阶段、需求生成阶段、返修阶段也应像开发阶段一样只包含当前阶段内容，token 随流程流转失效 | 拆分需求分析、需求生成、开发执行和返修指令；需求分析只回写评估，需求生成只回写需求设计，返修只回写执行和 Review 报告 | 单测、文档门禁、前端构建 |
 | RF-005 | 中 | AC-019 | 用户反馈需求设计确认阶段不能只确认，还要支持补充调整说明进行多轮迭代 | 扩展补充说明接口支持 `plan_ready`，追加补充版本并回到 `plan_pending` | 状态机单测、服务层单测、文档门禁 |
 | RF-006 | 中 | AC-022、AC-023、AC-024、AC-025 | 用户追加验收后合并归档、平台验证归档结果、执行计划 subagent 分析和 MCP 服务地址系统配置 | 增加 `closeout_pending` 阶段、归档 token、归档验证、全局 skill/harness 文案和系统参数配置 | 单测、打包、文档门禁、harness complete |
+| RF-007 | 高 | AC-023 | PR 前 subagent review 发现合并归档 token 未按仓库绑定，旧批次可能配合重复发布同仓库绕过办结验证 | 合并归档 token 写入目标仓库绑定，索引批次写入本需求归档上下文，办结前逐仓校验 token 使用和本轮批次 | 红绿单测、服务层相关测试、文档门禁 |
 
 ## 复审记录
 
@@ -97,5 +98,6 @@
 | RF-004 | 已完成四个阶段的工具集合、actionToken target 和模板文档同步 | 通过 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | RF-005 | 已完成 `plan_ready` 调整说明回退和补充版本记录 | 通过 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | RF-006 | 已完成待合并归档阶段、平台归档验证、subagent 执行计划指引和 MCP 服务地址系统参数配置 | 通过 | `mvn -pl ruoyi-requirement -am test`、`mvn -pl ruoyi-admin -am -DskipTests package`、`sh scripts/check-docs.sh` |
+| RF-007 | 已完成合并归档 token 仓库绑定、本需求归档批次标记和逐仓办结校验 | 通过 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqRepositoryIndexServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 
 - 最终结论：通过

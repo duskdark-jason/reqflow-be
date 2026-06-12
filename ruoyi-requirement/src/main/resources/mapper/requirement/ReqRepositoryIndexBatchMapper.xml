@@ -47,6 +47,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="branchName != null and branchName != ''">and branch_name = #{branchName}</if>
             <if test="commitHash != null and commitHash != ''">and commit_hash = #{commitHash}</if>
             <if test="status != null and status != ''">and status = #{status}</if>
+            <if test="remark != null and remark != ''">and remark = #{remark}</if>
         </where>
         order by batch_id desc
     </select>

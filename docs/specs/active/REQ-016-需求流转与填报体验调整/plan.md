@@ -44,7 +44,7 @@
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 需求设计动作 token、执行开发动作 token 和返修事件记录。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 阶段有效期、最长 24 小时兜底、一次性消费和开发阶段 token 复用。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | MCP 工具与 actionToken 阶段边界。 |
-| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqRepositoryIndexServiceImpl.java`、`ReqActionTokenMapper.xml` | 合并归档指令、归档 token 统计和平台知识库归档验证。 |
+| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqRepositoryIndexServiceImpl.java`、`ReqActionTokenMapper.xml`、`ReqRepositoryIndexBatchMapper.xml` | 合并归档指令、归档 token 仓库绑定和平台知识库归档验证。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqMcpKeyController.java`、`ruoyi-admin/src/main/resources/application.yml` | MCP 服务地址从系统参数读取，项目 yml 不再配置请求地址。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqPackageController.java` | 需求详情嵌入资料包读取权限。 |
 | 迁移 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/**` | 将需求管理 Controller 从 admin 模块迁移到需求模块，需求页面只读上下文接口按需求权限放行。 |

@@ -1098,7 +1098,7 @@ public class McpService
     private Map<String, Object> publishRepositoryIndexSchema()
     {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("actionToken", property("string", "项目分支初始化指令中的动作 token，优先用于定位项目、分支和目标方法"));
+        properties.put("actionToken", property("string", "项目分支初始化或需求合并归档指令中的动作 token，优先用于定位项目、分支、仓库和目标方法"));
         properties.put("remoteUrl", property("string", "当前仓库 Git 远端地址"));
         properties.put("projectId", property("integer", "兼容路径：需求平台项目 ID"));
         properties.put("repoId", property("integer", "兼容路径：需求平台仓库 ID"));

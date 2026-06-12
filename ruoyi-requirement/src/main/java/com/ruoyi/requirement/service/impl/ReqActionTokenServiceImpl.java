@@ -72,6 +72,15 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
     public ReqActionInstruction createInstruction(String actionType, Long projectId, Long variantId, Long demandId,
             String targetMethod, String prompt, String copyLabel, String operator)
     {
+        return createInstruction(actionType, projectId, variantId, demandId, targetMethod, prompt, copyLabel,
+                operator, null);
+    }
+
+    @Override
+    @Transactional
+    public ReqActionInstruction createInstruction(String actionType, Long projectId, Long variantId, Long demandId,
+            String targetMethod, String prompt, String copyLabel, String operator, String remark)
+    {
         validateInstruction(actionType, projectId, targetMethod, prompt);
         GeneratedToken generatedToken = generateUniqueToken();
         ReqActionToken token = new ReqActionToken();
@@ -85,6 +94,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         token.setStatus(UserConstants.NORMAL);
         token.setExpireTime(new Date(System.currentTimeMillis() + ACTION_TOKEN_TTL_MILLIS));
         token.setCreateBy(operator);
+        token.setRemark(remark);
         actionTokenMapper.insertReqActionToken(token);
 
         ReqActionInstruction instruction = new ReqActionInstruction();
