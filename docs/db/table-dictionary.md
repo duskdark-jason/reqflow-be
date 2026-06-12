@@ -4,7 +4,7 @@
 
 ## 维护范围
 
-- 主要来源：`docs/db/sql/req_platform_schema.sql`、`docs/db/sql/req_platform_req*.sql`。
+- 主要来源：`docs/db/sql/req_platform_schema.sql`、`docs/db/sql/req_platform_menu.sql`、`docs/db/sql/req_platform_release_settings.sql`。
 - RuoYi 系统表如 `sys_user`、`sys_menu` 只记录需求平台用到的关联点，不在本字典完整展开。
 - 新增或修改表、字段、索引、约束、状态枚举或数据保留语义时，同步更新本文件。
 
@@ -53,7 +53,7 @@
 | 表 | 字段 | 含义 | 维护要求 |
 |---|---|---|---|
 | `req_demand` | `demand_no` | 稳定需求编号 | 与本地 spec 目录中的 `REQ-001` 类编号保持可追踪关系。 |
-| `req_demand` | `demand_source` | 需求来源 | 新增和修改需求必填；历史数据通过 `req_platform_req016_demand_form_fields.sql` 默认补为 `BUSINESS`。 |
+| `req_demand` | `demand_source` | 需求来源 | 新增和修改需求必填；发布基线结构已包含该字段，历史数据补齐应随数据迁移脚本单独记录。 |
 | `req_demand` | `status` | 需求状态 | 新增默认 `draft`；主流程为 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> closeout_pending -> completed`，其中 `submitted` 为待需求分析、`plan_pending` 为待生成需求设计、`plan_ready` 为需求设计待确认、`confirmed` 为待执行开发、`closeout_pending` 为待合并归档；验收返修分支为 `review -> repairing -> review`，`archived` 为兼容归档状态。 |
 | `req_demand` | `creator_id` | 需求创建人用户 ID | 新增时由服务端当前登录用户写入；普通编辑只允许创建人在 `draft` 状态修改。 |
 | `req_demand` | `developer_user_id` | 指定开发人员用户 ID | 新增或修改草稿需求时必须指向启用的 `requirement_developer` 用户；需求提交后普通访问、流程按钮、MCP 指令和资料包回写锁定在创建人与该开发人员之间，管理员不受该参与人限制。 |
@@ -91,13 +91,13 @@
 | 系统表 | 使用位置 | 注意事项 |
 |---|---|---|
 | `sys_user` | `req_mcp_user_key.user_id`、需求创建人、指定开发人员、活动用户 | 查询用户显示信息时避免因角色表 join 放大行数。 |
-| `sys_menu` | 需求平台菜单、按钮权限和 MCP Key 菜单 | 菜单 SQL 保留在 `docs/db/sql/req_platform_menu.sql` 和增量 SQL 中，权限标识需与 Controller 注解一致。 |
-| `sys_role`、`sys_role_menu` | 需求人员、开发人员和管理员菜单授权 | 角色授权脚本为 `docs/db/sql/req_platform_req016_role_permissions.sql`；开发人员有隐藏 `req:package:save` 供 MCP 回写资料，需求人员不分配 MCP 管理和独立执行包菜单。 |
-| `sys_config` | MCP 服务对外 IP 端口 | 系统参数初始化脚本为 `docs/db/sql/req_platform_req017_mcp_public_host_config.sql`；管理员只填写 `reqflow.mcp.public-host=IP:端口`，服务端拼接协议和 `/requirement/mcp`。 |
+| `sys_menu` | 需求平台菜单、按钮权限和 MCP Key 菜单 | 菜单 SQL 保留在 `docs/db/sql/req_platform_menu.sql`，权限标识需与 Controller 注解一致。 |
+| `sys_role`、`sys_role_menu` | 需求人员、开发人员和管理员菜单授权 | 角色授权脚本为 `docs/db/sql/req_platform_release_settings.sql`；开发人员有隐藏 `req:package:save` 供 MCP 回写资料，需求人员不分配 MCP 管理和独立执行包菜单。 |
+| `sys_config` | MCP 服务对外 IP 端口 | 系统参数初始化脚本为 `docs/db/sql/req_platform_release_settings.sql`；管理员只填写 `reqflow.mcp.public-host=IP:端口`，服务端拼接协议、后端 context-path 和 `/requirement/mcp`。发布默认 MCP endpoint 为 `/reqflow-api/requirement/mcp`，不使用前端 `/reqflow/` 项目名。 |
 
 ## 更新检查
 
 - 表、字段、索引或约束变化：更新本文件。
 - 关系、join、聚合、分页粒度或过滤条件变化：更新 `relationship.md`。
-- 可执行 DDL、DML、迁移或修复脚本：保留在 `docs/db/sql/`，并在当前 spec 的 `execution-report.md` 记录路径。索引表缺失时先执行 `docs/db/sql/req_platform_req007_index_tables.sql` 补齐 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。
+- 可执行 DDL、DML、迁移或修复脚本：保留在 `docs/db/sql/`，并在当前 spec 的 `execution-report.md` 记录路径。索引表缺失时先确认已执行 `docs/db/sql/req_platform_schema.sql` 中的 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item` 建表段。
 - 只改文档不改 SQL 时：在 `execution-report.md` 写明数据库影响为文档更新，无执行脚本。

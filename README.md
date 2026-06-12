@@ -57,7 +57,8 @@ mvn -pl ruoyi-requirement -am test
 - `docs/db/sql/ry_20260417.sql`：RuoYi 基线库结构和基础数据。
 - `docs/db/sql/quartz.sql`：定时任务相关表。
 - `docs/db/sql/req_platform_schema.sql`：ReqFlow 需求平台表结构基线。
-- `docs/db/sql/req_platform_req*.sql`：需求平台增量迁移、菜单和修复脚本。
+- `docs/db/sql/req_platform_menu.sql`：需求管理菜单和按钮权限。
+- `docs/db/sql/req_platform_release_settings.sql`：初始发布所需系统参数、角色授权和品牌清理数据。
 
 修改数据库表、字段、索引、菜单权限或迁移脚本时，必须同步更新 `docs/db/table-dictionary.md`、`docs/db/relationship.md` 或相关 `docs/ai-harness` 文档。
 
