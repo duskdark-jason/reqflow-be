@@ -33,7 +33,10 @@ public class ReqDemandServiceImpl implements IReqDemandService
 {
     private static final String BRANCH_NOT_INITIALIZED_MESSAGE = "项目分支尚未初始化完成，请先完成分支初始化后再提交需求";
 
-    private static final String ACTION_TOKEN_USAGE_RULE = "有效期：24小时内有效，仅可使用一次；过期或已使用后需重新生成。";
+    private static final String ACTION_TOKEN_USAGE_RULE = "有效期：当前流程阶段内有效，流转到下一流程即失效；最长保留24小时，过期或已使用后需重新生成。";
+
+    private static final String DEVELOPMENT_STAGE_TOKEN_USAGE_RULE =
+            "有效期：当前开发阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行计划、执行报告和 Review 报告回写。";
 
     private static final String ROLE_REQUIREMENT_USER = "requirement_user";
 
@@ -294,44 +297,23 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("需求不存在");
         }
         validateDeveloperInstructionAccess(demand);
-        if (!"confirmed".equals(demand.getStatus()) && !"developing".equals(demand.getStatus())
-                && !"repairing".equals(demand.getStatus()) && !"review".equals(demand.getStatus()))
+        if (!"confirmed".equals(demand.getStatus()) && !"developing".equals(demand.getStatus()))
         {
             throw new ServiceException("当前状态不能生成执行任务指令");
         }
-        String planPrompt = "请基于已确认需求设计生成执行计划，并通过 reqflow MCP 回写执行计划。";
-        ReqActionInstruction planInstruction = actionTokenService.createInstruction(
+        String developPrompt = "请基于已确认需求设计执行开发，并通过 reqflow MCP 回写执行计划、执行报告和 Review 报告。";
+        ReqActionInstruction developInstruction = actionTokenService.createInstruction(
                 IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
                 demand.getProjectId(),
                 demand.getVariantId(),
                 demand.getDemandId(),
-                "save_development_plan",
-                planPrompt,
+                IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP,
+                developPrompt,
                 "生成执行任务指令",
                 operator);
-        String reportPrompt = "请根据已确认需求设计和执行计划完成开发、验证并通过 reqflow MCP 回写执行报告。";
-        ReqActionInstruction reportInstruction = actionTokenService.createInstruction(
-                IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
-                demand.getProjectId(),
-                demand.getVariantId(),
-                demand.getDemandId(),
-                "upload_execution_report",
-                reportPrompt,
-                "复制执行报告指令",
-                operator);
-        String reviewPrompt = "请根据实现和验证结果完成 Review，并通过 reqflow MCP 回写 Review 报告。";
-        ReqActionInstruction reviewInstruction = actionTokenService.createInstruction(
-                IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
-                demand.getProjectId(),
-                demand.getVariantId(),
-                demand.getDemandId(),
-                "upload_review_report",
-                reviewPrompt,
-                "复制Review报告指令",
-                operator);
-        planInstruction.setContent(requirementDevelopInstructionContent(planPrompt, planInstruction.getToken(),
-                reportInstruction.getToken(), reviewInstruction.getToken(), demand, suggestedTaskBranch(demand)));
-        return planInstruction;
+        developInstruction.setContent(requirementDevelopInstructionContent(developPrompt, developInstruction.getToken(),
+                demand, suggestedTaskBranch(demand)));
+        return developInstruction;
     }
 
     private String nextDemandNo()
@@ -367,8 +349,8 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 + "\n注意：两个 actionToken 分别是 upload_requirement_assessment 和 save_requirement_package 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
     }
 
-    private String requirementDevelopInstructionContent(String prompt, String planActionToken, String reportActionToken,
-            String reviewActionToken, ReqDemand demand, String taskBranch)
+    private String requirementDevelopInstructionContent(String prompt, String developActionToken, ReqDemand demand,
+            String taskBranch)
     {
         return prompt
                 + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求开发。"
@@ -383,15 +365,12 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
                 + "\n任务分支: " + taskBranch
-                + "\n执行计划 actionToken: " + planActionToken
-                + "\n执行报告 actionToken: " + reportActionToken
-                + "\nReview报告 actionToken: " + reviewActionToken
-                + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n分支要求：开发和返修阶段必须沿用需求设计阶段创建的任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
-                + "\n要求：先读取需求详情、最终需求设计和本地 requirement.md，生成或更新 plan.md；再按目标仓库规范完成实现、验证和提交。"
-                + "\n返修要求：需求人补充返修说明或 Review 产生 RF-* 后，继续在同一任务分支补充 execution-report.md 和 review-report.md，不另建返修文件。"
-                + "\n回写要求：先调用 save_development_plan，arguments.actionToken 填执行计划 actionToken；开发或返修完成后调用 upload_execution_report，arguments.actionToken 填执行报告 actionToken；Review 或复审完成后调用 upload_review_report，arguments.actionToken 填 Review 报告 actionToken。"
-                + "\n注意：三个 actionToken 均只能成功使用一次，且都不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n开发阶段 actionToken: " + developActionToken
+                + "\n" + DEVELOPMENT_STAGE_TOKEN_USAGE_RULE
+                + "\n分支要求：必须沿用需求设计阶段创建的任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
+                + "\n要求：先读取需求详情、最终需求设计和本地 requirement.md，生成或更新 plan.md；再按目标仓库规范完成实现、验证、自动 Review 和提交。"
+                + "\n回写要求：本阶段三个 MCP 工具都使用同一个开发阶段 actionToken：先调用 save_development_plan 回写执行计划，开发验证完成后调用 upload_execution_report 回写执行报告，自动 Review 完成后调用 upload_review_report 回写 Review 报告。"
+                + "\n注意：开发阶段 actionToken 是上述三个工具的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
     }
 
     private String suggestedTaskBranch(ReqDemand demand)

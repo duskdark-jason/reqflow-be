@@ -32,10 +32,10 @@
 | AC-006 | 初始化式 MCP 指令 | `ReqDemandServiceImpl.requirementPlanInstructionContent` | 单测断言 `reqflow-mcp`、`mcpServer`、`mcpTool`、`arguments.actionToken` 和非 `X-MCP-Key` 说明 | 通过 |
 | AC-007 | 执行开发指令 | `ReqDemandController`、`ReqDemandServiceImpl.createRequirementDevelopInstruction` | 单测断言目标工具为 `reqflow.upload_execution_report`，浏览器接口冒烟返回成功 | 通过 |
 | AC-008 | 返修流转和版本历史 | `ReqDemandServiceImpl.updateDemandStatus`、执行包版本链文档 | 单测覆盖 `demand_repairing` 和 `demand_repair_submitted` 事件，文档记录 `req_package_version` 历史版本 | 通过 |
-| AC-009 | actionToken 一次性和 24 小时有效 | `ReqActionTokenServiceImpl`、`ReqActionTokenMapper.xml` | `ReqActionTokenServiceImplTest` 覆盖有效期、过期拒绝、已使用拒绝和条件更新失败拒绝 | 通过 |
+| AC-009 | actionToken 阶段有效和 24 小时兜底 | `ReqActionTokenServiceImpl`、`ReqActionTokenMapper.xml`、`McpService` | 单测覆盖最长有效期、普通 token 已使用拒绝、开发阶段 token 复用和需求状态流转后失效 | 通过 |
 | AC-010 | 角色授权 SQL | `req_platform_req016_role_permissions.sql` | `ReqPlatformRoleSqlTest` 覆盖角色边界 | 通过 |
 | AC-011 | 计划阶段先评估再生成需求设计 | `ReqDemandServiceImpl`、`McpService` | 单测断言计划 token 只允许 `upload_requirement_assessment` 和 `save_requirement_package`，不允许执行计划工具 | 通过 |
-| AC-012 | 执行阶段生成计划和报告 | `ReqDemandServiceImpl`、`McpService` | 单测断言执行计划、执行报告和 Review 报告三个 actionToken | 通过 |
+| AC-012 | 执行阶段生成计划和报告 | `ReqDemandServiceImpl`、`McpService` | 单测断言执行计划、执行报告和 Review 报告共用同一个开发阶段 actionToken | 通过 |
 | AC-013 | 详情嵌入资料读取权限 | `ReqPackageController` | 权限注解复核，前端构建和浏览器详情页通过 | 通过 |
 | AC-014 | 来源必填、附件和 2MB 上传 | `ReqDemandServiceImpl`、`ReqDemandController`、模板和 SQL | 来源必填、字段脚本、上传限制、文本模板转义测试通过 | 通过 |
 | AC-015 | 需求列表上下文权限和首页快捷入口 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController`、`ReqIndexController`、首页 | 需求上下文只读接口权限复核，前端构建通过 | 通过 |
@@ -52,7 +52,7 @@
 - AC-006：通过，MCP 需求评估与设计指令具备初始化指令式字段和 `arguments.actionToken` 说明。
 - AC-007：通过，执行开发指令可指向 `upload_execution_report` 回写执行报告。
 - AC-008：通过，待验收可进入返修，返修完成后重新进入待验收；历史资料通过执行包版本链保留。
-- AC-009：通过，初始化、需求设计和执行开发 actionToken 统一 24 小时内有效且仅可消费一次。
+- AC-009：通过，actionToken 按流程阶段有效，流转到下一流程即失效；初始化和需求设计 token 一次性消费，开发阶段 token 在当前开发阶段内可复用。
 - AC-010：通过，角色授权脚本覆盖三类角色边界。
 - AC-011：通过，计划阶段先回写需求可行性评估，评估允许后只生成需求设计，不包含执行计划。
 - AC-012：通过，执行阶段包含执行计划、执行报告和 Review 报告回写。
@@ -67,13 +67,13 @@
 | 修复 ID | 严重级别 | 关联验收 ID | 问题 | 修复要求 | 验证要求 |
 |---|---|---|---|---|---|
 | RF-002 | 中 | AC-006、AC-007、AC-008 | 用户反馈 MCP 指令不够清晰，并建议增加返修流程和历史版本记录 | 补齐初始化式字段、执行开发指令、返修事件和版本链文档 | 单测、接口冒烟、文档门禁 |
-| RF-003 | 中 | AC-009 | 用户补充 actionToken 仅可使用一次且 24 小时内有效 | 补齐 token 过期时间、已使用拒绝、并发条件更新和指令文案 | 单测、接口冒烟、文档门禁 |
+| RF-003 | 中 | AC-009 | 用户补充 actionToken 应按流程阶段有效，转到下一流程即失效 | 补齐 token 过期时间、普通 token 已使用拒绝、开发阶段 token 复用、需求状态阶段校验和指令文案 | 单测、接口冒烟、文档门禁 |
 
 ## 复审记录
 
 | 修复 ID | 执行处理结果 | 复审结论 | 复审证据 |
 |---|---|---|---|
 | RF-002 | 已完成 MCP 指令、执行开发指令、返修事件和版本链说明 | 通过 | `mvn -pl ruoyi-requirement -am test`、接口冒烟、`check-docs` |
-| RF-003 | 已完成 actionToken 24 小时有效和一次性消费限制 | 通过 | `ReqActionTokenServiceImplTest`、接口冒烟、`check-docs` |
+| RF-003 | 已完成 actionToken 流程阶段有效、24 小时兜底和开发阶段复用限制 | 通过 | `ReqActionTokenServiceImplTest`、`McpServiceTest`、接口冒烟、`check-docs` |
 
 - 最终结论：通过

@@ -15,5 +15,7 @@ public interface ReqActionTokenMapper
 
     public int updateLastUsed(@Param("tokenId") Long tokenId);
 
+    public int touchLastUsed(@Param("tokenId") Long tokenId);
+
     public int deleteReqActionTokenByDemandIds(Long[] demandIds);
 }

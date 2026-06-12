@@ -44,8 +44,8 @@ class ReqActionTokenServiceImplTest
         assertTrue(instruction.getPrompt().contains("项目分支初始化"));
         assertTrue(instruction.getContent().contains(instruction.getPrompt()));
         assertTrue(instruction.getContent().contains(instruction.getToken()));
-        assertTrue(instruction.getContent().contains("24小时内有效"));
-        assertTrue(instruction.getContent().contains("仅可使用一次"));
+        assertTrue(instruction.getContent().contains("最长保留24小时"));
+        assertTrue(instruction.getContent().contains("已使用后需重新生成"));
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
         assertTrue(instruction.getContent().contains("toolName: publish_repository_index"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));
@@ -86,7 +86,7 @@ class ReqActionTokenServiceImplTest
         ReqActionInstruction requirement = service.createInstruction(IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
                 10L, 31L, 200L, "create_requirement_package", "请读取需求上下文并生成需求包", "复制需求指令", "admin");
         ReqActionInstruction develop = service.createInstruction(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
-                10L, 31L, 200L, "start_requirement_development", "请读取开发上下文并开始执行", "复制开发指令", "admin");
+                10L, 31L, 200L, IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP, "请读取开发上下文并开始执行", "复制开发指令", "admin");
 
         assertTrue(requirement.getToken().startsWith("reqflow_action_"));
         assertTrue(develop.getToken().startsWith("reqflow_action_"));
@@ -95,6 +95,8 @@ class ReqActionTokenServiceImplTest
         assertTrue(develop.getContent().contains(develop.getToken()));
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, requirement.getActionType());
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, develop.getActionType());
+        assertTrue(develop.getContent().contains("当前开发阶段内有效"));
+        assertTrue(develop.getContent().contains("多次用于执行计划、执行报告和 Review 报告回写"));
     }
 
     @Test
@@ -153,6 +155,27 @@ class ReqActionTokenServiceImplTest
 
         assertThrows(ServiceException.class, () -> service.resolveToken(plainToken));
         verify(mapper, never()).updateLastUsed(91L);
+    }
+
+    @Test
+    void reusableDevelopmentStageTokenCanResolveAfterPreviousUse()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_develop_stage_token";
+        ReqActionToken stored = token(93L, "0");
+        stored.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        stored.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP);
+        stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
+        stored.setLastUsedTime(new Date(System.currentTimeMillis() - 1000));
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.touchLastUsed(93L)).thenReturn(1);
+
+        ReqActionToken resolved = service.resolveToken(plainToken);
+
+        assertEquals(93L, resolved.getTokenId());
+        verify(mapper).touchLastUsed(93L);
+        verify(mapper, never()).updateLastUsed(93L);
     }
 
     @Test

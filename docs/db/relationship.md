@@ -71,8 +71,8 @@
 - `req_module` 在 REQ-005 后按 `project_id + variant_id + module_code` 保持唯一；新增人工模块、需求表单模块下拉和父级模块选择都必须带 `variant_id`，否则不同分支的同名模块会互相污染。
 - `req_mcp_user_key` 与 `sys_user` 是多对一关系，一个用户可拥有多个 Key。列表页只能 join 用户表展示账号和昵称，不能因一个用户多个 Key 反向放大用户数量或权限判断。
 - `req_action_token` 与项目、项目分支和需求都是上下文定位关系，不代表人员身份。统计或审计时不能把 action token 数量当作用户数量，也不能用 action token 绕过 `X-MCP-Key` 认证和菜单权限。
-- `requirement_plan` 动作 token 可绑定 `req_action_token.demand_id`，分别供 MCP `upload_requirement_assessment` 和 `save_requirement_package` 定位需求，先回写需求可行性评估，再回写需求设计；`requirement_develop` 动作 token 可绑定同一字段，分别供 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 定位需求并回写执行计划、执行报告和 Review 报告；人员权限仍由登录态或 `X-MCP-Key` 决定。
-- `req_action_token.expire_time` 和 `last_used_time` 是安全边界字段：动作 token 生成后 24 小时内有效且仅可消费一次，不能作为长期项目、分支或需求缓存键。
+- `requirement_plan` 动作 token 可绑定 `req_action_token.demand_id`，分别供 MCP `upload_requirement_assessment` 和 `save_requirement_package` 定位需求，先回写需求可行性评估，再回写需求设计；`requirement_develop` 动作 token 可绑定同一字段，以一个开发阶段 token 供 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 定位需求并回写执行计划、执行报告和 Review 报告；人员权限仍由登录态或 `X-MCP-Key` 决定。
+- `req_action_token.expire_time` 和 `last_used_time` 是安全边界字段：动作 token 以需求流程阶段为有效边界，流转到下一流程即失效；`expire_time` 作为最长 24 小时兜底，不能作为长期项目、分支或需求缓存键。项目初始化和需求设计 token 一次性消费，开发阶段 token 在 `confirmed/developing` 内可重复用于本阶段回写并刷新 `last_used_time`。
 - `req_demand.developer_user_id` 与 `sys_user` 是多对一展示关系；列表只允许左连接回显开发人员账号和昵称，不能因角色表 join 放大需求行数。开发人员候选列表可 join `sys_user_role` 和 `sys_role`，但必须使用 `distinct u.user_id`。
 - `sys_role_menu` 与菜单权限是多对多关系，角色授权脚本会重置 `requirement_user` 和 `requirement_developer` 的菜单集合；开发人员角色包含隐藏 `req:package:save` 以允许 MCP 回写资料，但不分配独立“需求执行包”菜单。
 - 项目初始化上下文一次返回一个项目全貌，不能直接把 `req_repository`、`req_variant`、`req_module`、`req_index_module`、`req_repository_index_batch` 做一条 SQL join 后分页，否则会因多组一对多关系放大行数；当前实现使用分表查询后在 Service 层聚合。

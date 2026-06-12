@@ -11,6 +11,8 @@ public interface IReqActionTokenService
     String ACTION_REQUIREMENT_PLAN = "requirement_plan";
     String ACTION_REQUIREMENT_DEVELOP = "requirement_develop";
 
+    String TARGET_REQUIREMENT_DEVELOP = "requirement_develop";
+
     ReqActionInstruction createProjectInitInstruction(ReqProject project, ReqVariant variant, String operator);
 
     ReqActionInstruction createInstruction(String actionType, Long projectId, Long variantId, Long demandId,

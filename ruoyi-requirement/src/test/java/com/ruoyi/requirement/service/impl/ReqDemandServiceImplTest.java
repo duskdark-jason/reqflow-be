@@ -516,8 +516,9 @@ class ReqDemandServiceImplTest
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_requirement_package"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
         assertTrue(instruction.getContent().contains("不是 X-MCP-Key"));
-        assertTrue(instruction.getContent().contains("24小时内有效"));
-        assertTrue(instruction.getContent().contains("仅可使用一次"));
+        assertTrue(instruction.getContent().contains("当前流程阶段内有效"));
+        assertTrue(instruction.getContent().contains("流转到下一流程即失效"));
+        assertTrue(instruction.getContent().contains("最长保留24小时"));
         assertTrue(instruction.getContent().contains("重新生成"));
         assertTrue(instruction.getContent().contains("需求设计阶段"));
         assertTrue(instruction.getContent().contains("可行性评估 actionToken: reqflow_action_assessment_token"));
@@ -551,8 +552,8 @@ class ReqDemandServiceImplTest
 
         ReqActionInstruction created = new ReqActionInstruction();
         created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
-        created.setTargetMethod("save_development_plan");
-        created.setToken("reqflow_action_plan_token");
+        created.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP);
+        created.setToken("reqflow_action_develop_stage_token");
         created.setPrompt("请按需求设计和执行计划完成开发。");
         created.setContent("base instruction");
         when(actionTokenService.createInstruction(
@@ -560,40 +561,10 @@ class ReqDemandServiceImplTest
                 eq(10L),
                 eq(31L),
                 eq(6L),
-                eq("save_development_plan"),
+                eq(IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP),
                 any(),
                 eq("生成执行任务指令"),
                 eq("developer"))).thenReturn(created);
-        ReqActionInstruction reportInstruction = new ReqActionInstruction();
-        reportInstruction.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
-        reportInstruction.setTargetMethod("upload_execution_report");
-        reportInstruction.setToken("reqflow_action_report_token");
-        reportInstruction.setPrompt("请回写执行报告。");
-        reportInstruction.setContent("report instruction");
-        when(actionTokenService.createInstruction(
-                eq(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP),
-                eq(10L),
-                eq(31L),
-                eq(6L),
-                eq("upload_execution_report"),
-                any(),
-                eq("复制执行报告指令"),
-                eq("developer"))).thenReturn(reportInstruction);
-        ReqActionInstruction reviewInstruction = new ReqActionInstruction();
-        reviewInstruction.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
-        reviewInstruction.setTargetMethod("upload_review_report");
-        reviewInstruction.setToken("reqflow_action_review_token");
-        reviewInstruction.setPrompt("请回写 Review 报告。");
-        reviewInstruction.setContent("review instruction");
-        when(actionTokenService.createInstruction(
-                eq(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP),
-                eq(10L),
-                eq(31L),
-                eq(6L),
-                eq("upload_review_report"),
-                any(),
-                eq("复制Review报告指令"),
-                eq("developer"))).thenReturn(reviewInstruction);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
@@ -607,15 +578,13 @@ class ReqDemandServiceImplTest
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_execution_report"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_review_report"));
         assertTrue(instruction.getContent().contains("任务分支: feature/req-6-demand"));
-        assertTrue(instruction.getContent().contains("执行计划 actionToken: reqflow_action_plan_token"));
-        assertTrue(instruction.getContent().contains("执行报告 actionToken: reqflow_action_report_token"));
-        assertTrue(instruction.getContent().contains("Review报告 actionToken: reqflow_action_review_token"));
+        assertTrue(instruction.getContent().contains("开发阶段 actionToken: reqflow_action_develop_stage_token"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
-        assertTrue(instruction.getContent().contains("24小时内有效"));
-        assertTrue(instruction.getContent().contains("仅可使用一次"));
-        assertTrue(instruction.getContent().contains("重新生成"));
+        assertTrue(instruction.getContent().contains("当前开发阶段内有效"));
+        assertTrue(instruction.getContent().contains("流转到待验收后即失效"));
+        assertTrue(instruction.getContent().contains("多次用于执行计划、执行报告和 Review 报告回写"));
         assertTrue(instruction.getContent().contains("不得重新生成不同任务分支"));
-        assertTrue(instruction.getContent().contains("继续在同一任务分支补充 execution-report.md 和 review-report.md"));
+        assertFalse(instruction.getContent().contains("返修要求"));
         assertTrue(instruction.getContent().contains("执行计划"));
         assertTrue(instruction.getContent().contains("执行报告"));
         assertTrue(instruction.getContent().contains("Review 报告"));

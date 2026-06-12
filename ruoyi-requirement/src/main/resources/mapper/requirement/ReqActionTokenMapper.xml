@@ -106,6 +106,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
           and last_used_time is null
     </update>
 
+    <update id="touchLastUsed">
+        update req_action_token
+        set last_used_time = sysdate()
+        where token_id = #{tokenId}
+    </update>
+
     <delete id="deleteReqActionTokenByDemandIds" parameterType="Long">
         delete from req_action_token where demand_id in
         <foreach item="demandId" collection="array" open="(" separator="," close=")">

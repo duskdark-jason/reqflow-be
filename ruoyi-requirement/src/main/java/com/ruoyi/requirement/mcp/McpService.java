@@ -826,6 +826,7 @@ public class McpService
         ReqActionToken token = actionTokenService.resolveToken(actionToken);
         if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
         {
+            validateActionTokenDemandStage(token, "submitted", "plan_pending", "plan_ready");
             if (!"upload_requirement_assessment".equals(toolName) && !"save_requirement_package".equals(toolName))
             {
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
@@ -836,11 +837,50 @@ public class McpService
             }
             return token.getDemandId();
         }
+        if (IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType()))
+        {
+            validateActionTokenDemandStage(token, "confirmed", "developing");
+            if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod()))
+            {
+                if ("save_development_plan".equals(toolName) || "upload_execution_report".equals(toolName)
+                        || "upload_review_report".equals(toolName))
+                {
+                    return token.getDemandId();
+                }
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            if (toolName.equals(token.getTargetMethod()))
+            {
+                return token.getDemandId();
+            }
+            throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+        }
         if (!toolName.equals(token.getTargetMethod()))
         {
             throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
         }
         return token.getDemandId();
+    }
+
+    private void validateActionTokenDemandStage(ReqActionToken token, String... validStatuses)
+    {
+        if (token.getDemandId() == null)
+        {
+            throw new IllegalArgumentException("动作Token未绑定需求");
+        }
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(token.getDemandId());
+        if (demand == null)
+        {
+            throw new IllegalArgumentException("动作Token绑定的需求不存在");
+        }
+        for (String validStatus : validStatuses)
+        {
+            if (validStatus.equals(demand.getStatus()))
+            {
+                return;
+            }
+        }
+        throw new IllegalArgumentException("动作Token所属流程阶段已结束，请重新生成指令");
     }
 
     private Map<String, Object> resource(String uri, String name)

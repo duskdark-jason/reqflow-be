@@ -51,8 +51,8 @@
 - 需求主状态流转为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，旧 `plan_pending`、`archived` 仅作为兼容状态保留；`submitted` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发。
 - 状态流转不仅校验 `req:demand:edit` 和状态机，还必须按角色和参与人隔离：需求创建人执行提交需求、确认需求设计、返修和验收，指定开发人员执行提交需求设计、开始开发、提交验收和返修验收，`admin` 可执行全部合法动作。
 - 指定开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令先用 `upload_requirement_assessment` 回写 `requirement_assessment` 需求可行性评估，评估结论允许继续后再用 `save_requirement_package` 保存 `requirement` 需求设计。需求设计阶段必须创建或沿用平台建议的任务分支，本地只写评估结论和 `requirement.md`，不能替代人员 `X-MCP-Key`。
-- 指定开发人员可通过需求详情获取 `requirement_develop` 动作 token 指令；该指令包含执行计划、执行报告和 Review 报告三个一次性 actionToken，分别用于 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，不能替代人员 `X-MCP-Key`。
-- 项目初始化、需求设计和开发执行动作 token 生成后 24 小时内有效且仅可使用一次；`last_used_time` 非空或 `expire_time` 过期时必须拒绝，重新执行需重新生成指令。
+- 指定开发人员可在 `confirmed` 或 `developing` 状态通过需求详情获取 `requirement_develop` 开发阶段动作 token 指令；该指令只给出一个开发阶段 actionToken，可在当前开发阶段内用于 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，不能替代人员 `X-MCP-Key`。
+- 项目初始化和需求设计动作 token 生成后在当前流程阶段内有效，最长保留 24 小时，且仅可使用一次；开发阶段动作 token 在 `confirmed/developing` 阶段内可重复用于执行计划、执行报告和 Review 报告回写，需求流转到 `review` 后立即失效，超过 24 小时也需重新生成。
 - 需求资料包通过 `req_package_version` 追加版本记录，需求设计阶段保留需求可行性评估和需求设计版本，返修流程依赖同一需求下执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新；保存和 MCP 回写只允许指定开发人员或管理员。
 - 管理员角色沿用 `role_key='admin'` 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，供 MCP 回写资料。
 - 需求未选择既有模块时，可以用备注承载新功能名称；执行包模块名解析顺序为人工模块、索引模块、备注。
@@ -68,7 +68,7 @@
 
 - 修改项目初始化上下文时，必须同步检查前端项目管理、项目维护、分支知识库页签和需求表单的字段使用。
 - 修改索引导入或影响面推荐时，必须确认项目分支、真实 Git 分支、索引批次和模块知识的粒度一致。
-- MCP tools 新增、改名或 actionToken 解析调整时，必须同步人员权限校验、接口契约、一次性和 24 小时有效期语义、`tools/list` schema、前端文案和平台初始化指令。
+- MCP tools 新增、改名或 actionToken 解析调整时，必须同步人员权限校验、接口契约、流程阶段有效期语义、`tools/list` schema、前端文案和平台初始化指令。
 - MCP 管理 Key 创建或重置结果调整时，必须同步前端 MCP 管理页。页面不再提供配置查询入口；创建和重置响应只单独返回一次性 `plainKey` 与 `codexSetupPackage`。`codexSetupPackage.installCommands` 是主复制入口，提供 macOS/Linux 和 Windows PowerShell 代码块命令模板；模板使用 `${REQFLOW_MCP_KEY}` 占位，前端只在当前结果弹窗中用一次性 `plainKey` 渲染。长 JSON 安装包仅作为高级配置/调试信息保留。
 - `/requirement/codex/install.sh` 和 `/requirement/codex/install.ps1` 是匿名可读安装脚本端点，脚本内容不得内置人员 Key，不得自动调用 reqflow MCP tools，只写入本机 Codex MCP 配置和全局 `reqflow-mcp` skill。
 - 全局 `reqflow-mcp` skill 模板的 `SKILL.md` frontmatter 必须保持合法 YAML；`name` 和 `description` 使用双引号包裹，描述中不得出现未转义的 `: `，避免 Codex 启动扫描时跳过该 skill。
