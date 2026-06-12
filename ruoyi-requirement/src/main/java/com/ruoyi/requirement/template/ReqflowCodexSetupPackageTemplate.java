@@ -46,7 +46,7 @@ public final class ReqflowCodexSetupPackageTemplate
                 + "    \"reqflow\": {\n"
                 + "      \"url\": \"" + escapeJson(mcpAddress) + "\",\n"
                 + "      \"headers\": {\n"
-                + "        \"" + MCP_KEY_HEADER + "\": \"创建或重置后返回的Key\"\n"
+                + "        \"" + MCP_KEY_HEADER + "\": \"创建后返回的Key\"\n"
                 + "      }\n"
                 + "    }\n"
                 + "  }\n"
@@ -67,7 +67,7 @@ public final class ReqflowCodexSetupPackageTemplate
         mcpServer.put("transport", "streamable-http");
         mcpServer.put("url", mcpAddress);
         mcpServer.put("headerName", MCP_KEY_HEADER);
-        mcpServer.put("headerValue", "创建或重置后返回的Key");
+        mcpServer.put("headerValue", "创建后返回的Key");
         return mcpServer;
     }
 
@@ -161,7 +161,7 @@ public final class ReqflowCodexSetupPackageTemplate
         List<Map<String, Object>> headers = new ArrayList<>();
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("name", MCP_KEY_HEADER);
-        header.put("description", "Reqflow MCP user key returned once when creating or regenerating a key.");
+        header.put("description", "Reqflow MCP user key returned once when creating a key.");
         header.put("isSecret", true);
         headers.add(header);
         return headers;

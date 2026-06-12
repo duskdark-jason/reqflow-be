@@ -11,6 +11,8 @@ import java.util.Arrays;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
@@ -18,13 +20,11 @@ import com.ruoyi.requirement.domain.ReqMcpUserKey;
 class ReqMcpKeyControllerTest
 {
     @Test
-    void createAndRegenerateDoNotSavePlainKeyResponseInOperationLog() throws NoSuchMethodException
+    void createDoesNotSavePlainKeyResponseInOperationLog() throws NoSuchMethodException
     {
         Method add = ReqMcpKeyController.class.getMethod("add", ReqMcpUserKey.class, HttpServletRequest.class);
-        Method regenerate = ReqMcpKeyController.class.getMethod("regenerate", Long.class, HttpServletRequest.class);
 
         assertFalse(add.getAnnotation(Log.class).isSaveResponseData());
-        assertFalse(regenerate.getAnnotation(Log.class).isSaveResponseData());
     }
 
     @Test
@@ -65,5 +65,19 @@ class ReqMcpKeyControllerTest
                 .anyMatch("/config"::equals);
 
         assertFalse(hasConfigMapping);
+    }
+
+    @Test
+    void controllerDoesNotExposeEditOrRegenerateEndpoint()
+    {
+        boolean hasPutMapping = Arrays.stream(ReqMcpKeyController.class.getDeclaredMethods())
+                .anyMatch(method -> method.isAnnotationPresent(PutMapping.class));
+        boolean hasRegenerateMapping = Arrays.stream(ReqMcpKeyController.class.getDeclaredMethods())
+                .filter(method -> method.isAnnotationPresent(PostMapping.class))
+                .flatMap(method -> Arrays.stream(method.getAnnotation(PostMapping.class).value()))
+                .anyMatch(value -> value.contains("regenerate"));
+
+        assertFalse(hasPutMapping);
+        assertFalse(hasRegenerateMapping);
     }
 }

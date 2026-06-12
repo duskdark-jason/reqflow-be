@@ -535,6 +535,34 @@ class McpServiceTest
     }
 
     @Test
+    void developStageActionTokenCannotBeUsedBeforeDeveloperStartsDevelopment()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveToken("reqflow_action_develop_stage")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "confirmed"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_develop_stage");
+        arguments.put("content", "执行计划");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("save_development_plan", arguments)));
+
+        assertToolErrorResult(response, "动作Token所属流程阶段已结束");
+        verify(packageService, never()).saveVersion(any(), any(), any(), any());
+    }
+
+    @Test
     void developStageActionTokenExpiresAfterDemandMovesToReview()
     {
         IReqPackageService packageService = mock(IReqPackageService.class);

@@ -130,4 +130,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             sysdate()
         </trim>
     </insert>
+
+    <update id="deactivateReqImpactItemsByRepositoryBranch" parameterType="ReqImpactItem">
+        update req_impact_item
+        set status = '1',
+            update_by = #{updateBy},
+            update_time = sysdate()
+        where project_id = #{projectId}
+          and repo_id = #{repoId}
+        <choose>
+            <when test="variantId != null">and variant_id = #{variantId}</when>
+            <otherwise>and variant_id is null</otherwise>
+        </choose>
+        <if test="branchName != null and branchName != ''">and branch_name = #{branchName}</if>
+          and status = '0'
+    </update>
 </mapper>

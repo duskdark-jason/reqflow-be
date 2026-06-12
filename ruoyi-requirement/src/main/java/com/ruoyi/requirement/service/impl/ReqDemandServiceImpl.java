@@ -199,6 +199,10 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             validateDeveloperUser(current.getDeveloperUserId());
         }
+        if ("plan_pending".equals(current.getStatus()) && "plan_ready".equals(status))
+        {
+            validateRequirementDesignGeneratedAfterLatestSupplement(current.getDemandId());
+        }
         int rows = reqDemandMapper.updateReqDemandStatus(demandId, status, updateBy);
         if (rows > 0 && "submitted".equals(status))
         {
@@ -358,8 +362,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("需求不存在");
         }
         validateDeveloperInstructionAccess(demand);
-        if (!"confirmed".equals(demand.getStatus()) && !"developing".equals(demand.getStatus())
-                && !"repairing".equals(demand.getStatus()))
+        if (!"developing".equals(demand.getStatus()) && !"repairing".equals(demand.getStatus()))
         {
             throw new ServiceException("当前状态不能生成执行任务指令");
         }
@@ -653,6 +656,34 @@ public class ReqDemandServiceImpl implements IReqDemandService
             return;
         }
         throw new ServiceException("只有指定开发人员可以生成该需求指令");
+    }
+
+    private void validateRequirementDesignGeneratedAfterLatestSupplement(Long demandId)
+    {
+        ReqPackageVersion requirement = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId, "requirement");
+        if (requirement == null)
+        {
+            throw new ServiceException("请先生成新的需求设计后再提交需求人确认");
+        }
+        ReqPackageVersion supplement = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId,
+                "requirement_supplement");
+        if (supplement != null && !isPackageVersionNotEarlier(requirement, supplement))
+        {
+            throw new ServiceException("请先生成新的需求设计后再提交需求人确认");
+        }
+    }
+
+    private boolean isPackageVersionNotEarlier(ReqPackageVersion candidate, ReqPackageVersion baseline)
+    {
+        if (candidate.getCreateTime() != null && baseline.getCreateTime() != null)
+        {
+            return !candidate.getCreateTime().before(baseline.getCreateTime());
+        }
+        if (candidate.getPackageId() != null && baseline.getPackageId() != null)
+        {
+            return candidate.getPackageId() >= baseline.getPackageId();
+        }
+        return false;
     }
 
     private boolean isCurrentCreator(ReqDemand demand)

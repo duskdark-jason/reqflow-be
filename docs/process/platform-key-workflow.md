@@ -32,7 +32,7 @@
 - 开发阶段不得重新生成不同任务分支；如本地任务分支缺失，只能按需求平台记录的同名任务分支恢复，不能自行创造新分支名。
 - 进入开发阶段后，将最终需求设计落地或校准到 `docs/specs/active/REQ-001-中文需求标题/requirement.md`，再由 Execution Agent 基于最终需求设计生成或更新 `plan.md`，然后按计划执行开发。
 - 落地 `meta.md` 时必须记录需求平台返回的影响模块，并声明模块知识库动作。涉及菜单、页面、接口、权限、核心流程或数据口径时，必须更新 `docs/ai-harness/modules/*.md`。
-- 开发阶段使用同一个开发阶段 actionToken 完成 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 回写；该 token 只在 `confirmed/developing` 流程阶段有效，转入待验收后失效。
+- 开发阶段使用同一个开发阶段 actionToken 完成 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 回写；该 token 只在 `developing` 流程阶段有效，转入待验收后失效。
 - 开发完成后进入自动 Review 循环：Execution Agent 持续追加或更新 `execution-report.md` 并通过 MCP `upload_execution_report` 回写新版本；Review Agent 只读审查、追加或更新 `review-report.md` 并通过 MCP `upload_review_report` 回写新版本。发现 `RF-*` 后自动切回执行阶段修复并回填 `execution-report.md`，再自动复审，直到最终 Review 结论为 `通过`。
 - 返修阶段沿用同一任务分支和同一 spec 目录；需求人补充返修说明后，开发人员复制新的返修任务提示词，使用同一个返修阶段 actionToken 持续补充 `execution-report.md` 和 `review-report.md` 并回写平台。返修阶段不得重新生成 `requirement.md` 或 `plan.md`，需求平台按版本保留每次执行和 Review 资料。
 - 完成后通知开发人员确认；merge、push、rebase 或删除远端分支仍需明确授权。

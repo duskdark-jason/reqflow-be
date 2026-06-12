@@ -64,6 +64,8 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         batchMapper.insertReqRepositoryIndexBatch(batch);
         Long batchId = batch.getBatchId();
 
+        deactivateExistingRepositoryKnowledge(request, branchVariant, username);
+
         int moduleCount = 0;
         for (ReqIndexModulePayload payload : safeList(request.getModules()))
         {
@@ -145,9 +147,10 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         }
         catch (DataAccessException e)
         {
-            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module"))
+            if (ReqOptionalIndexTableGuard.isMissingTable(e, "req_index_module")
+                    || ReqOptionalIndexTableGuard.isMissingTable(e, "req_repository_index_batch"))
             {
-                // 模块索引表缺失时不吞掉写入失败；这里只服务查询页的兼容展示。
+                // 模块索引表或批次表缺失时不吞掉写入失败；这里只服务查询页的兼容展示。
                 return Collections.emptyList();
             }
             throw e;
@@ -338,7 +341,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         module.setModuleCode(payload.getModuleCode());
         module.setModuleName(payload.getModuleName());
         module.setModuleType(payload.getModuleType());
-        module.setRepoScope(payload.getRepoScope());
+        module.setRepoScope(firstNotEmpty(payload.getRepoScope(), request.getRepoType()));
         module.setRelativePath(payload.getRelativePath());
         module.setSourceRef(payload.getSourceRef());
         module.setSummary(payload.getSummary());
@@ -371,6 +374,49 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         item.setStatus("0");
         item.setCreateBy(username);
         return item;
+    }
+
+    private void deactivateExistingRepositoryKnowledge(ReqRepositoryIndexImportRequest request, ReqVariant branchVariant, String username)
+    {
+        for (Long variantId : collectSnapshotVariantIds(request, branchVariant))
+        {
+            ReqIndexModule module = new ReqIndexModule();
+            module.setProjectId(request.getProjectId());
+            module.setRepoId(request.getRepoId());
+            module.setVariantId(variantId);
+            module.setUpdateBy(username);
+            moduleMapper.deactivateReqIndexModulesByRepositoryBranch(module);
+
+            ReqImpactItem item = new ReqImpactItem();
+            item.setProjectId(request.getProjectId());
+            item.setRepoId(request.getRepoId());
+            item.setVariantId(variantId);
+            item.setBranchName(request.getBranchName());
+            item.setUpdateBy(username);
+            impactMapper.deactivateReqImpactItemsByRepositoryBranch(item);
+        }
+    }
+
+    private Set<Long> collectSnapshotVariantIds(ReqRepositoryIndexImportRequest request, ReqVariant branchVariant)
+    {
+        Set<Long> variantIds = new HashSet<>();
+        if (branchVariant != null)
+        {
+            variantIds.add(branchVariant.getVariantId());
+        }
+        for (ReqIndexModulePayload module : safeList(request.getModules()))
+        {
+            variantIds.add(module.getVariantId());
+        }
+        for (ReqIndexImpactPayload impact : collectImpacts(request))
+        {
+            variantIds.add(impact.getVariantId());
+        }
+        if (variantIds.isEmpty())
+        {
+            variantIds.add(null);
+        }
+        return variantIds;
     }
 
     private Long resolveImpactVariantId(ReqRepositoryIndexImportRequest request, ReqIndexImpactPayload payload, ReqVariant branchVariant)

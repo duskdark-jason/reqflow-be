@@ -54,12 +54,12 @@ class ReqPlatformRoleSqlTest
         assertTrue(developerSection.contains("req:mcp:key:list"), developerSection);
         assertTrue(developerSection.contains("req:mcp:key:query"), developerSection);
         assertTrue(developerSection.contains("req:mcp:key:add"), developerSection);
-        assertTrue(developerSection.contains("req:mcp:key:edit"), developerSection);
         assertTrue(developerSection.contains("req:mcp:key:remove"), developerSection);
         assertTrue(developerSection.contains("req:package:save"), developerSection);
         assertTrue(developerSection.contains("req:stats:view"), developerSection);
         assertFalse(developerSection.contains("req:demand:add"), developerSection);
         assertFalse(developerSection.contains("req:demand:remove"), developerSection);
+        assertFalse(developerSection.contains("req:mcp:key:edit"), developerSection);
         assertFalse(developerSection.contains("req:project:"), developerSection);
         assertFalse(developerSection.contains("req:index:"), developerSection);
     }

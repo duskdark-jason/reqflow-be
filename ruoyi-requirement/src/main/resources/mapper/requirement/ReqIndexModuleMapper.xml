@@ -45,7 +45,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="variantId != null">and variant_id = #{variantId}</if>
             <if test="moduleCode != null and moduleCode != ''">and module_code = #{moduleCode}</if>
             <if test="moduleName != null and moduleName != ''">and module_name like concat('%', #{moduleName}, '%')</if>
+            <if test="moduleType != null and moduleType != ''">and module_type = #{moduleType}</if>
+            <if test="repoScope != null and repoScope != ''">and repo_scope = #{repoScope}</if>
             <if test="status != null and status != ''">and status = #{status}</if>
+            and batch_id in (
+                select latest_batch_id from (
+                    select max(batch_id) as latest_batch_id
+                    from req_repository_index_batch
+                    where status = 'imported'
+                    <if test="projectId != null">and project_id = #{projectId}</if>
+                    <if test="repoId != null">and repo_id = #{repoId}</if>
+                    group by repo_id, branch_name
+                ) latest_batches
+            )
         </where>
         order by order_num asc, index_module_id asc
     </select>
@@ -96,4 +108,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             sysdate()
         </trim>
     </insert>
+
+    <update id="deactivateReqIndexModulesByRepositoryBranch" parameterType="ReqIndexModule">
+        update req_index_module
+        set status = '1',
+            update_by = #{updateBy},
+            update_time = sysdate()
+        where project_id = #{projectId}
+          and repo_id = #{repoId}
+        <choose>
+            <when test="variantId != null">and variant_id = #{variantId}</when>
+            <otherwise>and variant_id is null</otherwise>
+        </choose>
+          and status = '0'
+    </update>
 </mapper>

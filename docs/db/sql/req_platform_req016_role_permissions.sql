@@ -67,7 +67,6 @@ WHERE status = '0'
       'req:mcp:key:list',
       'req:mcp:key:query',
       'req:mcp:key:add',
-      'req:mcp:key:edit',
       'req:mcp:key:remove',
       'req:package:save',
       'req:stats:view'

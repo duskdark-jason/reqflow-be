@@ -2,7 +2,7 @@
 
 你从 workspace 根目录启动，是 Workspace Execution Agent。先分流，再进入受影响子仓库按计划执行；不要自行扩大需求。
 
-如果用户提供需求平台开发 Key，先通过需求平台 MCP 读取最终需求设计、任务分支、目标仓库、开发基线分支和验收要求，并按 `docs/process/platform-key-workflow.md` 的开发模式执行。必须校验当前 workspace 仓库远端与平台关联远端一致，并切换到需求设计阶段已经创建的任务分支；开发阶段不得重新生成不同任务分支。`confirmed/developing` 阶段使用开发阶段 actionToken，先基于最终 `requirement.md` 生成或更新 `plan.md`，再落地开发，并依次回写执行计划、执行报告和 Review 报告。`repairing` 阶段使用返修阶段 actionToken，只处理返修项或需求人返修说明并补充 `execution-report.md` 和 `review-report.md`，不得重新生成需求设计或执行计划。
+如果用户提供需求平台开发 Key，先通过需求平台 MCP 读取最终需求设计、任务分支、目标仓库、开发基线分支和验收要求，并按 `docs/process/platform-key-workflow.md` 的开发模式执行。必须校验当前 workspace 仓库远端与平台关联远端一致，并切换到需求设计阶段已经创建的任务分支；开发阶段不得重新生成不同任务分支。`developing` 阶段使用开发阶段 actionToken，先基于最终 `requirement.md` 生成或更新 `plan.md`，再落地开发，并依次回写执行计划、执行报告和 Review 报告。`repairing` 阶段使用返修阶段 actionToken，只处理返修项或需求人返修说明并补充 `execution-report.md` 和 `review-report.md`，不得重新生成需求设计或执行计划。
 
 如果用户提供项目接入初始化 Key，只执行 harness 初始化下发：先切换默认基线分支并 `git pull --ff-only`，写入 workspace `AGENTS.md`、子仓库 `AGENTS.md`、`docs/` 和 `scripts/`，运行 init 校验，校验通过后提交并推送初始化生成或升级的文件，再回写结果；不得改业务代码。
 

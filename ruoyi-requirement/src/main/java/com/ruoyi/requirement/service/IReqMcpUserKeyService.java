@@ -19,11 +19,9 @@ public interface IReqMcpUserKeyService
 
     public ReqMcpUserKeyCreateResult createKey(ReqMcpUserKey reqMcpUserKey, String operator, String mcpAddress);
 
-    public int updateReqMcpUserKey(ReqMcpUserKey reqMcpUserKey);
+    public ReqMcpUserKeyCreateResult createInstruction(Long keyId, String mcpAddress);
 
     public int deleteReqMcpUserKeyByKeyIds(Long[] keyIds);
-
-    public ReqMcpUserKeyCreateResult regenerateKey(Long keyId, String operator, String mcpAddress);
 
     public LoginUser authenticate(String plainKey, String ip);
 }

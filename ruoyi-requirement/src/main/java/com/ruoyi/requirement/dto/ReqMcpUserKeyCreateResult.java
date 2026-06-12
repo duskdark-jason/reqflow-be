@@ -4,7 +4,7 @@ import java.util.Map;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
 
 /**
- * 人员MCP Key创建或重置后的一次性明文结果
+ * 人员MCP Key创建后的一次性明文和安装指令结果
  */
 public class ReqMcpUserKeyCreateResult
 {

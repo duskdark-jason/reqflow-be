@@ -18,10 +18,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.core.domain.entity.SysRole;
 import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.common.exception.ServiceException;
@@ -34,6 +38,12 @@ import com.ruoyi.system.service.ISysUserService;
 
 class ReqMcpUserKeyServiceImplTest
 {
+    @AfterEach
+    void clearSecurityContext()
+    {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void createsRandomKeyAndStoresOnlyHashAndPrefix()
     {
@@ -112,28 +122,23 @@ class ReqMcpUserKeyServiceImplTest
     }
 
     @Test
-    void rejectsUserRebindWhenUpdatingKey()
+    void nonAdminCreateKeyBindsCurrentUser()
     {
         ReqMcpUserKeyMapper mapper = mock(ReqMcpUserKeyMapper.class);
         ISysUserService userService = mock(ISysUserService.class);
         ReqMcpUserKeyServiceImpl service = newService(mapper, userService, mock(ISysMenuService.class));
+        when(userService.selectUserById(12L)).thenReturn(enabledUser(12L, "developer"));
+        mockLoginUser(12L, "requirement_developer");
 
-        ReqMcpUserKey exists = new ReqMcpUserKey();
-        exists.setKeyId(99L);
-        exists.setUserId(12L);
-        exists.setKeyName("开发人员Codex");
-        exists.setStatus("0");
-        when(mapper.selectReqMcpUserKeyByKeyId(99L)).thenReturn(exists);
+        ReqMcpUserKey request = new ReqMcpUserKey();
+        request.setUserId(13L);
+        request.setKeyName("个人Codex");
 
-        ReqMcpUserKey update = new ReqMcpUserKey();
-        update.setKeyId(99L);
-        update.setUserId(13L);
-        update.setKeyName("换绑尝试");
-        update.setStatus("0");
-        when(userService.selectUserById(13L)).thenReturn(enabledUser(13L, "other_user"));
+        service.createKey(request, "developer", "http://localhost:8080/requirement/mcp");
 
-        assertThrows(ServiceException.class, () -> service.updateReqMcpUserKey(update));
-        verify(mapper, never()).updateReqMcpUserKey(any());
+        ArgumentCaptor<ReqMcpUserKey> captor = forClass(ReqMcpUserKey.class);
+        verify(mapper).insertReqMcpUserKey(captor.capture());
+        assertEquals(12L, captor.getValue().getUserId());
     }
 
     @Test
@@ -157,6 +162,60 @@ class ReqMcpUserKeyServiceImplTest
         verify(userService).selectUserList(queryCaptor.capture());
         assertEquals("dev", queryCaptor.getValue().getUserName());
         assertEquals("0", queryCaptor.getValue().getStatus());
+    }
+
+    @Test
+    void nonAdminUserOptionsOnlyReturnsCurrentUser()
+    {
+        ISysUserService userService = mock(ISysUserService.class);
+        ReqMcpUserKeyServiceImpl service = newService(mock(ReqMcpUserKeyMapper.class), userService, mock(ISysMenuService.class));
+        when(userService.selectUserById(12L)).thenReturn(enabledUser(12L, "developer"));
+        mockLoginUser(12L, "requirement_developer");
+
+        List<ReqMcpUserOption> options = service.selectUserOptions("other");
+
+        assertEquals(1, options.size());
+        assertEquals(12L, options.get(0).getUserId());
+        verify(userService, never()).selectUserList(any(SysUser.class));
+    }
+
+    @Test
+    void createsInstructionPackageWithoutRecoveringPlainKey()
+    {
+        ReqMcpUserKeyMapper mapper = mock(ReqMcpUserKeyMapper.class);
+        ReqMcpUserKeyServiceImpl service = newService(mapper, mock(ISysUserService.class), mock(ISysMenuService.class));
+        ReqMcpUserKey key = new ReqMcpUserKey();
+        key.setKeyId(99L);
+        key.setUserId(12L);
+        key.setKeyName("个人Codex");
+        key.setStatus("0");
+        when(mapper.selectReqMcpUserKeyByKeyId(99L)).thenReturn(key);
+        mockLoginUser(1L, "admin");
+
+        ReqMcpUserKeyCreateResult result = service.createInstruction(99L, "http://localhost:8080/requirement/mcp");
+
+        assertEquals(key, result.getKey());
+        assertEquals(null, result.getPlainKey());
+        assertEquals("reqflow-codex-setup", result.getCodexSetupPackage().get("packageName"));
+    }
+
+    @Test
+    void rejectsOtherUserInstructionPackageForNonAdmin()
+    {
+        ReqMcpUserKeyMapper mapper = mock(ReqMcpUserKeyMapper.class);
+        ReqMcpUserKeyServiceImpl service = newService(mapper, mock(ISysUserService.class), mock(ISysMenuService.class));
+        ReqMcpUserKey key = new ReqMcpUserKey();
+        key.setKeyId(99L);
+        key.setUserId(13L);
+        key.setKeyName("他人Codex");
+        key.setStatus("0");
+        when(mapper.selectReqMcpUserKeyByKeyId(99L)).thenReturn(key);
+        mockLoginUser(12L, "requirement_developer");
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.createInstruction(99L, "http://localhost:8080/requirement/mcp"));
+
+        assertTrue(exception.getMessage().contains("只能查看自己的MCP Key指令"));
     }
 
     @Test
@@ -290,5 +349,16 @@ class ReqMcpUserKeyServiceImplTest
         user.setStatus("0");
         user.setDelFlag("0");
         return user;
+    }
+
+    private void mockLoginUser(Long userId, String roleKey)
+    {
+        SysRole role = new SysRole();
+        role.setRoleKey(roleKey);
+        SysUser user = enabledUser(userId, roleKey);
+        user.setRoles(List.of(role));
+        LoginUser loginUser = new LoginUser(userId, 1L, user, Collections.emptySet());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities()));
     }
 }

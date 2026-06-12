@@ -13,4 +13,6 @@ public interface ReqImpactItemMapper
     List<ReqImpactItem> selectLatestImpactItems(ReqImpactSuggestQuery query);
 
     int insertReqImpactItem(ReqImpactItem item);
+
+    int deactivateReqImpactItemsByRepositoryBranch(ReqImpactItem item);
 }

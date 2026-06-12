@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,7 +43,7 @@ public class ReqMcpKeyController extends BaseController
         return getDataTable(list);
     }
 
-    @PreAuthorize("@ss.hasAnyPermi('req:mcp:key:list,req:mcp:key:add,req:mcp:key:edit')")
+    @PreAuthorize("@ss.hasAnyPermi('req:mcp:key:list,req:mcp:key:add')")
     @GetMapping("/user-options")
     public AjaxResult userOptions(String userName)
     {
@@ -58,29 +57,19 @@ public class ReqMcpKeyController extends BaseController
         return success(reqMcpUserKeyService.selectReqMcpUserKeyByKeyId(keyId));
     }
 
+    @PreAuthorize("@ss.hasPermi('req:mcp:key:query')")
+    @GetMapping(value = "/{keyId}/instruction")
+    public AjaxResult instruction(@PathVariable("keyId") Long keyId, HttpServletRequest request)
+    {
+        return success(reqMcpUserKeyService.createInstruction(keyId, mcpAddress(request)));
+    }
+
     @PreAuthorize("@ss.hasPermi('req:mcp:key:add')")
     @Log(title = "MCP人员Key", businessType = BusinessType.INSERT, isSaveResponseData = false)
     @PostMapping
     public AjaxResult add(@RequestBody ReqMcpUserKey reqMcpUserKey, HttpServletRequest request)
     {
         return success(reqMcpUserKeyService.createKey(reqMcpUserKey, getUsername(), mcpAddress(request)));
-    }
-
-    @PreAuthorize("@ss.hasPermi('req:mcp:key:edit')")
-    @Log(title = "MCP人员Key", businessType = BusinessType.UPDATE)
-    @PutMapping
-    public AjaxResult edit(@RequestBody ReqMcpUserKey reqMcpUserKey)
-    {
-        reqMcpUserKey.setUpdateBy(getUsername());
-        return toAjax(reqMcpUserKeyService.updateReqMcpUserKey(reqMcpUserKey));
-    }
-
-    @PreAuthorize("@ss.hasPermi('req:mcp:key:edit')")
-    @Log(title = "MCP人员Key重置", businessType = BusinessType.UPDATE, isSaveResponseData = false)
-    @PostMapping("/{keyId}/regenerate")
-    public AjaxResult regenerate(@PathVariable("keyId") Long keyId, HttpServletRequest request)
-    {
-        return success(reqMcpUserKeyService.regenerateKey(keyId, getUsername(), mcpAddress(request)));
     }
 
     @PreAuthorize("@ss.hasPermi('req:mcp:key:remove')")

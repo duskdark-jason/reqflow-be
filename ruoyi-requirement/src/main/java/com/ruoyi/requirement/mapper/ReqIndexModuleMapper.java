@@ -12,4 +12,6 @@ public interface ReqIndexModuleMapper
     List<ReqIndexModule> selectReqIndexModuleList(ReqIndexModule module);
 
     int insertReqIndexModule(ReqIndexModule module);
+
+    int deactivateReqIndexModulesByRepositoryBranch(ReqIndexModule module);
 }

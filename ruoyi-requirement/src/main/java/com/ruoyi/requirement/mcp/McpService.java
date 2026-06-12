@@ -496,7 +496,7 @@ public class McpService
         content.append("4. 先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能生成模块知识库；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n");
         content.append("5. 运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。\n");
         content.append("6. 校验通过后提交并推送初始化生成或升级的 AGENTS.md、docs/ 和 scripts/。\n");
-        content.append("7. 通过 mcp__reqflow.publish_repository_index 发布结构化索引，modules 必须是一行一个前端页面业务功能或后端主能力，pages/apis/permissions/tables/documents 通过 moduleCode 归属。\n");
+        content.append("7. 通过 mcp__reqflow.publish_repository_index 发布结构化索引，modules 必须是一行一个前端页面业务功能或后端主能力，pages/apis/permissions/tables/documents 通过 moduleCode 归属；重复发布按当前仓库当前分支快照同步，平台会让旧模块和旧影响面失效。\n");
         content.append("8. 通过 mcp__reqflow.register_harness_init_result 回写初始化模式、commit、push 结果和异常说明。\n");
         return content.toString();
     }
@@ -707,7 +707,7 @@ public class McpService
                 + "5. 在每个子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
                 + "6. 校验通过后提交并推送初始化生成或升级的 `AGENTS.md`、`docs/` 和 `scripts/`。\n"
                 + "7. 发布索引前，先扫描前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或前端页面业务功能生成 `modules`；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n"
-                + "8. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
+                + "8. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。重复发布按当前仓库当前分支快照同步，平台会让旧模块和旧影响面失效。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
                 + "9. 调用 `register_harness_init_result` 回写 harness 初始化状态、commit、push 结果和失败原因。\n"
                 + "10. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
     }
@@ -868,7 +868,7 @@ public class McpService
         {
             if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod()))
             {
-                validateActionTokenDemandStage(token, "confirmed", "developing");
+                validateActionTokenDemandStage(token, "developing");
                 if ("save_development_plan".equals(toolName) || "upload_execution_report".equals(toolName)
                         || "upload_review_report".equals(toolName))
                 {
@@ -885,7 +885,7 @@ public class McpService
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
-            validateActionTokenDemandStage(token, "confirmed", "developing", "repairing");
+            validateActionTokenDemandStage(token, "developing", "repairing");
             if (toolName.equals(token.getTargetMethod()))
             {
                 return token.getDemandId();
@@ -1038,7 +1038,7 @@ public class McpService
         itemProperties.put("sourceRef", property("string", "模块来源说明，例如路由、菜单、页面组件或后台任务"));
         itemProperties.put("summary", property("string", "模块业务摘要"));
         itemProperties.put("orderNum", property("integer", "排序号"));
-        return arrayObjectProperty("模块或功能点索引列表；项目初始化时不能为空，优先按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块",
+        return arrayObjectProperty("模块或功能点索引列表；项目初始化时不能为空，优先按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块；重复发布视为当前仓库当前分支快照，未再次出现的旧模块会从活动知识库中失效",
                 itemProperties, Arrays.asList("moduleCode", "moduleName"));
     }
 

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -97,6 +98,56 @@ class ReqRepositoryIndexServiceImplTest
         verify(impactMapper, times(2)).insertReqImpactItem(any());
         verify(repositoryMapper).updateHarnessInitResult(any(ReqRepository.class));
         verify(activityLogService).record(7L, 1L, null, "repository_index_published", "mcp", "仓库索引发布：git@example.com:reqflow-ui.git", null);
+    }
+
+    @Test
+    void importsIndexAsSnapshotAndDeactivatesPreviousRepositoryKnowledge()
+    {
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
+        ReqImpactItemMapper impactMapper = mock(ReqImpactItemMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqRepositoryIndexServiceImpl service = newService(batchMapper, moduleMapper, impactMapper,
+                repositoryMapper, variantMapper, mock(ReqActivityLogService.class));
+
+        ReqRepository repository = new ReqRepository();
+        repository.setRepoId(2L);
+        repository.setProjectId(1L);
+        repository.setRepoUrl("git@example.com:reqflow-ui.git");
+        repository.setRepoType("FRONTEND");
+        when(repositoryMapper.selectReqRepositoryByRepoId(2L)).thenReturn(repository);
+        ReqVariant branch = new ReqVariant();
+        branch.setVariantId(8L);
+        branch.setProjectId(1L);
+        branch.setBaselineBranch("customer/hlj");
+        branch.setStatus("0");
+        when(variantMapper.selectReqVariantList(any())).thenReturn(Collections.singletonList(branch));
+        doAnswer(invocation -> {
+            ReqRepositoryIndexBatch batch = invocation.getArgument(0);
+            batch.setBatchId(104L);
+            return 1;
+        }).when(batchMapper).insertReqRepositoryIndexBatch(any(ReqRepositoryIndexBatch.class));
+
+        ReqRepositoryIndexImportRequest request = baseRequest();
+        request.setModules(Collections.singletonList(module("demand", "需求管理")));
+        request.setPages(Collections.singletonList(impact("PAGE", "需求列表")));
+
+        service.importRepositoryIndex(request, "mcp", "tester", 7L);
+
+        verify(moduleMapper).deactivateReqIndexModulesByRepositoryBranch(argThat(module ->
+                Long.valueOf(1L).equals(module.getProjectId())
+                        && Long.valueOf(2L).equals(module.getRepoId())
+                        && Long.valueOf(8L).equals(module.getVariantId())
+                        && "tester".equals(module.getUpdateBy())));
+        verify(impactMapper).deactivateReqImpactItemsByRepositoryBranch(argThat(item ->
+                Long.valueOf(1L).equals(item.getProjectId())
+                        && Long.valueOf(2L).equals(item.getRepoId())
+                        && Long.valueOf(8L).equals(item.getVariantId())
+                        && "customer/hlj".equals(item.getBranchName())
+                        && "tester".equals(item.getUpdateBy())));
+        verify(moduleMapper).insertReqIndexModule(any());
+        verify(impactMapper).insertReqImpactItem(any());
     }
 
     @Test

@@ -15,7 +15,7 @@
 1. 后端 TDD：先修改 `ReqDemandStatusTransitionTest` 和 `ReqDemandServiceImplTest`，让编号、默认状态、创建人覆盖和新状态主路径用例失败，覆盖 AC-001~AC-003。
 2. 状态机实现：修改 `ReqDemandStatusTransition` 和 `ReqDemandServiceImpl`，实现不带日期编号、`draft` 默认状态和新流转，覆盖 AC-001~AC-003。
 3. 需求分析与需求生成指令：扩展 `IReqDemandService`、`ReqDemandController`、`ReqDemandServiceImpl`，让 `submitted` 状态只生成需求分析指令和 `upload_requirement_assessment` token，`plan_pending/plan_ready` 状态只生成需求生成指令和 `save_requirement_package` token，覆盖 AC-004、AC-006、AC-011。
-4. 执行任务指令与返修：新增执行任务指令接口，`confirmed/developing` 阶段支持 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 共用开发阶段 token；`repairing` 阶段只支持 `upload_execution_report` 和 `upload_review_report` 共用返修阶段 token；增加 `review -> repairing -> review` 状态事件记录，覆盖 AC-007、AC-008、AC-012。
+4. 执行任务指令与返修：新增执行任务指令接口，`confirmed` 阶段只允许开始开发，进入 `developing` 后才支持 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 共用开发阶段 token；`repairing` 阶段只支持 `upload_execution_report` 和 `upload_review_report` 共用返修阶段 token；增加 `review -> repairing -> review` 状态事件记录，覆盖 AC-007、AC-008、AC-012。
 5. Token 生命周期：按流程阶段校验 actionToken 有效性，保留 24 小时最长有效期兜底；开发阶段和返修阶段 token 在当前阶段内可复用，需求分析和需求生成 token 一次性消费，覆盖 AC-009。
 6. 角色权限 SQL：新增幂等角色授权脚本，覆盖需求人员、开发人员和管理员角色边界，补充脚本契约测试，覆盖 AC-010。
 7. MCP 阶段拆分：`requirement_plan` 按 `target_method=requirement_analysis` 和 `target_method=requirement_generate` 分别限制工具与需求状态；`requirement_develop` 按 `target_method=requirement_develop` 和 `target_method=requirement_repair` 分别限制工具与需求状态，覆盖 AC-011、AC-012。
