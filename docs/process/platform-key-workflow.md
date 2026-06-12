@@ -13,9 +13,10 @@
 - 自动切换失败时必须停止，并说明需求平台期望的仓库、当前检测到的仓库、尝试过的切换路径和失败原因。
 - 必须先切换到目标基线分支并本地拉取最新代码；推荐命令为 `git switch <baseline-branch>` 和 `git pull --ff-only`。拉取失败、工作区存在未说明改动或远端不一致时必须停止说明。
 - 必须在需求设计阶段基于最新基线创建或切换到需求平台建议的 ASCII 任务分支；任务分支创建时机在需求设计阶段，不得推迟到开发阶段。
-- Plan Agent 必须先形成需求可行性评估和风险判断，结论类型至少区分“可继续设计、需澄清、需调整、暂不可实现”，并通过需求平台 MCP `upload_requirement_assessment` 回写评估报告；需要需求人补充、调整或当前不可实现时，应把结论作为反馈推送给需求人，本轮不得继续生成最终需求设计。
-- 评估结论允许继续后，Plan Agent 只生成或调整需求设计，只允许写入 `docs/specs/active/REQ-001-中文需求标题/meta.md` 和 `requirement.md`，不得生成 `plan.md`、不得改业务代码、不得写 `execution-report.md` 或 `review-report.md`。
-- 本地需求设计完成后，必须通过需求平台 MCP `save_requirement_package` 回写需求设计；需求人补充调整指令后，继续在同一任务分支更新可行性评估和 `requirement.md` 并再次回写，需求平台按 `req_package_version` 记录评估和需求设计迭代版本。
+- 需求分析阶段必须先形成需求可行性评估和风险判断，结论类型至少区分“可继续设计、需澄清、需调整、暂不可实现”，并通过需求平台 MCP `upload_requirement_assessment` 使用需求分析 actionToken 回写评估报告；该阶段不得调用 `save_requirement_package`，不得生成最终 `requirement.md`、`plan.md`、执行报告或 Review 报告。
+- 需求分析结论需要需求人补充、调整或当前不可实现时，应把结论作为反馈推送给需求人，本轮停止。结论允许继续后，需求平台流转到需求生成阶段，开发人员复制新的需求生成提示词。
+- 需求生成阶段只生成或调整需求设计，只允许写入 `docs/specs/active/REQ-001-中文需求标题/meta.md` 和 `requirement.md`，并通过需求平台 MCP `save_requirement_package` 使用需求生成 actionToken 回写需求设计；该阶段不得调用 `upload_requirement_assessment`，不得生成 `plan.md`、不得改业务代码、不得写 `execution-report.md` 或 `review-report.md`。
+- 需求人补充调整指令后，继续在同一任务分支更新最终 `requirement.md` 并再次回写，需求平台按 `req_package_version` 记录需求设计迭代版本；如需重新评估风险，应由平台重新进入需求分析阶段并使用新的分析 token。
 - 本地任务分支保留最终版 `requirement.md` 作为后续开发输入。MCP 回写不等同于 Git push；是否提交或推送任务分支按平台指令、仓库 Git 工作流或用户授权执行。
 - 需求设计阶段不得生成执行计划、不得进入开发或 Review。
 
@@ -31,8 +32,9 @@
 - 开发阶段不得重新生成不同任务分支；如本地任务分支缺失，只能按需求平台记录的同名任务分支恢复，不能自行创造新分支名。
 - 进入开发阶段后，将最终需求设计落地或校准到 `docs/specs/active/REQ-001-中文需求标题/requirement.md`，再由 Execution Agent 基于最终需求设计生成或更新 `plan.md`，然后按计划执行开发。
 - 落地 `meta.md` 时必须记录需求平台返回的影响模块，并声明模块知识库动作。涉及菜单、页面、接口、权限、核心流程或数据口径时，必须更新 `docs/ai-harness/modules/*.md`。
+- 开发阶段使用同一个开发阶段 actionToken 完成 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 回写；该 token 只在 `confirmed/developing` 流程阶段有效，转入待验收后失效。
 - 开发完成后进入自动 Review 循环：Execution Agent 持续追加或更新 `execution-report.md` 并通过 MCP `upload_execution_report` 回写新版本；Review Agent 只读审查、追加或更新 `review-report.md` 并通过 MCP `upload_review_report` 回写新版本。发现 `RF-*` 后自动切回执行阶段修复并回填 `execution-report.md`，再自动复审，直到最终 Review 结论为 `通过`。
-- 返修阶段沿用同一任务分支和同一 spec 目录；需求人补充返修说明后，开发人员复制新的执行任务提示词，在同一任务分支持续补充 `execution-report.md` 和 `review-report.md`，需求平台按版本保留每次执行和 Review 资料。
+- 返修阶段沿用同一任务分支和同一 spec 目录；需求人补充返修说明后，开发人员复制新的返修任务提示词，使用同一个返修阶段 actionToken 持续补充 `execution-report.md` 和 `review-report.md` 并回写平台。返修阶段不得重新生成 `requirement.md` 或 `plan.md`，需求平台按版本保留每次执行和 Review 资料。
 - 完成后通知开发人员确认；merge、push、rebase 或删除远端分支仍需明确授权。
 
 ## 模式三：项目接入初始化模式

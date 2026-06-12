@@ -179,6 +179,27 @@ class ReqActionTokenServiceImplTest
     }
 
     @Test
+    void reusableRepairStageTokenCanResolveAfterPreviousUse()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_repair_stage_token";
+        ReqActionToken stored = token(94L, "0");
+        stored.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        stored.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_REPAIR);
+        stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
+        stored.setLastUsedTime(new Date(System.currentTimeMillis() - 1000));
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.touchLastUsed(94L)).thenReturn(1);
+
+        ReqActionToken resolved = service.resolveToken(plainToken);
+
+        assertEquals(94L, resolved.getTokenId());
+        verify(mapper).touchLastUsed(94L);
+        verify(mapper, never()).updateLastUsed(94L);
+    }
+
+    @Test
     void rejectsTokenWhenLastUsedUpdateDoesNotWin()
     {
         ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);

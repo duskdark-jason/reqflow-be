@@ -10,20 +10,21 @@
 
 | 路径 | 修改说明 |
 |---|---|
-| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 新增需求覆盖客户端编号/创建人，生成 `REQ-001` 风格编号，默认 `draft`，限制非草稿和非创建人修改；生成初始化式 MCP 需求评估与设计指令、执行开发指令并记录返修事件；按角色隔离状态动作并支持管理员删除清理。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 新增需求覆盖客户端编号/创建人，生成 `REQ-001` 风格编号，默认 `draft`，限制非草稿和非创建人修改；按阶段生成初始化式 MCP 需求分析、需求生成、执行开发和返修指令并记录返修事件；按角色隔离状态动作并支持管理员删除清理。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/domain/ReqDemand.java`、`ReqDemandMapper.xml` | 增加指定开发人员字段回显、开发人员候选查询和非管理员参与人列表过滤。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandStatusTransition.java` | 调整主状态流转为提需、资料生成、确认、开发、验收、办结。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/IReqDemandService.java` | 增加需求 MCP 评估与设计指令、执行开发指令、开发人员候选和参与人校验服务方法。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqDemandController.java` | 新增 `/requirement/demand/developer-options`、`/requirement/demand/{demandId}/plan-instruction`、`/requirement/demand/{demandId}/develop-instruction`、`/requirement/demand/upload` 和管理员删除接口，编辑时注入当前用户 ID，上传单文件限制 2MB。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/**` | 将需求管理 Controller 从 admin 模块迁移到需求模块；项目、分支、模块和索引模块只读上下文接口允许需求权限访问，管理类写接口仍保持原权限。 |
-| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | 支持 `actionToken` 解析需求上下文，允许 MCP 回写需求说明和执行计划。 |
-| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 生成后写入 24 小时最长过期时间；需求设计 token 一次性消费，开发阶段 token 可在当前阶段复用并刷新 `last_used_time`。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | 支持 `actionToken` 解析需求上下文，并按需求分析、需求生成、开发执行和返修阶段限制可调用工具和有效状态。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 生成后写入 24 小时最长过期时间；需求分析和需求生成 token 一次性消费，开发阶段和返修阶段 token 可在当前阶段复用并刷新 `last_used_time`。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/ReqflowCodexGlobalSkillTemplate.java`、`ruoyi-requirement/src/main/resources/harness-template/**` | 同步全局 `reqflow-mcp` skill 和 harness 模板，拆分需求分析、需求生成、开发执行和返修阶段提示词。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mapper/ReqDemandMapper.java`、`ReqDemandMapper.xml` | 编号统计改为全量需求计数，不按日期生成，并读写需求来源和附件字段。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/**`、`templates/requirement/**` | 执行包上下文增加需求来源、纯文本业务背景和附件，JSON 模板对文本引号做转义。 |
 | `docs/db/sql/req_platform_req016_demand_form_fields.sql` | 新增需求来源和附件字段幂等升级脚本。 |
 | `docs/db/sql/req_platform_req017_demand_developer_lock.sql` | 新增指定开发人员字段和索引幂等升级脚本。 |
 | `ruoyi-requirement/src/test/java/**` | 覆盖编号、创建人、草稿编辑、状态主路径、MCP actionToken 回写、需求来源必填、上传 2MB 限制、模板文本转义、角色动作隔离和管理员删除权限 SQL。 |
-| `docs/ai-harness/modules/requirement-platform.md`、`docs/ai-harness/contracts/requirement-platform-api.md`、`docs/db/table-dictionary.md`、`docs/db/relationship.md` | 同步 API、模块、状态和编号语义。 |
+| `docs/ai-harness/modules/requirement-platform.md`、`docs/ai-harness/contracts/requirement-platform-api.md`、`docs/db/table-dictionary.md`、`docs/db/relationship.md` | 同步 API、模块、状态、编号语义和 actionToken 阶段目标语义。 |
 
 ## 模块知识库沉淀
 
@@ -53,7 +54,8 @@
 | L0 | AC-005 | `sh scripts/check-docs.sh` | 通过 |
 | L1 | AC-001~AC-017 | `mvn -pl ruoyi-admin -am -DskipTests package` | 通过，Controller 迁移后 admin 整包编译成功。 |
 | L1 | AC-013、AC-015、AC-017 | 在前端 companion 执行 `npm run build:prod` | 通过，仅保留既有资产体积 warning。 |
-| L2 | AC-001~AC-017 | `mvn -pl ruoyi-requirement -am test` | 通过，108 个测试覆盖编号、创建人、状态、指令、返修事件、来源必填、上传 2MB 限制、角色动作隔离、删除链路、参与人锁定和 SQL 权限。 |
+| L2 | AC-004、AC-006、AC-009、AC-011、AC-012 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，57 个测试覆盖需求分析/需求生成指令拆分、开发阶段同 token、返修阶段同 token、跨阶段工具拒绝和流程阶段失效。 |
+| L2 | AC-001~AC-017 | `mvn -pl ruoyi-requirement -am test` | 通过，116 个测试覆盖编号、创建人、状态、阶段指令、返修事件、来源必填、上传 2MB 限制、角色动作隔离、删除链路、参与人锁定、SQL 权限和全局 skill 模板。 |
 | L2 | AC-017 | 连接本机 `ry-vue` 执行 `docs/db/sql/req_platform_req017_demand_developer_lock.sql` 并查询字段/索引 | 通过，`req_demand.developer_user_id` 和 `idx_req_demand_developer` 已存在。 |
 | L3 | AC-004、AC-006、AC-007、AC-009、AC-017 | 使用 `xqr/123456` 和 `yfr/123456` 调用需求接口流转 | 通过，xqr 创建 draft 并指定 yfr；yfr 提交前不可见，提交后可见；xqr 生成计划/开发指令被拒绝，yfr 可生成计划和开发指令，指令包含阶段有效 token 规则。 |
 | L4（可选） | AC-013、AC-015、AC-017 | 打开前端 companion `http://127.0.0.1:1024/requirement/demand` 和详情页 | 通过，xqr 需求列表展示开发人员 `研发人员（yfr）`，详情内嵌 Agent 交接资料包并展示当前需求标题和文档页签，xqr 不展示开发指令按钮。 |
@@ -76,15 +78,15 @@
 | AC-001 | 已完成 | 单测覆盖 `REQ-003`、`REQ-004`、`REQ-007` 风格编号，不含日期。 |
 | AC-002 | 已完成 | 单测覆盖默认 `draft`、创建人来自当前用户、客户端创建人被覆盖。 |
 | AC-003 | 已完成 | 状态机单测覆盖新主路径和兼容路径。 |
-| AC-004 | 已完成 | 单测覆盖 MCP 需求评估与设计指令及 `actionToken` 回写，`xqr` 获取指令被拒绝的历史接口冒烟仍适用。 |
+| AC-004 | 已完成 | 单测覆盖 `submitted` 状态只生成需求分析指令，仅包含 `upload_requirement_assessment` 和需求分析 actionToken。 |
 | AC-005 | 已完成 | API、模块、表字典和关系文档已同步，`check-docs` 通过。 |
-| AC-006 | 已完成 | 单测断言指令包含 `reqflow-mcp`、`mcpServer`、`mcpTool`、`toolName`、可行性评估 token、需求设计 token、`arguments.actionToken` 和非 `X-MCP-Key` 说明。 |
+| AC-006 | 已完成 | 单测断言需求分析指令和需求生成指令分别包含当前阶段唯一 MCP tool、阶段 actionToken、`arguments.actionToken` 和非 `X-MCP-Key` 说明。 |
 | AC-007 | 已完成 | 新增执行开发指令接口，单测断言目标工具包含 `reqflow.save_development_plan`、`reqflow.upload_execution_report` 与 `reqflow.upload_review_report`；历史 `yfr` 接口冒烟覆盖执行计划和执行报告，Review 报告 token 由本次单测补充覆盖。 |
 | AC-008 | 已完成 | 单测覆盖 `review -> repairing` 记录 `demand_repairing` 事件，返修回到验收记录 `demand_repair_submitted`。 |
-| AC-009 | 已完成 | `ReqActionTokenServiceImplTest` 覆盖 24 小时最长 `expireTime`、过期拒绝、普通 token 已使用拒绝、并发条件更新失败拒绝和开发阶段 token 复用。 |
+| AC-009 | 已完成 | `ReqActionTokenServiceImplTest` 覆盖 24 小时最长 `expireTime`、过期拒绝、普通 token 已使用拒绝、并发条件更新失败拒绝、开发阶段 token 复用和返修阶段 token 复用；`McpServiceTest` 覆盖开发/返修 token 随流程状态失效。 |
 | AC-010 | 已完成 | `ReqPlatformRoleSqlTest` 覆盖需求人员、开发人员和管理员角色授权脚本。 |
-| AC-011 | 已完成 | `ReqDemandServiceImplTest` 和 `McpServiceTest` 覆盖计划阶段先回写需求可行性评估，评估允许后再回写需求设计，且不允许开发计划工具。 |
-| AC-012 | 已完成 | `ReqDemandServiceImplTest` 覆盖执行阶段一个开发阶段 token；`McpServiceTest` 覆盖同一 token 可回写执行计划、执行报告和 Review 报告，并在流转到待验收后失效。 |
+| AC-011 | 已完成 | `ReqDemandServiceImplTest` 和 `McpServiceTest` 覆盖需求分析阶段只回写需求可行性评估，需求生成阶段只回写需求设计，且两个阶段都不允许开发计划工具。 |
+| AC-012 | 已完成 | `ReqDemandServiceImplTest` 覆盖开发阶段一个开发阶段 token 和返修阶段一个返修阶段 token；`McpServiceTest` 覆盖开发 token 可回写执行计划、执行报告和 Review 报告，返修 token 只可回写执行报告和 Review 报告。 |
 | AC-013 | 已完成 | `ReqPackageController` 权限允许 `req:demand:query` 读取当前需求资料包。 |
 | AC-014 | 已完成 | `ReqDemandServiceImplTest` 覆盖来源必填，`ReqDemandSchemaSqlTest` 覆盖字段脚本，`ReqDemandControllerUploadTest` 覆盖 2MB 上传限制，`RequirementTemplateServiceTest` 覆盖文本转义。 |
 | AC-015 | 已完成 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController` 和 `ReqIndexController` 的只读上下文接口接受需求权限；`xqr` 账号进入需求列表接口无权限不足；前端首页快捷入口按权限过滤。 |
@@ -93,7 +95,7 @@
 
 ## 计划偏差
 
-- MCP 需求评估与设计指令没有修改 `ReqActionTokenServiceImpl` 的通用模板，而是在需求服务中生成面向需求说明和执行计划的专用指令文本。
+- MCP 阶段指令没有修改 `ReqActionTokenServiceImpl` 的通用模板，而是在需求服务中生成面向需求分析、需求生成、开发执行和返修的专用指令文本。
 - 同步扩展 MCP 包保存工具的 `actionToken` 解析能力，让开发人员复制指令后可以不手填 `demandId`。
 - 根据用户返修反馈，额外增加初始化式指令字段、执行开发指令、返修状态事件和 actionToken 生命周期限制。
 
@@ -103,6 +105,7 @@
 |---|---|---|---|
 | RF-002 | 已修复 | 已补充初始化式 MCP 指令字段、执行开发指令、返修状态事件和版本链文档。 | `mvn -pl ruoyi-requirement -am test` 通过；接口冒烟通过；`check-docs` 通过 |
 | RF-003 | 已修复 | 已补充 actionToken 流程阶段有效期、24 小时最长兜底、普通 token 一次性消费、开发阶段 token 复用、并发条件更新、指令文案和文档。 | `ReqActionTokenServiceImplTest` 通过；`mvn -pl ruoyi-requirement -am test` 通过 |
+| RF-004 | 已修复 | 已按用户反馈把需求分析、需求生成、开发执行和返修阶段的指令内容与 actionToken 拆分为当前阶段最小工具集合；返修阶段只包含执行报告和 Review 报告。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
 
 ## 风险与后续
 

@@ -355,11 +355,11 @@ class McpServiceTest
         IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
         ReqActionToken token = new ReqActionToken();
         token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
-        token.setTargetMethod("save_requirement_package");
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE);
         token.setDemandId(9L);
         when(actionTokenService.resolveToken("reqflow_action_design")).thenReturn(token);
         ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
-        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "submitted"));
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "plan_pending"));
         when(packageService.saveVersion(9L, "requirement", "需求设计", "save_requirement_package"))
                 .thenReturn(packageVersion("requirement", "需求设计"));
 
@@ -385,7 +385,7 @@ class McpServiceTest
         IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
         ReqActionToken token = new ReqActionToken();
         token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
-        token.setTargetMethod("upload_requirement_assessment");
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS);
         token.setDemandId(9L);
         when(actionTokenService.resolveToken("reqflow_action_assessment")).thenReturn(token);
         ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
@@ -415,7 +415,7 @@ class McpServiceTest
         IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
         ReqActionToken token = new ReqActionToken();
         token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
-        token.setTargetMethod("save_requirement_package");
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS);
         token.setDemandId(9L);
         when(actionTokenService.resolveToken("reqflow_action_design")).thenReturn(token);
         ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
@@ -433,6 +433,34 @@ class McpServiceTest
         McpResponse response = service.handle(request("tools/call", toolParams("save_development_plan", arguments)));
 
         assertToolErrorResult(response, "动作Token不支持当前MCP工具");
+        verify(packageService, never()).saveVersion(any(), any(), any(), any());
+    }
+
+    @Test
+    void requirementGenerateTokenExpiresAfterDemandIsConfirmed()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveToken("reqflow_action_generate")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "confirmed"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_generate");
+        arguments.put("content", "需求设计");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("save_requirement_package", arguments)));
+
+        assertToolErrorResult(response, "动作Token所属流程阶段已结束");
         verify(packageService, never()).saveVersion(any(), any(), any(), any());
     }
 
@@ -505,6 +533,71 @@ class McpServiceTest
         McpResponse response = service.handle(request("tools/call", toolParams("upload_execution_report", arguments)));
 
         assertToolErrorResult(response, "动作Token所属流程阶段已结束");
+        verify(packageService, never()).saveVersion(any(), any(), any(), any());
+    }
+
+    @Test
+    void repairToolsCanResolveDemandBySameRepairStageActionToken()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_REPAIR);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveToken("reqflow_action_repair_stage")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "repairing"));
+        when(packageService.saveVersion(9L, "execution_report", "返修执行报告", "upload_execution_report"))
+                .thenReturn(packageVersion("execution_report", "返修执行报告"));
+        when(packageService.saveVersion(9L, "review_report", "返修 Review 报告", "upload_review_report"))
+                .thenReturn(packageVersion("review_report", "返修 Review 报告"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+
+        Map<String, Object> reportArguments = new HashMap<>();
+        reportArguments.put("actionToken", "reqflow_action_repair_stage");
+        reportArguments.put("content", "返修执行报告");
+        Map<String, Object> reviewArguments = new HashMap<>();
+        reviewArguments.put("actionToken", "reqflow_action_repair_stage");
+        reviewArguments.put("content", "返修 Review 报告");
+
+        service.handle(request("tools/call", toolParams("upload_execution_report", reportArguments)));
+        service.handle(request("tools/call", toolParams("upload_review_report", reviewArguments)));
+
+        verify(actionTokenService, org.mockito.Mockito.times(2)).resolveToken("reqflow_action_repair_stage");
+        verify(packageService).saveVersion(9L, "execution_report", "返修执行报告", "upload_execution_report");
+        verify(packageService).saveVersion(9L, "review_report", "返修 Review 报告", "upload_review_report");
+    }
+
+    @Test
+    void repairStageActionTokenDoesNotAllowDevelopmentPlanTool()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_REPAIR);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveToken("reqflow_action_repair_stage")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "repairing"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_repair_stage");
+        arguments.put("content", "执行计划");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("save_development_plan", arguments)));
+
+        assertToolErrorResult(response, "动作Token不支持当前MCP工具");
         verify(packageService, never()).saveVersion(any(), any(), any(), any());
     }
 

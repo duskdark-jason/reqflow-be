@@ -14,11 +14,11 @@
 
 1. 后端 TDD：先修改 `ReqDemandStatusTransitionTest` 和 `ReqDemandServiceImplTest`，让编号、默认状态、创建人覆盖和新状态主路径用例失败，覆盖 AC-001~AC-003。
 2. 状态机实现：修改 `ReqDemandStatusTransition` 和 `ReqDemandServiceImpl`，实现不带日期编号、`draft` 默认状态和新流转，覆盖 AC-001~AC-003。
-3. 生成需求评估与设计指令：扩展 `IReqDemandService`、`ReqDemandController`、`ReqDemandServiceImpl`，提供生成需求评估与设计指令查询接口，指令内容采用初始化指令风格，先回写需求可行性评估，再按结论回写需求设计，覆盖 AC-004、AC-006。
-4. 执行任务指令与返修：新增执行任务指令接口，支持 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 动作 token；增加 `review -> repairing -> review` 状态事件记录，覆盖 AC-007、AC-008。
-5. Token 生命周期：按流程阶段校验 actionToken 有效性，保留 24 小时最长有效期兜底；开发阶段 token 在当前开发阶段内可复用，覆盖 AC-009。
+3. 需求分析与需求生成指令：扩展 `IReqDemandService`、`ReqDemandController`、`ReqDemandServiceImpl`，让 `submitted` 状态只生成需求分析指令和 `upload_requirement_assessment` token，`plan_pending/plan_ready` 状态只生成需求生成指令和 `save_requirement_package` token，覆盖 AC-004、AC-006、AC-011。
+4. 执行任务指令与返修：新增执行任务指令接口，`confirmed/developing` 阶段支持 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 共用开发阶段 token；`repairing` 阶段只支持 `upload_execution_report` 和 `upload_review_report` 共用返修阶段 token；增加 `review -> repairing -> review` 状态事件记录，覆盖 AC-007、AC-008、AC-012。
+5. Token 生命周期：按流程阶段校验 actionToken 有效性，保留 24 小时最长有效期兜底；开发阶段和返修阶段 token 在当前阶段内可复用，需求分析和需求生成 token 一次性消费，覆盖 AC-009。
 6. 角色权限 SQL：新增幂等角色授权脚本，覆盖需求人员、开发人员和管理员角色边界，补充脚本契约测试，覆盖 AC-010。
-7. MCP 阶段拆分：收窄 `requirement_plan` actionToken 只允许 `upload_requirement_assessment` 和 `save_requirement_package`，需求设计阶段先创建任务分支并回写可行性评估，评估允许后只生成 `requirement.md`；执行阶段生成一个 `requirement_develop` 阶段 token，供 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 共用，覆盖 AC-011、AC-012。
+7. MCP 阶段拆分：`requirement_plan` 按 `target_method=requirement_analysis` 和 `target_method=requirement_generate` 分别限制工具与需求状态；`requirement_develop` 按 `target_method=requirement_develop` 和 `target_method=requirement_repair` 分别限制工具与需求状态，覆盖 AC-011、AC-012。
 8. 资料包读取权限：需求详情嵌入读取允许 `req:demand:query`，独立资料包菜单仍保留 `req:package:list`，覆盖 AC-013。
 9. 需求填报字段与上传限制：新增 `demand_source`、`attachments` 字段和专用上传接口，执行包上下文同步来源、背景和附件，覆盖 AC-014。
 10. 需求上下文权限与 Controller 迁移：将需求管理 Controller 迁入 `ruoyi-requirement` 模块，需求表单所需项目、分支、模块和索引模块只读接口接受需求权限，覆盖 AC-015。
@@ -72,15 +72,15 @@
 | AC-001 | 后端 TDD、状态机实现 | `mvn -pl ruoyi-requirement -am test` |
 | AC-002 | 后端 TDD、状态机实现 | `mvn -pl ruoyi-requirement -am test` |
 | AC-003 | 后端 TDD、状态机实现 | `mvn -pl ruoyi-requirement -am test` |
-| AC-004 | 生成需求设计指令 | 单测或编译、前端调用冒烟 |
+| AC-004 | 生成需求分析指令 | 单测或编译、前端调用冒烟 |
 | AC-005 | 文档同步 | `sh scripts/check-docs.sh` |
-| AC-006 | 生成需求设计指令 | 单测断言初始化式指令字段 |
+| AC-006 | 需求分析和需求生成指令 | 单测断言初始化式指令字段 |
 | AC-007 | 执行任务指令 | 单测和接口冒烟 |
 | AC-008 | 返修状态流转 | 状态事件单测、文档复核 |
-| AC-009 | Token 生命周期 | `ReqActionTokenServiceImplTest`、mapper 条件更新复核 |
+| AC-009 | Token 生命周期 | `ReqActionTokenServiceImplTest`、`McpServiceTest`、mapper 条件更新复核 |
 | AC-010 | 角色权限 SQL | `ReqPlatformRoleSqlTest`、SQL 脚本复核 |
-| AC-011 | 计划阶段先回写可行性评估，评估允许后只生成需求设计 | `ReqDemandServiceImplTest`、`McpServiceTest` |
-| AC-012 | 执行阶段生成计划和报告 | `ReqDemandServiceImplTest`、`McpServiceTest` |
+| AC-011 | 需求分析阶段只回写可行性评估，需求生成阶段只回写需求设计 | `ReqDemandServiceImplTest`、`McpServiceTest` |
+| AC-012 | 开发阶段生成计划和报告，返修阶段只补执行与 Review 报告 | `ReqDemandServiceImplTest`、`McpServiceTest` |
 | AC-013 | 详情嵌入资料读取权限 | Controller 权限复核、前端构建 |
 | AC-014 | 来源必填、附件和 2MB 上传限制 | `ReqDemandServiceImplTest`、`ReqDemandSchemaSqlTest`、`ReqDemandControllerUploadTest`、`RequirementTemplateServiceTest` |
 | AC-015 | 需求列表上下文只读接口权限 | Controller 权限复核、端到端账号冒烟 |

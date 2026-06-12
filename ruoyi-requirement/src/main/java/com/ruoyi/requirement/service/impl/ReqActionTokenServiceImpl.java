@@ -39,6 +39,9 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
     private static final String DEVELOPMENT_STAGE_TOKEN_USAGE_RULE =
             "有效期：当前开发阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行计划、执行报告和 Review 报告回写。";
 
+    private static final String REPAIR_STAGE_TOKEN_USAGE_RULE =
+            "有效期：当前返修阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行报告和 Review 报告回写。";
+
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Autowired
@@ -114,15 +117,15 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         {
             throw new ServiceException("动作Token已过期，请重新生成");
         }
-        boolean reusableDevelopmentStageToken = isReusableDevelopmentStageToken(token);
-        if (isUsed(token) && !reusableDevelopmentStageToken)
+        boolean reusableStageToken = isReusableStageToken(token);
+        if (isUsed(token) && !reusableStageToken)
         {
             throw new ServiceException("动作Token已使用，请重新生成");
         }
         // 解析成功后记录使用时间。普通动作通过条件更新保证一次性消费，开发阶段 Token 仅刷新最近使用时间。
         if (token.getTokenId() != null)
         {
-            int updated = reusableDevelopmentStageToken
+            int updated = reusableStageToken
                     ? actionTokenMapper.touchLastUsed(token.getTokenId())
                     : actionTokenMapper.updateLastUsed(token.getTokenId());
             if (updated <= 0)
@@ -195,10 +198,11 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         return token.getLastUsedTime() != null;
     }
 
-    private boolean isReusableDevelopmentStageToken(ReqActionToken token)
+    private boolean isReusableStageToken(ReqActionToken token)
     {
         return ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
-                && TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod());
+                && (TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod())
+                    || TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod()));
     }
 
     private String usageRule(String actionType, String targetMethod)
@@ -206,6 +210,10 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         if (ACTION_REQUIREMENT_DEVELOP.equals(actionType) && TARGET_REQUIREMENT_DEVELOP.equals(targetMethod))
         {
             return DEVELOPMENT_STAGE_TOKEN_USAGE_RULE;
+        }
+        if (ACTION_REQUIREMENT_DEVELOP.equals(actionType) && TARGET_REQUIREMENT_REPAIR.equals(targetMethod))
+        {
+            return REPAIR_STAGE_TOKEN_USAGE_RULE;
         }
         return ACTION_TOKEN_USAGE_RULE;
     }

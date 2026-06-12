@@ -8,12 +8,14 @@
 
 - 新增需求时忽略客户端传入的 `creatorId` 和 `demandNo`，由后端自动填充。
 - 需求编号生成改为不带日期的稳定序号格式。
-- 默认状态改为未提交，提交后进入待生成需求设计。
-- 提供开发人员可复制的生成需求评估与设计指令，先绑定需求可行性评估回写动作上下文，再绑定需求设计回写动作上下文。
-- 提供开发人员可复制的执行任务指令，绑定执行计划、执行报告和 Review 报告回写动作上下文。
+- 默认状态改为未提交，提交后进入待需求分析，分析通过后再进入待生成需求设计。
+- 提供开发人员可复制的需求分析指令，只绑定需求可行性评估回写动作上下文。
+- 提供开发人员可复制的需求生成指令，只绑定需求设计回写动作上下文。
+- 提供开发人员可复制的执行任务指令，使用同一个开发阶段 actionToken 绑定执行计划、执行报告和 Review 报告回写动作上下文。
+- 提供开发人员可复制的返修任务指令，使用同一个返修阶段 actionToken 绑定执行报告和 Review 报告回写动作上下文，不包含执行计划或需求设计生成要求。
 - 状态流转与前端按钮保持一致。
 - 增加返修流程，记录状态事件并通过执行包版本链保留返修资料历史。
-- actionToken 有效期以流程阶段为准，流转到下一流程即失效，最长保留 24 小时；项目初始化和需求设计 token 仅可使用一次，开发阶段 token 在当前开发阶段内可用于执行计划、执行报告和 Review 报告回写。
+- actionToken 有效期以流程阶段为准，流转到下一流程即失效，最长保留 24 小时；项目初始化、需求分析和需求生成 token 仅可使用一次，开发阶段 token 在当前开发阶段内可用于执行计划、执行报告和 Review 报告回写，返修阶段 token 在当前返修阶段内可用于执行报告和 Review 报告回写。
 - 增加平台角色授权脚本：管理员拥有全部功能，需求人员仅开放首页、需求列表和使用统计，开发人员开放首页、需求列表、MCP 管理和使用统计，并具备 MCP 回写资料所需的隐藏保存权限。
 - 调整系统 MCP 工具链边界：计划阶段先生成并回写需求可行性评估，结论允许后只生成需求设计；执行阶段生成执行计划、执行报告和 Review 报告。
 - 需求创建或草稿修改时指定一个开发人员；提交后普通访问、流程动作、MCP 指令和资料包回写锁定在需求创建人与该指定开发人员之间，管理员不受参与人限制。
@@ -52,11 +54,13 @@
 - 需求来源：`demandSource` 为新增和修改需求必填字段，历史数据默认归类为 `BUSINESS`。
 - 业务背景与附件：`businessBackground` 保存普通文本业务背景；图片和文件通过需求上传接口返回路径后写入 `attachments`，单文件不超过 2MB。
 - 默认状态：新增为 `draft`，中文语义为“未提交”。
-- 主状态流转：`draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，其中 `submitted` 表示待开发人员生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待开发人员生成执行计划并开始开发。
+- 主状态流转：`draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed`，其中 `submitted` 表示待需求分析，`plan_pending` 表示待开发人员生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待开发人员生成执行计划并开始开发。
 - 返修流转：`review -> repairing -> review`，返修完成后重新走验收确认。
-- 兼容状态：旧 `plan_pending`、`repairing`、`archived` 可继续识别，其中 `repairing` 作为待验收返修分支。
-- 需求设计阶段：`plan-instruction` 先指向 `upload_requirement_assessment` 回写需求可行性评估，评估结论允许继续后再指向 `save_requirement_package` 回写需求设计，并要求在需求设计阶段创建或沿用任务分支，本地只生成评估结论和 `requirement.md`。
+- 兼容状态：`repairing`、`archived` 可继续识别，其中 `repairing` 作为待验收返修分支。
+- 需求分析阶段：`submitted` 状态下 `plan-instruction` 只指向 `upload_requirement_assessment` 回写需求可行性评估，并要求先给出可实现结论、风险和需求人补充项；该阶段不生成最终 `requirement.md`、`plan.md`、执行报告或 Review 报告。
+- 需求生成阶段：`plan_pending/plan_ready` 状态下 `plan-instruction` 只指向 `save_requirement_package` 回写需求设计，并要求沿用需求分析阶段任务分支，本地只生成或调整 `requirement.md`。
 - 执行阶段：`develop-instruction` 只给出一个当前开发阶段有效的 actionToken，状态处于 `confirmed/developing` 时可用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，流转到 `review` 后立即失效；该指令不包含返修说明。
+- 返修阶段：`develop-instruction` 在 `repairing` 状态只给出一个当前返修阶段有效的 actionToken，可用于 `upload_execution_report` 和 `upload_review_report`，流转回 `review` 后立即失效；该指令不包含 `save_development_plan`。
 - 资料包读取：需求详情内嵌资料包读取可使用 `req:demand:query`，独立 Agent 资料包页面仍使用 `req:package:list` 菜单权限。
 - 管理员删除：管理员拥有 `req:demand:remove` 删除需求按钮权限，删除时清理需求资料包版本和动作 token；需求人员、开发人员不展示也不能调用删除。
 - 权限隔离：需求人员进入需求列表所需的项目、分支、模块和索引模块只读上下文接口可使用需求权限访问，但不展示项目管理、MCP 管理或 Agent 交接资料独立入口。
@@ -67,15 +71,15 @@
 - AC-001：新增需求后编号为 `REQ-001` 风格且不包含日期。
 - AC-002：新增需求后状态为 `draft`，创建人来自当前用户，忽略客户端 `creatorId`。
 - AC-003：状态机允许新主路径流转并拒绝跳转和倒退。
-- AC-004：开发人员可通过需求详情获取用于 MCP 生成并回写需求可行性评估和需求设计的复制指令。
+- AC-004：开发人员可通过需求详情获取用于 MCP 回写需求可行性评估的需求分析复制指令。
 - AC-005：后端 API、数据库关系和模块 harness 文档同步记录新契约。
-- AC-006：生成需求评估与设计指令采用初始化指令风格，明确 `mcpServer`、`mcpTool`、`toolName`、`arguments.actionToken`，并说明 actionToken 不是 `X-MCP-Key`。
+- AC-006：需求分析指令和需求生成指令采用初始化指令风格，分别明确当前阶段唯一 MCP 工具、`mcpServer`、`mcpTool`、`toolName`、`arguments.actionToken`，并说明 actionToken 不是 `X-MCP-Key`。
 - AC-007：开发阶段可获取执行任务指令，明确调用 `reqflow.save_development_plan` 回写执行计划、调用 `reqflow.upload_execution_report` 回写执行报告、调用 `reqflow.upload_review_report` 回写 Review 报告。
 - AC-008：待验收可进入返修状态，返修提交后回到待验收，并记录返修状态事件；资料历史通过 `req_package_version` 新版本保留。
-- AC-009：`project_init`、`requirement_plan`、`requirement_develop` actionToken 以流程阶段为有效边界，流转到下一流程即失效，最长 24 小时兜底；项目初始化和需求设计 token 一次性消费，开发阶段 token 在 `confirmed/developing` 内可多次回写本阶段产物。
+- AC-009：`project_init`、`requirement_plan`、`requirement_develop` actionToken 以流程阶段为有效边界，流转到下一流程即失效，最长 24 小时兜底；项目初始化、需求分析和需求生成 token 一次性消费，开发阶段 token 在 `confirmed/developing` 内可多次回写本阶段产物，返修阶段 token 在 `repairing` 内可多次回写返修报告产物。
 - AC-010：角色授权 SQL 幂等创建或维护 `requirement_user`、`requirement_developer` 角色；需求人员只分配需求列表和使用统计相关权限，开发人员分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，管理员角色保留全部功能。
-- AC-011：`plan-instruction` 指令文案和 MCP token 只允许调用 `upload_requirement_assessment` 保存需求可行性评估、调用 `save_requirement_package` 保存需求设计，不再包含 `save_development_plan`。
-- AC-012：`develop-instruction` 指令文案包含执行计划、执行报告和 Review 报告三个目标工具，并使用同一个开发阶段 actionToken 回写 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`。
+- AC-011：`plan-instruction` 在 `submitted` 状态只允许调用 `upload_requirement_assessment`，在 `plan_pending/plan_ready` 状态只允许调用 `save_requirement_package`，两个阶段都不包含 `save_development_plan`。
+- AC-012：`develop-instruction` 在 `confirmed/developing` 状态包含执行计划、执行报告和 Review 报告三个目标工具，并使用同一个开发阶段 actionToken 回写；在 `repairing` 状态只包含执行报告和 Review 报告两个目标工具，并使用同一个返修阶段 actionToken 回写。
 - AC-013：需求详情读取交接资料包不要求角色拥有独立 Agent 资料包菜单权限，具备 `req:demand:query` 即可查看当前需求资料。
 - AC-014：新增和修改需求时 `demandSource` 必填；`businessBackground` 保存纯文本业务背景；图片和文件作为需求附件上传，接口单文件不超过 2MB；执行包上下文包含需求来源、业务背景和附件。
 - AC-015：需求人员账号进入需求列表不出现项目、分支、模块、索引模块四类上下文接口权限不足；首页快捷入口不得展示无权限的 MCP 管理。

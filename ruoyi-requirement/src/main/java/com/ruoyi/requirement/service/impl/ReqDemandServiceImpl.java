@@ -38,6 +38,9 @@ public class ReqDemandServiceImpl implements IReqDemandService
     private static final String DEVELOPMENT_STAGE_TOKEN_USAGE_RULE =
             "有效期：当前开发阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行计划、执行报告和 Review 报告回写。";
 
+    private static final String REPAIR_STAGE_TOKEN_USAGE_RULE =
+            "有效期：当前返修阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行报告和 Review 报告回写。";
+
     private static final String ROLE_REQUIREMENT_USER = "requirement_user";
 
     private static final String ROLE_REQUIREMENT_DEVELOPER = "requirement_developer";
@@ -262,30 +265,33 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("当前状态不能生成需求设计指令");
         }
         String taskBranch = suggestedTaskBranch(demand);
-        String assessmentPrompt = "请先在需求设计阶段完成需求可行性评估和风险判断，通过 reqflow MCP 回写评估报告。";
-        ReqActionInstruction assessmentInstruction = actionTokenService.createInstruction(
+        if ("submitted".equals(demand.getStatus()))
+        {
+            String prompt = "请在需求分析阶段完成需求可行性评估和风险判断，并通过 reqflow MCP 回写评估报告。";
+            ReqActionInstruction instruction = actionTokenService.createInstruction(
+                    IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
+                    demand.getProjectId(),
+                    demand.getVariantId(),
+                    demand.getDemandId(),
+                    IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS,
+                    prompt,
+                    "生成需求分析指令",
+                    operator);
+            instruction.setContent(requirementAnalysisInstructionContent(prompt, instruction.getToken(), demand, taskBranch));
+            return instruction;
+        }
+        String prompt = "请在需求生成阶段基于已确认可继续的评估结论生成详细需求设计，并通过 reqflow MCP 回写需求设计。";
+        ReqActionInstruction instruction = actionTokenService.createInstruction(
                 IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
                 demand.getProjectId(),
                 demand.getVariantId(),
                 demand.getDemandId(),
-                "upload_requirement_assessment",
-                assessmentPrompt,
-                "生成需求评估与设计",
+                IReqActionTokenService.TARGET_REQUIREMENT_GENERATE,
+                prompt,
+                "生成需求设计指令",
                 operator);
-        String designPrompt = "请在需求评估允许继续后生成详细需求设计，通过 reqflow MCP 回写资料包。";
-        ReqActionInstruction designInstruction = actionTokenService.createInstruction(
-                IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
-                demand.getProjectId(),
-                demand.getVariantId(),
-                demand.getDemandId(),
-                "save_requirement_package",
-                designPrompt,
-                "复制需求设计回写指令",
-                operator);
-        // 需求设计指令给开发人员复制到 Codex，动作 Token 仅定位需求上下文，不替代人员 MCP Key 鉴权。
-        assessmentInstruction.setContent(requirementPlanInstructionContent(assessmentPrompt, assessmentInstruction.getToken(),
-                designInstruction.getToken(), demand, taskBranch));
-        return assessmentInstruction;
+        instruction.setContent(requirementGenerateInstructionContent(prompt, instruction.getToken(), demand, taskBranch));
+        return instruction;
     }
 
     @Override
@@ -297,9 +303,26 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("需求不存在");
         }
         validateDeveloperInstructionAccess(demand);
-        if (!"confirmed".equals(demand.getStatus()) && !"developing".equals(demand.getStatus()))
+        if (!"confirmed".equals(demand.getStatus()) && !"developing".equals(demand.getStatus())
+                && !"repairing".equals(demand.getStatus()))
         {
             throw new ServiceException("当前状态不能生成执行任务指令");
+        }
+        if ("repairing".equals(demand.getStatus()))
+        {
+            String repairPrompt = "请在返修阶段根据 Review 返修项完成修复、验证和复审，并通过 reqflow MCP 回写返修执行报告和 Review 报告。";
+            ReqActionInstruction repairInstruction = actionTokenService.createInstruction(
+                    IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
+                    demand.getProjectId(),
+                    demand.getVariantId(),
+                    demand.getDemandId(),
+                    IReqActionTokenService.TARGET_REQUIREMENT_REPAIR,
+                    repairPrompt,
+                    "生成返修任务指令",
+                    operator);
+            repairInstruction.setContent(requirementRepairInstructionContent(repairPrompt, repairInstruction.getToken(),
+                    demand, suggestedTaskBranch(demand)));
+            return repairInstruction;
         }
         String developPrompt = "请基于已确认需求设计执行开发，并通过 reqflow MCP 回写执行计划、执行报告和 Review 报告。";
         ReqActionInstruction developInstruction = actionTokenService.createInstruction(
@@ -323,30 +346,46 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return "REQ-" + String.format("%03d", sequence);
     }
 
-    private String requirementPlanInstructionContent(String prompt, String assessmentActionToken, String designActionToken,
-            ReqDemand demand, String taskBranch)
+    private String requirementAnalysisInstructionContent(String prompt, String analysisActionToken, ReqDemand demand,
+            String taskBranch)
     {
         return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求设计生成。"
+                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求分析。"
                 + "\nmcpServer: reqflow"
                 + "\ntoolName: upload_requirement_assessment"
                 + "\nmcpTool: reqflow.upload_requirement_assessment"
-                + "\ntoolName: save_requirement_package"
-                + "\nmcpTool: reqflow.save_requirement_package"
-                + "\ntargetMethods: upload_requirement_assessment, save_requirement_package"
+                + "\ntargetMethod: upload_requirement_assessment"
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
                 + "\n建议任务分支: " + taskBranch
-                + "\n可行性评估 actionToken: " + assessmentActionToken
-                + "\n需求设计 actionToken: " + designActionToken
+                + "\n需求分析 actionToken: " + analysisActionToken
                 + "\n" + ACTION_TOKEN_USAGE_RULE
                 + "\n要求：先读取需求详情中的基础需求、业务背景、预期结果、验收标准、附件和历史需求设计版本。"
-                + "\n分支要求：校验当前 workspace 仓库远端与平台项目一致，切换目标基线分支并 git pull --ff-only 后，创建或切换到上面的建议任务分支；需求人补充调整指令时继续使用同一任务分支。"
+                + "\n分支要求：校验当前 workspace 仓库远端与平台项目一致，切换目标基线分支并 git pull --ff-only 后，创建或切换到上面的建议任务分支。"
                 + "\n评估要求：先形成需求可行性评估报告，必须给出评估结论、主要风险、阻断点、需要需求人补充或调整的内容、是否允许继续生成需求设计；结论类型从“可继续设计、需澄清、需调整、暂不可实现”中选择。"
-                + "\n评估回写：先调用 upload_requirement_assessment，arguments.actionToken 填可行性评估 actionToken，content 填评估报告；如果结论是需澄清、需调整或暂不可实现，本轮停止生成 requirement.md，并把该结论作为反馈推送给需求人。"
-                + "\n本地文件：评估通过或有条件允许继续后，只生成或更新 docs/specs/active/REQ-001-中文需求标题/meta.md 和 requirement.md，可在 requirement.md 顶部保留“可行性评估”小节；不生成 plan.md，不改业务代码。"
-                + "\n保存要求：评估允许继续后调用 save_requirement_package，arguments.actionToken 填需求设计 actionToken，content 填详细需求设计；每次补充调整都再次回写评估和需求设计，平台按版本保存，最终版 requirement.md 保留在本地任务分支用于开发。"
-                + "\n注意：两个 actionToken 分别是 upload_requirement_assessment 和 save_requirement_package 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n回写要求：调用 upload_requirement_assessment，arguments.actionToken 填需求分析 actionToken，content 填评估报告；如果结论是需澄清、需调整或暂不可实现，本轮停止生成 requirement.md，并把该结论作为反馈推送给需求人。"
+                + "\n本地文件：本阶段只允许生成或更新评估结论，不生成 plan.md、不改业务代码、不写执行或 Review 报告。"
+                + "\n注意：需求分析 actionToken 是 upload_requirement_assessment 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+    }
+
+    private String requirementGenerateInstructionContent(String prompt, String generateActionToken, ReqDemand demand,
+            String taskBranch)
+    {
+        return prompt
+                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求生成。"
+                + "\nmcpServer: reqflow"
+                + "\ntoolName: save_requirement_package"
+                + "\nmcpTool: reqflow.save_requirement_package"
+                + "\ntargetMethod: save_requirement_package"
+                + "\ndemandId: " + demand.getDemandId()
+                + "\ndemandNo: " + demand.getDemandNo()
+                + "\n任务分支: " + taskBranch
+                + "\n需求生成 actionToken: " + generateActionToken
+                + "\n" + ACTION_TOKEN_USAGE_RULE
+                + "\n要求：读取需求详情、需求分析评估结论、需求人补充说明和历史需求设计版本，只生成或调整 `requirement.md`。"
+                + "\n分支要求：必须沿用需求分析阶段创建的任务分支，不得重新生成不同任务分支。"
+                + "\n回写要求：调用 save_requirement_package，arguments.actionToken 填需求生成 actionToken，content 填详细需求设计；本阶段不生成 plan.md、不改业务代码、不写执行或 Review 报告。"
+                + "\n注意：需求生成 actionToken 是 save_requirement_package 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
     }
 
     private String requirementDevelopInstructionContent(String prompt, String developActionToken, ReqDemand demand,
@@ -371,6 +410,28 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 + "\n要求：先读取需求详情、最终需求设计和本地 requirement.md，生成或更新 plan.md；再按目标仓库规范完成实现、验证、自动 Review 和提交。"
                 + "\n回写要求：本阶段三个 MCP 工具都使用同一个开发阶段 actionToken：先调用 save_development_plan 回写执行计划，开发验证完成后调用 upload_execution_report 回写执行报告，自动 Review 完成后调用 upload_review_report 回写 Review 报告。"
                 + "\n注意：开发阶段 actionToken 是上述三个工具的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+    }
+
+    private String requirementRepairInstructionContent(String prompt, String repairActionToken, ReqDemand demand,
+            String taskBranch)
+    {
+        return prompt
+                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求返修。"
+                + "\nmcpServer: reqflow"
+                + "\ntoolName: upload_execution_report"
+                + "\nmcpTool: reqflow.upload_execution_report"
+                + "\ntoolName: upload_review_report"
+                + "\nmcpTool: reqflow.upload_review_report"
+                + "\ntargetMethods: upload_execution_report, upload_review_report"
+                + "\ndemandId: " + demand.getDemandId()
+                + "\ndemandNo: " + demand.getDemandNo()
+                + "\n任务分支: " + taskBranch
+                + "\n返修阶段 actionToken: " + repairActionToken
+                + "\n" + REPAIR_STAGE_TOKEN_USAGE_RULE
+                + "\n分支要求：必须沿用原任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
+                + "\n要求：只处理本次 Review 返修项或需求人返修要求，完成修复、验证和自动复审，不重新生成需求设计或执行计划。"
+                + "\n回写要求：本阶段两个 MCP 工具都使用同一个返修阶段 actionToken：修复验证完成后调用 upload_execution_report 回写返修执行报告，自动复审完成后调用 upload_review_report 回写 Review 报告。"
+                + "\n注意：返修阶段 actionToken 是上述两个工具的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
     }
 
     private String suggestedTaskBranch(ReqDemand demand)

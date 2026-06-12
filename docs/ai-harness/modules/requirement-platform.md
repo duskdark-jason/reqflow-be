@@ -48,11 +48,12 @@
 - 普通需求编辑只允许 `draft` 状态且创建人匹配；状态变化必须通过状态流转接口，不得通过通用编辑接口绕过状态机。
 - 普通用户的需求列表、详情、资料包读取和 MCP 需求资源读取必须按参与人锁定：创建人可见自己创建的需求，指定开发人员仅在需求提交后可见分配给自己的需求；管理员不受参与人限制。
 - 删除需求只开放给管理员按钮权限 `req:demand:remove`，会同步删除该需求的资料包版本和动作 token；需求人员和开发人员角色脚本不得分配该权限。
-- 需求主状态流转为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，旧 `plan_pending`、`archived` 仅作为兼容状态保留；`submitted` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发。
+- 需求主状态流转为 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，`archived` 仅作为归档状态保留；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发。
 - 状态流转不仅校验 `req:demand:edit` 和状态机，还必须按角色和参与人隔离：需求创建人执行提交需求、确认需求设计、返修和验收，指定开发人员执行提交需求设计、开始开发、提交验收和返修验收，`admin` 可执行全部合法动作。
-- 指定开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令先用 `upload_requirement_assessment` 回写 `requirement_assessment` 需求可行性评估，评估结论允许继续后再用 `save_requirement_package` 保存 `requirement` 需求设计。需求设计阶段必须创建或沿用平台建议的任务分支，本地只写评估结论和 `requirement.md`，不能替代人员 `X-MCP-Key`。
+- 指定开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；`submitted` 状态只生成需求分析指令，使用 `target_method=requirement_analysis` 和 `upload_requirement_assessment` 回写 `requirement_assessment`；`plan_pending/plan_ready` 状态只生成需求生成指令，使用 `target_method=requirement_generate` 和 `save_requirement_package` 保存 `requirement`。需求分析阶段必须先给出可行性结论和风险，需求生成阶段只写 `requirement.md`，不能替代人员 `X-MCP-Key`。
 - 指定开发人员可在 `confirmed` 或 `developing` 状态通过需求详情获取 `requirement_develop` 开发阶段动作 token 指令；该指令只给出一个开发阶段 actionToken，可在当前开发阶段内用于 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，不能替代人员 `X-MCP-Key`。
-- 项目初始化和需求设计动作 token 生成后在当前流程阶段内有效，最长保留 24 小时，且仅可使用一次；开发阶段动作 token 在 `confirmed/developing` 阶段内可重复用于执行计划、执行报告和 Review 报告回写，需求流转到 `review` 后立即失效，超过 24 小时也需重新生成。
+- 指定开发人员可在 `repairing` 状态通过需求详情获取 `requirement_repair` 返修阶段动作 token 指令；该指令只给出一个返修阶段 actionToken，可在当前返修阶段内用于 MCP `upload_execution_report` 和 `upload_review_report`，不得重新生成需求设计或执行计划。
+- 项目初始化、需求分析和需求生成动作 token 生成后在当前流程阶段内有效，最长保留 24 小时，且仅可使用一次；开发阶段动作 token 在 `confirmed/developing` 阶段内可重复用于执行计划、执行报告和 Review 报告回写，返修阶段动作 token 在 `repairing` 阶段内可重复用于执行报告和 Review 报告回写；需求流转到下一阶段后旧 token 立即失效，超过 24 小时也需重新生成。
 - 需求资料包通过 `req_package_version` 追加版本记录，需求设计阶段保留需求可行性评估和需求设计版本，返修流程依赖同一需求下执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新；保存和 MCP 回写只允许指定开发人员或管理员。
 - 管理员角色沿用 `role_key='admin'` 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，供 MCP 回写资料。
 - 需求未选择既有模块时，可以用备注承载新功能名称；执行包模块名解析顺序为人工模块、索引模块、备注。
@@ -75,8 +76,8 @@
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
 - 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
-- 需求设计指令调整时，必须保持 Plan Agent 先做需求可行性评估并通过 `upload_requirement_assessment` 回写平台：结论允许继续后，才在需求设计阶段创建任务分支、落地 `requirement.md`、通过 `save_requirement_package` 回写平台版本；开发阶段只能沿用该分支生成 `plan.md` 和实现。
-- 返修指令调整时，必须保持同一任务分支和同一 spec 目录，持续追加 `execution-report.md` 与 `review-report.md`，并分别通过 `upload_execution_report`、`upload_review_report` 回写新版本。
+- 需求分析和需求生成指令调整时，必须保持阶段收敛：需求分析阶段只给 `upload_requirement_assessment` 和需求分析 actionToken；需求生成阶段只给 `save_requirement_package` 和需求生成 actionToken。结论允许继续后，才在需求生成阶段落地 `requirement.md`、通过 `save_requirement_package` 回写平台版本；开发阶段只能沿用该分支生成 `plan.md` 和实现。
+- 返修指令调整时，必须保持同一任务分支和同一 spec 目录，只给 `upload_execution_report`、`upload_review_report` 和同一个返修阶段 actionToken，持续追加 `execution-report.md` 与 `review-report.md`，不得携带执行计划或需求设计生成要求。
 - 项目接入初始化索引调整时，必须防止“已发布索引但没有具体业务模块”的假阳性；`actionToken` 或 `mcpKey` 项目初始化上下文下，`modules` 至少包含一个带 `moduleCode` 和 `moduleName` 的页面业务功能或后端主能力。
 - MCP 下发的完整 harness 模板由后端 `ruoyi-requirement/src/main/resources/harness-template/` 保存并随包发布；`files.txt` 是下发清单。该目录是项目接入初始化模板的唯一维护源，workspace 根目录不再保留离线模板副本。
 - 索引表迁移不完整时，`publish_repository_index` 必须返回指向 `docs/db/sql/req_platform_req007_index_tables.sql` 的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。

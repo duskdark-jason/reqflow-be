@@ -826,22 +826,47 @@ public class McpService
         ReqActionToken token = actionTokenService.resolveToken(actionToken);
         if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
         {
-            validateActionTokenDemandStage(token, "submitted", "plan_pending", "plan_ready");
-            if (!"upload_requirement_assessment".equals(toolName) && !"save_requirement_package".equals(toolName))
+            if (IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "submitted");
+                if ("upload_requirement_assessment".equals(toolName))
+                {
+                    return token.getDemandId();
+                }
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            if (IReqActionTokenService.TARGET_REQUIREMENT_GENERATE.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "plan_pending", "plan_ready");
+                if ("save_requirement_package".equals(toolName))
+                {
+                    return token.getDemandId();
+                }
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            if ("upload_requirement_assessment".equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "submitted");
+            }
+            else if ("save_requirement_package".equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "plan_pending", "plan_ready");
+            }
+            else
             {
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
-            if (!toolName.equals(token.getTargetMethod()))
+            if (toolName.equals(token.getTargetMethod()))
             {
-                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+                return token.getDemandId();
             }
-            return token.getDemandId();
+            throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
         }
         if (IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType()))
         {
-            validateActionTokenDemandStage(token, "confirmed", "developing");
             if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod()))
             {
+                validateActionTokenDemandStage(token, "confirmed", "developing");
                 if ("save_development_plan".equals(toolName) || "upload_execution_report".equals(toolName)
                         || "upload_review_report".equals(toolName))
                 {
@@ -849,6 +874,16 @@ public class McpService
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
+            if (IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "repairing");
+                if ("upload_execution_report".equals(toolName) || "upload_review_report".equals(toolName))
+                {
+                    return token.getDemandId();
+                }
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            validateActionTokenDemandStage(token, "confirmed", "developing", "repairing");
             if (toolName.equals(token.getTargetMethod()))
             {
                 return token.getDemandId();
