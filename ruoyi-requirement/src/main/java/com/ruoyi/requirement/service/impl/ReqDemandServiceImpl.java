@@ -193,7 +193,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("需求状态流转不允许");
         }
-        validateStatusActionRole(status);
+        validateStatusActionRole(current.getStatus(), status);
         validateStatusActionParticipant(current, status);
         if ("submitted".equals(status))
         {
@@ -252,7 +252,8 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("需求不存在");
         }
-        if (!"supplement_required".equals(current.getStatus()))
+        boolean designAdjustment = "plan_ready".equals(current.getStatus());
+        if (!"supplement_required".equals(current.getStatus()) && !designAdjustment)
         {
             throw new ServiceException("当前状态不需要补充说明");
         }
@@ -261,7 +262,8 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("只有需求创建人可以补充说明");
         }
 
-        savePackageVersion(demandId, "requirement_supplement", content.trim(), "需求人补充说明", updateBy);
+        String versionNote = designAdjustment ? "需求设计调整说明" : "需求人补充说明";
+        savePackageVersion(demandId, "requirement_supplement", content.trim(), versionNote, updateBy);
         int rows = reqDemandMapper.updateReqDemandStatus(demandId, "plan_pending", updateBy);
         if (rows < 1)
         {
@@ -270,7 +272,10 @@ public class ReqDemandServiceImpl implements IReqDemandService
         if (rows > 0)
         {
             activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
-                    "demand_supplement_submitted", "web", "提交补充说明：" + current.getDemandNo(), null);
+                    designAdjustment ? "demand_design_adjustment_submitted" : "demand_supplement_submitted",
+                    "web",
+                    (designAdjustment ? "提交需求设计调整说明：" : "提交补充说明：") + current.getDemandNo(),
+                    null);
         }
         return rows;
     }
@@ -543,13 +548,13 @@ public class ReqDemandServiceImpl implements IReqDemandService
         }
     }
 
-    private void validateStatusActionRole(String targetStatus)
+    private void validateStatusActionRole(String fromStatus, String targetStatus)
     {
         if (isCurrentAdmin())
         {
             return;
         }
-        String requiredRole = requiredRoleForStatusAction(targetStatus);
+        String requiredRole = requiredRoleForStatusAction(fromStatus, targetStatus);
         if (requiredRole == null)
         {
             throw new ServiceException("当前角色不能执行该流程动作");
@@ -580,10 +585,14 @@ public class ReqDemandServiceImpl implements IReqDemandService
         }
     }
 
-    private String requiredRoleForStatusAction(String targetStatus)
+    private String requiredRoleForStatusAction(String fromStatus, String targetStatus)
     {
         if ("submitted".equals(targetStatus) || "confirmed".equals(targetStatus)
                 || "repairing".equals(targetStatus) || "completed".equals(targetStatus))
+        {
+            return ROLE_REQUIREMENT_USER;
+        }
+        if ("plan_ready".equals(fromStatus) && "plan_pending".equals(targetStatus))
         {
             return ROLE_REQUIREMENT_USER;
         }
@@ -616,7 +625,8 @@ public class ReqDemandServiceImpl implements IReqDemandService
             return;
         }
         if ("submitted".equals(targetStatus) || "confirmed".equals(targetStatus)
-                || "repairing".equals(targetStatus) || "completed".equals(targetStatus))
+                || "repairing".equals(targetStatus) || "completed".equals(targetStatus)
+                || ("plan_ready".equals(demand.getStatus()) && "plan_pending".equals(targetStatus)))
         {
             if (isCurrentCreator(demand))
             {

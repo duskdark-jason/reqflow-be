@@ -124,7 +124,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | `/requirement/demand/{demandIds}` | DELETE | `req:demand:remove` | 管理员删除一个或多个需求，并删除关联资料包版本和动作 token |
 | `/requirement/demand/upload` | POST | `req:demand:add` 或 `req:demand:edit` | 上传需求附件，单文件不超过 2MB |
 | `/requirement/demand/{demandId}/status/{status}` | POST | `req:demand:edit` | 状态流转 |
-| `/requirement/demand/{demandId}/supplement` | POST | `req:demand:edit` | 需求创建人在待补充说明状态提交补充内容，并回到待生成需求设计 |
+| `/requirement/demand/{demandId}/supplement` | POST | `req:demand:edit` | 需求创建人在待补充说明或需求设计待确认状态提交补充/调整内容，并回到待生成需求设计 |
 | `/requirement/demand/{demandId}/plan-instruction` | GET | `req:demand:query` | 按当前状态获取需求分析或需求生成 MCP 指令 |
 | `/requirement/demand/{demandId}/develop-instruction` | GET | `req:demand:query` | 按当前状态获取开发执行或返修 MCP 指令 |
 
@@ -153,6 +153,7 @@ plan_pending -> plan_ready
 plan_pending -> supplement_required
 plan_pending -> rejected
 supplement_required -> plan_pending
+plan_ready -> plan_pending
 plan_ready -> confirmed
 confirmed -> developing
 developing -> review
@@ -163,9 +164,9 @@ completed -> archived
 rejected -> archived
 ```
 
-其中 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed` 是主流程；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发。`submitted` 和 `plan_pending` 可由指定开发人员选择 `supplement_required` 或 `rejected` 作为结论分支：`supplement_required` 表示需要需求创建人补充说明，补充后通过专用补充接口回到 `plan_pending`；`rejected` 表示当前需求无法实现，可由管理员归档。`review -> repairing -> review` 是验收返修分支；`archived` 用于归档场景。不允许其他跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
+其中 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed` 是主流程；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发。`submitted` 和 `plan_pending` 可由指定开发人员选择 `supplement_required` 或 `rejected` 作为结论分支：`supplement_required` 表示需要需求创建人补充说明，补充后通过专用补充接口回到 `plan_pending`；`plan_ready -> plan_pending` 表示需求创建人对已生成需求设计提出调整说明并重新进入需求生成阶段；`rejected` 表示当前需求无法实现，可由管理员归档。`review -> repairing -> review` 是验收返修分支；`archived` 用于归档场景。不允许其他跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
 
-`/requirement/demand/{demandId}/supplement` 请求体为 `{ "content": "补充说明正文" }`。该接口只允许需求创建人或管理员在 `supplement_required` 状态调用，调用成功后追加 `requirement_supplement` 资料包版本并把需求状态改回 `plan_pending`；如果状态不是待补充说明、内容为空或操作者不是创建人，会返回业务异常。普通 `/requirement/package/{demandId}/{artifactType}` 保存接口仍不开放给需求人员写入补充说明。
+`/requirement/demand/{demandId}/supplement` 请求体为 `{ "content": "补充说明正文" }`。该接口只允许需求创建人或管理员在 `supplement_required` 或 `plan_ready` 状态调用：`supplement_required` 表示补充基础需求信息，`plan_ready` 表示对已生成需求设计提出调整说明。调用成功后追加 `requirement_supplement` 资料包版本并把需求状态改回 `plan_pending`；如果状态不是待补充说明或需求设计待确认、内容为空或操作者不是创建人，会返回业务异常。普通 `/requirement/package/{demandId}/{artifactType}` 保存接口仍不开放给需求人员写入补充说明。
 
 `plan-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_plan`，仅指定开发人员或管理员可在 `submitted`、`plan_pending` 或 `plan_ready` 状态生成。`submitted` 只返回需求分析指令，`targetMethod=requirement_analysis`，复制内容只包含 `upload_requirement_assessment`、需求分析 `actionToken`、建议任务分支、`arguments.actionToken` 使用说明，以及“当前流程阶段内有效、流转到下一流程即失效、最长保留 24 小时、过期或已使用后重新生成”的提示；评估报告必须给出“可继续设计、需澄清、需调整、暂不可实现”之一的结论，结论需要需求人补充、调整或暂不可实现时，本轮不得生成 `requirement.md`。`plan_pending` 和 `plan_ready` 只返回需求生成指令，`targetMethod=requirement_generate`，复制内容只包含 `save_requirement_package`、需求生成 `actionToken` 和同一阶段有效期提示；本阶段只生成或调整 `requirement.md`，不得生成 `plan.md`、不得改业务代码、不得写执行或 Review 报告。两个阶段的 actionToken 都不能替代人员 `X-MCP-Key`。
 
@@ -184,7 +185,7 @@ rejected -> archived
 
 执行包读取复用需求参与人可见性：需求创建人、指定开发人员和管理员可读。执行包保存、草稿生成和 MCP 资料包回写仅允许指定开发人员或管理员执行；即使用户拥有隐藏 `req:package:save` 权限，也不能回写未指定给自己的需求。服务端内部在提需时自动生成 `requirement_draft` 和 `context_manifest`，在需求人补充说明时生成 `requirement_supplement`，这两个流程写入不代表开放通用资料包写权限。
 
-业务页面默认展示的资料类型为 `requirement_draft`、`requirement_supplement`、`requirement_assessment`、`requirement`、`plan`、`execution_report` 和 `review_report`。`context_manifest` 仍作为 MCP 上下文资源保留，不作为普通页面默认标签展示。
+业务页面默认一级标签展示的资料类型为 `requirement_draft`、`requirement_assessment`、`requirement`、`plan`、`execution_report` 和 `review_report`。`requirement_supplement` 仍作为补充/调整版本类型和 MCP 资源保留，但前端应按语义嵌入需求可行性评估或需求设计标签内的折叠历史记录，不作为普通页面默认标签展示；`context_manifest` 仍作为 MCP 上下文资源保留，不作为普通页面默认标签展示。
 
 MCP `upload_requirement_assessment` 和 `save_requirement_package` 可显式传 `demandId`，也可传当前阶段指令里的对应 `actionToken` 由服务端解析到绑定需求；MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 可传开发执行或返修指令里的同一个阶段 `actionToken` 由服务端解析到绑定需求；这些调用仍必须通过人员 `X-MCP-Key` 或登录态权限校验。需求分析和需求生成 actionToken 被成功解析后立即写入 `last_used_time`，后续重复使用必须失败；开发阶段 actionToken 在 `confirmed/developing` 内可重复用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；返修阶段 actionToken 在 `repairing` 内可重复用于 `upload_execution_report` 和 `upload_review_report`。需求流转到下一阶段后旧 actionToken 立即失效，最长保留时间仍为 24 小时。
 

@@ -461,6 +461,35 @@ class ReqDemandServiceImplTest
     }
 
     @Test
+    void creatorCanSubmitDesignAdjustmentAndReturnDemandToDesignStage()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("plan_ready");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(reqDemandMapper.updateReqDemandStatus(5L, "plan_pending", "creator")).thenReturn(1);
+        mockLoginUser(7L, "requirement_user");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "packageVersionMapper", packageVersionMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.submitDemandSupplement(5L, "请补充异常分支和验收样例", "creator"));
+
+        verify(packageVersionMapper).insertReqPackageVersion(argThat(packageVersion ->
+                hasPackage(packageVersion, "requirement_supplement", "请补充异常分支", "验收样例")
+                        && "需求设计调整说明".equals(packageVersion.getVersionNote())));
+        verify(reqDemandMapper).updateReqDemandStatus(5L, "plan_pending", "creator");
+        verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_design_adjustment_submitted"),
+                eq("web"), contains("提交需求设计调整说明"), isNull());
+    }
+
+    @Test
     void rejectsSupplementWhenDemandIsNotWaitingForSupplement()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);

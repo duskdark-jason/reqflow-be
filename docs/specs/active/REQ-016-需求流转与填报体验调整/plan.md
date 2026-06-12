@@ -24,7 +24,8 @@
 10. 需求上下文权限与 Controller 迁移：将需求管理 Controller 迁入 `ruoyi-requirement` 模块，需求表单所需项目、分支、模块和索引模块只读接口接受需求权限，覆盖 AC-015。
 11. 删除与流程隔离：新增 `req:demand:remove` 管理员删除接口和按钮权限，服务层按角色拦截具体状态动作，覆盖 AC-016。
 12. 单一指定开发人员锁定：新增 `developer_user_id` 字段、开发人员候选接口、参与人列表过滤和资料包读写校验，覆盖 AC-017。
-13. 文档同步：更新 API 契约、模块文档、表字典和关系说明，覆盖 AC-005、AC-010~AC-017。
+13. 设计确认调整说明：扩展补充说明接口，使 `plan_ready` 阶段需求创建人可提交需求设计调整说明，追加 `requirement_supplement` 版本并回到 `plan_pending`，覆盖 AC-019。
+14. 文档同步：更新 API 契约、模块文档、表字典和关系说明，覆盖 AC-005、AC-010~AC-019。
 
 ## 文件改动范围
 
@@ -34,6 +35,7 @@
 | 修改 | `ruoyi-requirement/src/test/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImplTest.java` | 编号、默认状态和创建人失败用例。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandStatusTransition.java` | 新状态主路径。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 编号、创建人和状态实现。 |
+| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqDemandStatusTransition.java` | 需求设计待确认阶段补充调整说明回退到待生成需求设计。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/IReqDemandService.java` | 指令查询服务方法。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqDemandController.java` | 生成需求设计、执行任务指令查询接口和管理员删除接口。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 需求设计动作 token、执行开发动作 token 和返修事件记录。 |
@@ -87,6 +89,7 @@
 | AC-016 | 管理员删除和流程角色隔离 | `ReqDemandServiceImplTest`、`ReqPlatformRoleSqlTest` |
 | AC-017 | 单一指定开发人员和参与人锁定 | `ReqDemandServiceImplTest`、`ReqDemandSchemaSqlTest`、接口账号冒烟 |
 | AC-018 | 自动需求草稿、结论分支和需求人补充说明 | `ReqDemandStatusTransitionTest`、`ReqDemandServiceImplTest`、`McpServiceTest` |
+| AC-019 | 需求设计待确认阶段补充调整说明并多轮迭代 | `ReqDemandStatusTransitionTest`、`ReqDemandServiceImplTest` |
 
 ## 执行约束
 

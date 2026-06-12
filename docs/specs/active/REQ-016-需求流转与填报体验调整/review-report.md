@@ -42,6 +42,7 @@
 | AC-016 | 管理员删除和流程角色隔离 | `ReqDemandController`、`ReqDemandServiceImpl`、SQL 脚本 | 单测覆盖删除链路、角色状态动作拦截和 SQL 权限边界 | 通过 |
 | AC-017 | 单一指定开发人员和参与人锁定 | `ReqDemandServiceImpl`、`ReqDemandMapper.xml`、`ReqPackageServiceImpl`、`McpService`、前端状态按钮过滤 | 单测覆盖指定开发人员、非参与人拒绝和 SQL 字段；前端构建通过 | 通过 |
 | AC-018 | 自动需求草稿、结论分支和需求人补充说明 | `ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqDemandController`、`McpService` | `ReqDemandServiceImplTest` 覆盖提交需求自动生成草稿和补充说明；`ReqDemandStatusTransitionTest` 覆盖分支；`McpServiceTest` 覆盖补充说明资源 | 通过 |
+| AC-019 | 需求设计待确认阶段补充调整说明 | `ReqDemandServiceImpl`、`ReqDemandStatusTransition` | `ReqDemandServiceImplTest` 覆盖 `plan_ready` 提交调整说明并追加 `requirement_supplement`；`ReqDemandStatusTransitionTest` 覆盖 `plan_ready -> plan_pending` | 通过 |
 
 ## 验收复核
 
@@ -62,6 +63,8 @@
 - AC-015：通过，需求列表上下文只读接口按需求权限放行，首页快捷入口按权限过滤。
 - AC-016：通过，管理员删除和流程角色隔离已覆盖。
 - AC-017：通过，需求只锁定一个指定开发人员，该人员同时负责需求设计、执行开发和返修；普通访问与操作限制在创建人和该开发人员之间。
+- AC-018：通过，提交需求自动生成草稿和上下文清单，需求分析/设计结论可进入补充或无法实现分支，需求人可提交补充说明。
+- AC-019：通过，需求设计待确认阶段需求人可提交补充调整说明并回到待生成需求设计。
 
 ## 返修交接清单
 
@@ -70,6 +73,7 @@
 | RF-002 | 中 | AC-006、AC-007、AC-008 | 用户反馈 MCP 指令不够清晰，并建议增加返修流程和历史版本记录 | 补齐初始化式字段、执行开发指令、返修事件和版本链文档 | 单测、接口冒烟、文档门禁 |
 | RF-003 | 中 | AC-009 | 用户补充 actionToken 应按流程阶段有效，转到下一流程即失效 | 补齐 token 过期时间、普通 token 已使用拒绝、开发阶段 token 复用、需求状态阶段校验和指令文案 | 单测、接口冒烟、文档门禁 |
 | RF-004 | 中 | AC-004、AC-006、AC-011、AC-012 | 用户反馈需求分析阶段、需求生成阶段、返修阶段也应像开发阶段一样只包含当前阶段内容，token 随流程流转失效 | 拆分需求分析、需求生成、开发执行和返修指令；需求分析只回写评估，需求生成只回写需求设计，返修只回写执行和 Review 报告 | 单测、文档门禁、前端构建 |
+| RF-005 | 中 | AC-019 | 用户反馈需求设计确认阶段不能只确认，还要支持补充调整说明进行多轮迭代 | 扩展补充说明接口支持 `plan_ready`，追加补充版本并回到 `plan_pending` | 状态机单测、服务层单测、文档门禁 |
 
 ## 复审记录
 
@@ -78,5 +82,6 @@
 | RF-002 | 已完成 MCP 指令、执行开发指令、返修事件和版本链说明 | 通过 | `mvn -pl ruoyi-requirement -am test`、接口冒烟、`check-docs` |
 | RF-003 | 已完成 actionToken 流程阶段有效、24 小时兜底和开发阶段复用限制 | 通过 | `ReqActionTokenServiceImplTest`、`McpServiceTest`、接口冒烟、`check-docs` |
 | RF-004 | 已完成四个阶段的工具集合、actionToken target 和模板文档同步 | 通过 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
+| RF-005 | 已完成 `plan_ready` 调整说明回退和补充版本记录 | 通过 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 
 - 最终结论：通过

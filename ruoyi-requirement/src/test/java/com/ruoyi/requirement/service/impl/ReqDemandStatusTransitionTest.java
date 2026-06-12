@@ -35,6 +35,7 @@ class ReqDemandStatusTransitionTest
         assertTrue(ReqDemandStatusTransition.isAllowed("submitted", "rejected"));
         assertTrue(ReqDemandStatusTransition.isAllowed("plan_pending", "rejected"));
         assertTrue(ReqDemandStatusTransition.isAllowed("supplement_required", "plan_pending"));
+        assertTrue(ReqDemandStatusTransition.isAllowed("plan_ready", "plan_pending"));
         assertTrue(ReqDemandStatusTransition.isAllowed("rejected", "archived"));
     }
 

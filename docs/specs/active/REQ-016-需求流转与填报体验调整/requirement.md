@@ -55,7 +55,7 @@
 - 业务背景与附件：`businessBackground` 保存普通文本业务背景；图片和文件通过需求上传接口返回路径后写入 `attachments`，单文件不超过 2MB。
 - 默认状态：新增为 `draft`，中文语义为“未提交”。
 - 主状态流转：`draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> completed`，其中 `submitted` 表示待需求分析，`plan_pending` 表示待开发人员生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待开发人员生成执行计划并开始开发。
-- 结论分支：`submitted` 和 `plan_pending` 可由指定开发人员选择退回 `supplement_required` 或结束到 `rejected`；需求创建人在 `supplement_required` 提交补充说明后回到 `plan_pending`。
+- 结论分支：`submitted` 和 `plan_pending` 可由指定开发人员选择退回 `supplement_required` 或结束到 `rejected`；需求创建人在 `supplement_required` 提交补充说明后回到 `plan_pending`；需求创建人在 `plan_ready` 需求设计待确认阶段可提交需求设计调整说明并回到 `plan_pending`，让指定开发人员重新生成设计，支持多轮迭代。
 - 自动草稿：需求从 `draft` 提交到 `submitted` 后，后端自动生成 `requirement_draft` 和 `context_manifest`，供 MCP 读取基础需求和上下文清单。
 - 返修流转：`review -> repairing -> review`，返修完成后重新走验收确认。
 - 兼容状态：`repairing`、`archived` 可继续识别，其中 `repairing` 作为待验收返修分支。
@@ -88,6 +88,7 @@
 - AC-016：管理员可删除需求；需求人员和开发人员不可见删除按钮，服务端状态流转按角色隔离具体动作。
 - AC-017：新增和修改草稿需求必须指定开发人员；提交后只有创建人、指定开发人员和管理员可查看或操作该需求，开发人员不能看到他人未提交草稿。
 - AC-018：需求提交后自动生成需求草稿和上下文清单；需求分析或需求设计阶段支持“需要补充说明”和“需求无法实现”结论；需求人在待补充说明状态可提交补充说明并回到待生成需求设计。
+- AC-019：需求设计待确认阶段，需求人除确认需求设计外还可提交补充调整说明；服务端追加 `requirement_supplement` 版本并把状态改回 `plan_pending`。
 
 ## Companion 关联
 

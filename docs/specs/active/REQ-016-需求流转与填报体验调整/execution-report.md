@@ -12,6 +12,7 @@
 |---|---|
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 新增需求覆盖客户端编号/创建人，生成 `REQ-001` 风格编号，默认 `draft`，限制非草稿和非创建人修改；按阶段生成初始化式 MCP 需求分析、需求生成、执行开发和返修指令并记录返修事件；按角色隔离状态动作并支持管理员删除清理。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqDemandStatusTransition.java` | 本轮追加需求分析/设计结论分支：开发人员可流转到待补充说明或需求无法实现；需求人补充说明后回到待生成需求设计；提交需求时自动生成需求草稿和上下文清单。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`、`ReqDemandStatusTransition.java` | 本轮追加 `plan_ready -> plan_pending` 设计调整回退路径，需求人可在确认需求设计阶段提交调整说明并追加 `requirement_supplement` 版本。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqDemandController.java`、`dto/ReqDemandSupplementRequest.java` | 本轮新增 `/requirement/demand/{demandId}/supplement` 需求补充说明接口，供需求人在待补充说明状态回填内容。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/domain/ReqDemand.java`、`ReqDemandMapper.xml` | 增加指定开发人员字段回显、开发人员候选查询和非管理员参与人列表过滤。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandStatusTransition.java` | 调整主状态流转为提需、资料生成、确认、开发、验收、办结。 |
@@ -63,6 +64,7 @@
 | L2 | AC-015 | `mvn -pl ruoyi-requirement -am -Dtest=ReqIndexControllerPermissionTest -Dsurefire.failIfNoSpecifiedTests=false test` | 先失败复现 `impact/suggest` 仅允许 `req:index:list`，修复后通过，锁定需求表单上下文权限。 |
 | L2 | AC-001~AC-017 | `mvn -pl ruoyi-requirement -am test` | 通过，116 个测试覆盖编号、创建人、状态、阶段指令、返修事件、来源必填、上传 2MB 限制、角色动作隔离、删除链路、参与人锁定、SQL 权限和全局 skill 模板。 |
 | L2 | AC-003、AC-004、AC-011、AC-017 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，59 个测试覆盖结论分支、自动需求草稿、需求人补充说明和 MCP 补充资源。 |
+| L2 | AC-019 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 本轮通过，33 个测试覆盖 `plan_ready -> plan_pending` 设计调整回退路径、补充调整说明版本和状态更新。 |
 | L2 | AC-017 | 连接本机 `ry-vue` 执行 `docs/db/sql/req_platform_req017_demand_developer_lock.sql` 并查询字段/索引 | 通过，`req_demand.developer_user_id` 和 `idx_req_demand_developer` 已存在。 |
 | L3 | AC-004、AC-006、AC-007、AC-009、AC-017 | 使用 `xqr/123456` 和 `yfr/123456` 调用需求接口流转 | 通过，xqr 创建 draft 并指定 yfr；yfr 提交前不可见，提交后可见；xqr 生成计划/开发指令被拒绝，yfr 可生成计划和开发指令，指令包含阶段有效 token 规则。 |
 | L3 | AC-015 | 使用 `xqr/123456` 登录后调用 `/requirement/index/impact/suggest?projectId=1&variantId=1&moduleId=16` | 通过，返回 HTTP 200 和 `code=200`，不再触发权限不足。 |
@@ -101,6 +103,7 @@
 | AC-016 | 已完成 | `ReqDemandServiceImplTest` 覆盖需求人员/开发人员状态动作互斥、管理员合法流转和删除关联数据；`ReqPlatformRoleSqlTest` 覆盖角色脚本不分配删除权限。 |
 | AC-017 | 已完成 | `ReqDemandServiceImplTest` 覆盖未指定开发人员拒绝、指定开发人员可执行开发动作、非参与人拒绝读取；`xqr/yfr` 真实接口流转验证提交前后可见性、指令权限和同一开发人员进入开发中。 |
 | AC-018 | 已完成 | 本轮补充：`draft -> submitted` 自动生成 `requirement_draft` 和 `context_manifest`；开发人员可在分析/设计阶段选择待补充说明或需求无法实现；需求人在待补充说明状态提交 `requirement_supplement` 后回到 `plan_pending`。 |
+| AC-019 | 已完成 | 本轮补充：`plan_ready` 需求设计待确认阶段可由需求创建人提交需求设计调整说明，服务端追加 `requirement_supplement` 版本并回到 `plan_pending`，支持多轮设计迭代。 |
 
 ## 计划偏差
 
@@ -115,6 +118,7 @@
 | RF-002 | 已修复 | 已补充初始化式 MCP 指令字段、执行开发指令、返修状态事件和版本链文档。 | `mvn -pl ruoyi-requirement -am test` 通过；接口冒烟通过；`check-docs` 通过 |
 | RF-003 | 已修复 | 已补充 actionToken 流程阶段有效期、24 小时最长兜底、普通 token 一次性消费、开发阶段 token 复用、并发条件更新、指令文案和文档。 | `ReqActionTokenServiceImplTest` 通过；`mvn -pl ruoyi-requirement -am test` 通过 |
 | RF-004 | 已修复 | 已按用户反馈把需求分析、需求生成、开发执行和返修阶段的指令内容与 actionToken 拆分为当前阶段最小工具集合；返修阶段只包含执行报告和 Review 报告。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,McpServiceTest,ReqActionTokenServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
+| RF-005 | 已修复 | 已扩展补充说明接口支持需求设计待确认阶段提交调整说明，追加补充版本并回到待生成需求设计阶段。 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandStatusTransitionTest,ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` 通过 |
 
 ## 风险与后续
 

@@ -18,6 +18,7 @@ public final class ReqDemandStatusTransition
             "plan_pending->supplement_required",
             "plan_pending->rejected",
             "supplement_required->plan_pending",
+            "plan_ready->plan_pending",
             "plan_ready->confirmed",
             "confirmed->developing",
             "developing->review",
