@@ -61,6 +61,9 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_demand_id AND pe
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
 SELECT '需求修改', @req_demand_id, 3, '#', '', 1, 0, 'F', '0', '0', 'req:demand:edit', '#', 'admin', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_demand_id AND perms = 'req:demand:edit');
+INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
+SELECT '需求删除', @req_demand_id, 4, '#', '', 1, 0, 'F', '0', '0', 'req:demand:remove', '#', 'admin', NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_demand_id AND perms = 'req:demand:remove');
 
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
 SELECT '需求执行包', @req_parent_id, 3, 'package', 'requirement/package/index', 1, 0, 'C', '0', '0', 'req:package:list', 'clipboard', 'admin', NOW()

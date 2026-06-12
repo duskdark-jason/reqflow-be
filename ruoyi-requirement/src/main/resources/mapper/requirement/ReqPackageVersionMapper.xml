@@ -43,6 +43,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         values(#{demandId}, #{artifactType}, #{versionNo}, #{content}, #{status}, #{versionNote}, #{createBy}, sysdate())
     </insert>
 
+    <delete id="deleteReqPackageVersionByDemandIds" parameterType="Long">
+        delete from req_package_version where demand_id in
+        <foreach item="demandId" collection="array" open="(" separator="," close=")">
+            #{demandId}
+        </foreach>
+    </delete>
+
     <select id="selectPackageCount" resultType="long">select count(1) from req_package_version</select>
     <select id="selectPackageCountByArtifactType" parameterType="String" resultType="long">
         select count(1) from req_package_version where artifact_type = #{artifactType}

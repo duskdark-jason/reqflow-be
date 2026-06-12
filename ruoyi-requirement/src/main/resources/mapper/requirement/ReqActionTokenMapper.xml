@@ -105,4 +105,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where token_id = #{tokenId}
           and last_used_time is null
     </update>
+
+    <delete id="deleteReqActionTokenByDemandIds" parameterType="Long">
+        delete from req_action_token where demand_id in
+        <foreach item="demandId" collection="array" open="(" separator="," close=")">
+            #{demandId}
+        </foreach>
+    </delete>
 </mapper>

@@ -12,6 +12,7 @@ public interface ReqDemandMapper
     List<ReqDemand> selectReqDemandList(ReqDemand reqDemand);
     int insertReqDemand(ReqDemand reqDemand);
     int updateReqDemand(ReqDemand reqDemand);
+    int deleteReqDemandByDemandIds(Long[] demandIds);
     int updateReqDemandStatus(@Param("demandId") Long demandId, @Param("status") String status, @Param("updateBy") String updateBy);
     Long selectDemandCount();
     List<Map<String, Object>> selectProjectRank();

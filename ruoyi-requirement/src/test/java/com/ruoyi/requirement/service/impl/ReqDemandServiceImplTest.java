@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -17,15 +18,24 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.common.core.domain.entity.SysRole;
+import com.ruoyi.common.core.domain.entity.SysUser;
+import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.dto.ReqActionInstruction;
+import com.ruoyi.requirement.mapper.ReqActionTokenMapper;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
+import com.ruoyi.requirement.mapper.ReqPackageVersionMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
@@ -34,6 +44,12 @@ import com.ruoyi.requirement.service.ReqActivityLogService;
 
 class ReqDemandServiceImplTest
 {
+    @org.junit.jupiter.api.AfterEach
+    void clearSecurityContext()
+    {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void rejectsInvalidStatusChangeFromGenericUpdate()
     {
@@ -219,6 +235,95 @@ class ReqDemandServiceImplTest
     }
 
     @Test
+    void rejectsRequirementUserExecutingDeveloperStatusAction()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(1L);
+        current.setStatus("submitted");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+        mockLoginUser(7L, "requirement_user");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.updateReqDemandStatus(1L, "plan_ready", "req-user"));
+
+        assertTrue(exception.getMessage().contains("当前角色不能执行该流程动作"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
+    }
+
+    @Test
+    void rejectsDeveloperExecutingRequirementUserStatusAction()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(1L);
+        current.setStatus("plan_ready");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.updateReqDemandStatus(1L, "confirmed", "developer"));
+
+        assertTrue(exception.getMessage().contains("当前角色不能执行该流程动作"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
+    }
+
+    @Test
+    void adminCanExecuteAnyValidStatusAction()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(1L);
+        current.setStatus("submitted");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+        when(reqDemandMapper.updateReqDemandStatus(1L, "plan_ready", "admin")).thenReturn(1);
+        mockLoginUser(1L, "admin");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.updateReqDemandStatus(1L, "plan_ready", "admin"));
+        verify(reqDemandMapper).updateReqDemandStatus(1L, "plan_ready", "admin");
+    }
+
+    @Test
+    void deletesDemandAndRelatedGeneratedData()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
+        ReqActionTokenMapper actionTokenMapper = mock(ReqActionTokenMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(1L);
+        current.setDemandNo("REQ-001");
+        current.setTitle("删除测试");
+        when(reqDemandMapper.selectReqDemandByDemandId(1L)).thenReturn(current);
+        when(reqDemandMapper.deleteReqDemandByDemandIds(aryEq(new Long[] {1L}))).thenReturn(1);
+        mockLoginUser(1L, "admin");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "packageVersionMapper", packageVersionMapper);
+        ReflectionTestUtils.setField(service, "actionTokenMapper", actionTokenMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.deleteReqDemandByDemandIds(new Long[] {1L}, "admin"));
+        verify(packageVersionMapper).deleteReqPackageVersionByDemandIds(aryEq(new Long[] {1L}));
+        verify(actionTokenMapper).deleteReqActionTokenByDemandIds(aryEq(new Long[] {1L}));
+        verify(reqDemandMapper).deleteReqDemandByDemandIds(aryEq(new Long[] {1L}));
+        verify(activityLogService).record(eq(1L), eq(10L), eq(1L), eq("demand_deleted"), eq("web"),
+                contains("REQ-001"), isNull());
+    }
+
+    @Test
     void overwritesClientProvidedDemandNoOnInsert()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
@@ -376,6 +481,7 @@ class ReqDemandServiceImplTest
         current.setStatus("review");
         when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
         when(reqDemandMapper.updateReqDemandStatus(5L, "repairing", "approver")).thenReturn(1);
+        mockLoginUser(7L, "requirement_user");
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
@@ -399,6 +505,19 @@ class ReqDemandServiceImplTest
         demand.setExpectedResult("预期结果");
         demand.setAcceptanceText("验收标准");
         return demand;
+    }
+
+    private void mockLoginUser(Long userId, String roleKey)
+    {
+        SysRole role = new SysRole();
+        role.setRoleKey(roleKey);
+        SysUser user = new SysUser();
+        user.setUserId(userId);
+        user.setUserName(roleKey);
+        user.setRoles(List.of(role));
+        LoginUser loginUser = new LoginUser(userId, 1L, user, Set.of("*:*:*"));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities()));
     }
 
     private ReqVariant variant(Long variantId, Long projectId, String branchName)

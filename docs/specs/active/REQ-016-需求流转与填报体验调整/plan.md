@@ -21,7 +21,9 @@
 7. MCP 阶段拆分：收窄 `requirement_plan` actionToken 只允许 `save_requirement_package`，执行阶段生成 `save_development_plan` 和 `upload_execution_report` 两个一次性 actionToken，覆盖 AC-011、AC-012。
 8. 资料包读取权限：需求详情嵌入读取允许 `req:demand:query`，独立资料包菜单仍保留 `req:package:list`，覆盖 AC-013。
 9. 需求填报字段与上传限制：新增 `demand_source`、`attachments` 字段和专用上传接口，执行包上下文同步来源、背景和附件，覆盖 AC-014。
-10. 文档同步：更新 API 契约、模块文档、表字典和关系说明，覆盖 AC-005、AC-010~AC-014。
+10. 需求上下文权限与 Controller 迁移：将需求管理 Controller 迁入 `ruoyi-requirement` 模块，需求表单所需项目、分支、模块和索引模块只读接口接受需求权限，覆盖 AC-015。
+11. 删除与流程隔离：新增 `req:demand:remove` 管理员删除接口和按钮权限，服务层按角色拦截具体状态动作，覆盖 AC-016。
+12. 文档同步：更新 API 契约、模块文档、表字典和关系说明，覆盖 AC-005、AC-010~AC-016。
 
 ## 文件改动范围
 
@@ -32,11 +34,12 @@
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandStatusTransition.java` | 新状态主路径。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 编号、创建人和状态实现。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/IReqDemandService.java` | 指令查询服务方法。 |
-| 修改 | `ruoyi-admin/src/main/java/com/ruoyi/web/controller/requirement/ReqDemandController.java` | 生成需求设计和执行任务指令查询接口。 |
+| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqDemandController.java` | 生成需求设计、执行任务指令查询接口和管理员删除接口。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 需求编排动作 token、执行开发动作 token 和返修事件记录。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 24 小时有效期、一次性消费和并发条件更新。 |
 | 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | MCP 工具与 actionToken 阶段边界。 |
-| 修改 | `ruoyi-admin/src/main/java/com/ruoyi/web/controller/requirement/ReqPackageController.java` | 需求详情嵌入资料包读取权限。 |
+| 修改 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqPackageController.java` | 需求详情嵌入资料包读取权限。 |
+| 迁移 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/**` | 将需求管理 Controller 从 admin 模块迁移到需求模块，需求页面只读上下文接口按需求权限放行。 |
 | 新增 | `docs/db/sql/req_platform_req016_role_permissions.sql` | 平台三类角色菜单权限。 |
 | 新增 | `ruoyi-requirement/src/test/java/com/ruoyi/requirement/service/impl/ReqPlatformRoleSqlTest.java` | 角色 SQL 契约测试。 |
 | 修改 | `docs/ai-harness/contracts/requirement-platform-api.md`、`docs/ai-harness/modules/requirement-platform.md`、`docs/db/table-dictionary.md`、`docs/db/relationship.md` | 长期契约同步。 |
@@ -77,6 +80,8 @@
 | AC-012 | 执行阶段生成计划和报告 | `ReqDemandServiceImplTest`、`McpServiceTest` |
 | AC-013 | 详情嵌入资料读取权限 | Controller 权限复核、前端构建 |
 | AC-014 | 来源必填、附件和 2MB 上传限制 | `ReqDemandServiceImplTest`、`ReqDemandSchemaSqlTest`、`ReqDemandControllerUploadTest`、`RequirementTemplateServiceTest` |
+| AC-015 | 需求列表上下文只读接口权限 | Controller 权限复核、端到端账号冒烟 |
+| AC-016 | 管理员删除和流程角色隔离 | `ReqDemandServiceImplTest`、`ReqPlatformRoleSqlTest` |
 
 ## 执行约束
 

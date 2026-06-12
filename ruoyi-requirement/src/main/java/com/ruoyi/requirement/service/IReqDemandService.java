@@ -10,6 +10,7 @@ public interface IReqDemandService
     List<ReqDemand> selectReqDemandList(ReqDemand reqDemand);
     int insertReqDemand(ReqDemand reqDemand);
     int updateReqDemand(ReqDemand reqDemand);
+    int deleteReqDemandByDemandIds(Long[] demandIds, String operator);
     int updateReqDemandStatus(Long demandId, String status, String updateBy);
     ReqActionInstruction createRequirementPlanInstruction(Long demandId, String operator);
     ReqActionInstruction createRequirementDevelopInstruction(Long demandId, String operator);

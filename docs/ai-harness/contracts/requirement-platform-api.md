@@ -23,11 +23,13 @@
 | 项目分支兼容接口 | `/requirement/variant/**` | GET/POST/PUT/DELETE | `req:variant:*` | 一个项目分支，左侧菜单不再暴露 |
 | 人工模块兼容接口 | `/requirement/module/**` | GET/POST/PUT/DELETE | `req:module:*` | 一个项目分支下的人工模块或功能点，左侧菜单不再暴露 |
 
+需求列表、详情和维护页需要读取项目、分支、人工模块和索引模块作为表单上下文。为避免给需求人员分配项目/MCP 管理菜单，`/requirement/project/list`、`/requirement/project/{projectId}`、`/requirement/project/init/{projectId}`、`/requirement/variant/list`、`/requirement/variant/{variantId}`、`/requirement/module/list`、`/requirement/module/{moduleId}` 可在对应管理权限之外接受 `req:demand:list`、`req:demand:add`、`req:demand:edit` 或 `req:demand:query` 的只读访问；新增、修改和删除仍只接受各自管理权限。
+
 ## 项目初始化接口
 
 | 路径 | 方法 | 权限 | 说明 |
 |---|---|---|---|
-| `/requirement/project/init/{projectId}` | GET | `req:project:query` | 查询一个项目的初始化上下文 |
+| `/requirement/project/init/{projectId}` | GET | `req:project:query` 或需求上下文只读权限 | 查询一个项目的初始化上下文 |
 | `/requirement/project/init` | POST | `req:project:add` | 新增项目并同步保存代码仓库和项目分支 |
 | `/requirement/project/init` | PUT | `req:project:edit` | 更新项目并同步保存代码仓库和项目分支 |
 | `/requirement/project/{projectId}/harness-template` | GET | `req:project:query` | 查询项目接入所需 harness 初始化模板包 |
@@ -96,8 +98,8 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | 路径 | 方法 | 权限 | 说明 |
 |---|---|---|---|
 | `/requirement/index/batch/list` | GET | `req:index:list` | 查询仓库索引批次 |
-| `/requirement/index/module/tree` | GET | `req:index:list` | 查询索引生成的模块知识列表 |
-| `/requirement/index/impact/suggest` | GET | `req:index:list` | 按项目、仓库、项目分支和模块推荐影响面 |
+| `/requirement/index/module/tree` | GET | `req:index:list` 或需求上下文只读权限 | 查询索引生成的模块知识列表 |
+| `/requirement/index/impact/suggest` | GET | `req:index:list`、`req:demand:add`、`req:demand:edit` 或 `req:demand:query` | 按项目、仓库、项目分支和模块推荐影响面 |
 | `/requirement/index/import` | POST | `req:index:import` | 备用 JSON 导入入口 |
 
 索引导入只保存 Git 远端、仓库类型、分支、commit、相对路径和结构化影响面。上传内容如果包含个人本机绝对路径，服务端必须拒绝导入。
@@ -118,6 +120,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | `/requirement/demand/{demandId}` | GET | `req:demand:query` | 查询需求详情 |
 | `/requirement/demand` | POST | `req:demand:add` | 新增未提交需求 |
 | `/requirement/demand` | PUT | `req:demand:edit` | 修改未提交需求正文 |
+| `/requirement/demand/{demandIds}` | DELETE | `req:demand:remove` | 管理员删除一个或多个需求，并删除关联资料包版本和动作 token |
 | `/requirement/demand/upload` | POST | `req:demand:add` 或 `req:demand:edit` | 上传需求背景图片或附件，单文件不超过 2MB |
 | `/requirement/demand/{demandId}/status/{status}` | POST | `req:demand:edit` | 状态流转 |
 | `/requirement/demand/{demandId}/plan-instruction` | GET | `req:demand:query` | 获取生成需求设计并回写需求设计的 MCP 指令 |
@@ -130,6 +133,8 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 新增和修改需求时，`projectId + variantId` 必须指向同一项目下已启用且初始化完成的项目分支；未初始化完成的分支不得作为需求提交目标。分支初始化完成口径为：项目存在有效代码仓库，且所有有效仓库都已有该分支真实 `baselineBranch` 的 `imported` 索引批次。新功能提需允许当前分支暂时没有既有模块知识，该校验必须在后端服务层兜底，不能只依赖前端下拉过滤。
 
 普通修改接口只允许修改 `draft` 状态需求，且请求操作者必须是需求创建人；普通修改接口会忽略状态字段，状态变化只能通过 `/status/{status}` 接口进入状态机。
+
+删除需求是管理员运维能力，不属于需求人员或开发人员主流程。删除接口要求 `req:demand:remove`，角色初始化脚本不得给 `requirement_user` 或 `requirement_developer` 分配该权限；删除会物理删除 `req_demand`，并同步清理该需求的 `req_package_version` 和 `req_action_token` 记录。
 
 需求可以选择既有模块，也可以通过备注字段承载“新功能名称”。新功能名称用于执行包上下文和前端展示，不写入项目分支知识库；选择既有模块时，`moduleId` 可以对应人工模块，也可以对应索引模块标识，执行包生成时按人工模块、索引模块、备注的顺序解析模块名。
 
@@ -240,6 +245,8 @@ requirement_develop
 `codexSetupPackage` 内的 MCP 地址优先读取后端配置项 `reqflow.mcp.public-url`。该配置项应填写完整 MCP 对外访问地址，例如 `https://reqflow.example.com/requirement/mcp`；为空时服务端才按 `X-Forwarded-Proto`、`X-Forwarded-Host`、`Host` 和 `context-path` 自动推导地址。部署在反向代理、HTTPS、非默认端口或非本机访问场景时，建议显式配置 `reqflow.mcp.public-url`，避免安装包包含 `localhost` 或临时代理端口。
 
 平台角色授权脚本为 `docs/db/sql/req_platform_req016_role_permissions.sql`。管理员角色使用 `role_key='admin'`，沿用 RuoYi 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理和使用统计菜单权限，并额外分配隐藏 `req:package:save`，用于通过 MCP 回写需求设计、执行计划和执行报告。
+
+需求删除按钮权限 `req:demand:remove` 只随菜单脚本注册给管理员使用，不能加入需求人员或开发人员角色集合。状态流转接口虽然共用 `req:demand:edit`，服务层还必须按角色校验具体动作：需求人员只能执行提需、需求设计确认、返修和验收，开发人员只能执行提交需求设计、开始开发、提交验收和返修验收。
 
 MCP 管理菜单权限独立于需求提交权限。需求人员角色默认不分配 `req:mcp:key:*`，管理员或开发人员可通过该菜单为已启用且未删除用户创建 Key。Key 鉴权后使用绑定用户的当前菜单权限集合；绑定用户停用或删除后，即使 Key 本身仍为启用状态也必须拒绝鉴权。即使 Key 有效，调用 MCP 工具仍受 `req:package:save`、`req:index:import`、`req:project:query` 等权限限制。
 

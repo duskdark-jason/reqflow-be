@@ -10,16 +10,17 @@
 
 | 路径 | 修改说明 |
 |---|---|
-| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 新增需求覆盖客户端编号/创建人，生成 `REQ-001` 风格编号，默认 `draft`，限制非草稿和非创建人修改；生成初始化式 MCP 编排指令、执行开发指令并记录返修事件。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 新增需求覆盖客户端编号/创建人，生成 `REQ-001` 风格编号，默认 `draft`，限制非草稿和非创建人修改；生成初始化式 MCP 编排指令、执行开发指令并记录返修事件；按角色隔离状态动作并支持管理员删除清理。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandStatusTransition.java` | 调整主状态流转为提需、资料生成、确认、开发、验收、办结。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/IReqDemandService.java` | 增加需求 MCP 编排指令和执行开发指令服务方法。 |
-| `ruoyi-admin/src/main/java/com/ruoyi/web/controller/requirement/ReqDemandController.java` | 新增 `/requirement/demand/{demandId}/plan-instruction`、`/requirement/demand/{demandId}/develop-instruction` 和 `/requirement/demand/upload`，编辑时注入当前用户 ID，上传单文件限制 2MB。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqDemandController.java` | 新增 `/requirement/demand/{demandId}/plan-instruction`、`/requirement/demand/{demandId}/develop-instruction`、`/requirement/demand/upload` 和管理员删除接口，编辑时注入当前用户 ID，上传单文件限制 2MB。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/**` | 将需求管理 Controller 从 admin 模块迁移到需求模块；项目、分支、模块和索引模块只读上下文接口允许需求权限访问，管理类写接口仍保持原权限。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | 支持 `actionToken` 解析需求上下文，允许 MCP 回写需求说明和执行计划。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 生成后写入 24 小时过期时间，成功解析后写入 `last_used_time`，过期、已使用或并发重复消费时拒绝。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mapper/ReqDemandMapper.java`、`ReqDemandMapper.xml` | 编号统计改为全量需求计数，不按日期生成，并读写需求来源和附件字段。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/**`、`templates/requirement/**` | 执行包上下文增加需求来源、富文本业务背景和附件，JSON 模板对富文本引号做转义。 |
 | `docs/db/sql/req_platform_req016_demand_form_fields.sql` | 新增需求来源和附件字段幂等升级脚本。 |
-| `ruoyi-requirement/src/test/java/**`、`ruoyi-admin/src/test/java/**` | 覆盖编号、创建人、草稿编辑、状态主路径、MCP actionToken 回写、需求来源必填、上传 2MB 限制和模板富文本转义。 |
+| `ruoyi-requirement/src/test/java/**` | 覆盖编号、创建人、草稿编辑、状态主路径、MCP actionToken 回写、需求来源必填、上传 2MB 限制、模板富文本转义、角色动作隔离和管理员删除权限 SQL。 |
 | `docs/ai-harness/modules/requirement-platform.md`、`docs/ai-harness/contracts/requirement-platform-api.md`、`docs/db/table-dictionary.md`、`docs/db/relationship.md` | 同步 API、模块、状态和编号语义。 |
 
 ## 模块知识库沉淀
@@ -48,10 +49,10 @@
 | 层级 | 验收 ID | 命令或方式 | 结果 |
 |---|---|---|---|
 | L0 | AC-005 | `sh scripts/check-docs.sh` | 通过 |
-| L1 | AC-001~AC-014 | `mvn -pl ruoyi-admin -am -DskipTests package` | 通过 |
-| L2 | AC-001~AC-014 | `mvn -pl ruoyi-requirement -am test` | 通过，90 个测试覆盖编号、创建人、状态、指令、返修事件、actionToken 一次性/有效期、来源必填、SQL 字段和执行包模板。 |
+| L1 | AC-001~AC-016 | `mvn -pl ruoyi-admin -am -DskipTests package` | 通过，Controller 迁移后 admin 整包编译成功。 |
+| L2 | AC-001~AC-016 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqPlatformRoleSqlTest,ReqDemandControllerUploadTest,ReqMcpKeyControllerTest,ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，26 个目标测试覆盖编号、创建人、状态、指令、返修事件、来源必填、上传 2MB 限制、角色动作隔离、删除链路和 SQL 权限。 |
 | L3 | AC-004、AC-006、AC-007、AC-009 | 登录后调用 `/dev-api/requirement/demand/{id}/plan-instruction`、`/dev-api/requirement/demand/{id}/develop-instruction` | 通过，接口返回 `code=200`，指令包含 `reqflow-mcp`、`mcpTool`、`arguments.actionToken`、24 小时有效和仅可使用一次提示。 |
-| L4（可选） | AC-001~AC-014 | 真实新增/状态流转端到端写操作 | 未执行；为避免污染本地已有业务数据，本次使用单测覆盖写入语义。 |
+| L4（可选） | AC-001~AC-016 | 真实新增/状态流转端到端写操作 | 未执行；为避免污染本地已有业务数据，本次使用单测覆盖写入语义。 |
 
 ## 运行态证据
 
@@ -82,6 +83,8 @@
 | AC-012 | 已完成 | `ReqDemandServiceImplTest` 和 `McpServiceTest` 覆盖执行阶段计划和执行报告两个 token。 |
 | AC-013 | 已完成 | `ReqPackageController` 权限允许 `req:demand:query` 读取当前需求资料包。 |
 | AC-014 | 已完成 | `ReqDemandServiceImplTest` 覆盖来源必填，`ReqDemandSchemaSqlTest` 覆盖字段脚本，`ReqDemandControllerUploadTest` 覆盖 2MB 上传限制，`RequirementTemplateServiceTest` 覆盖富文本转义。 |
+| AC-015 | 已完成 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController` 和 `ReqIndexController` 的只读上下文接口接受需求权限；Controller 已迁移到需求模块并通过 admin 打包验证。 |
+| AC-016 | 已完成 | `ReqDemandServiceImplTest` 覆盖需求人员/开发人员状态动作互斥、管理员合法流转和删除关联数据；`ReqPlatformRoleSqlTest` 覆盖角色脚本不分配删除权限。 |
 
 ## 计划偏差
 
@@ -100,5 +103,6 @@
 
 - 新编号基于当前需求总数递增；如果线上已经存在旧日期编号，新建数据会从当前总数后继续生成 `REQ-###`，历史编号不迁移。
 - 状态推进接口仍沿用 `req:demand:edit` 和状态机约束；前端按角色过滤具体流程按钮。
+- 新增管理员删除需求权限 `req:demand:remove`，删除时清理资料包版本和动作 token；需求人员和开发人员角色脚本不分配删除权限。
 - 新增字段脚本本轮未直接连接本机库执行，部署时需先执行 `docs/db/sql/req_platform_req016_demand_form_fields.sql`。
 - 返修历史复用 `req_package_version` 追加版本，不新增返修表；如后续需要对每轮返修单独命名，可再扩展版本元数据。

@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.requirement;
+package com.ruoyi.requirement.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ public class ReqModuleController extends BaseController
     @Autowired
     private IReqModuleService reqModuleService;
 
-    @PreAuthorize("@ss.hasPermi('req:module:list')")
+    @PreAuthorize("@ss.hasAnyPermi('req:module:list,req:demand:list,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping("/list")
     public TableDataInfo list(ReqModule reqModule)
     {
@@ -38,7 +38,7 @@ public class ReqModuleController extends BaseController
         return getDataTable(list);
     }
 
-    @PreAuthorize("@ss.hasPermi('req:module:query')")
+    @PreAuthorize("@ss.hasAnyPermi('req:module:query,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping(value = "/{moduleId}")
     public AjaxResult getInfo(@PathVariable("moduleId") Long moduleId)
     {

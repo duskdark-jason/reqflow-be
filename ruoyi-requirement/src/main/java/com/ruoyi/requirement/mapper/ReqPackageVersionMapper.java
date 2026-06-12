@@ -10,6 +10,7 @@ public interface ReqPackageVersionMapper
     ReqPackageVersion selectLatestByDemandIdAndArtifactType(@Param("demandId") Long demandId, @Param("artifactType") String artifactType);
     Integer selectMaxVersionNo(@Param("demandId") Long demandId, @Param("artifactType") String artifactType);
     int insertReqPackageVersion(ReqPackageVersion reqPackageVersion);
+    int deleteReqPackageVersionByDemandIds(Long[] demandIds);
     Long selectPackageCount();
     Long selectPackageCountByArtifactType(String artifactType);
 }

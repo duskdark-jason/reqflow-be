@@ -38,6 +38,8 @@
 | AC-012 | 执行阶段生成计划和报告 | `ReqDemandServiceImpl`、`McpService` | 单测断言执行计划和执行报告两个 actionToken | 通过 |
 | AC-013 | 详情嵌入资料读取权限 | `ReqPackageController` | 权限注解复核，前端构建和浏览器详情页通过 | 通过 |
 | AC-014 | 来源必填、附件和 2MB 上传 | `ReqDemandServiceImpl`、`ReqDemandController`、模板和 SQL | 来源必填、字段脚本、上传限制、富文本模板转义测试通过 | 通过 |
+| AC-015 | 需求列表上下文权限和首页快捷入口 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController`、`ReqIndexController`、首页 | 需求上下文只读接口权限复核，前端构建通过 | 通过 |
+| AC-016 | 管理员删除和流程角色隔离 | `ReqDemandController`、`ReqDemandServiceImpl`、SQL 脚本 | 单测覆盖删除链路、角色状态动作拦截和 SQL 权限边界 | 通过 |
 
 ## 验收复核
 

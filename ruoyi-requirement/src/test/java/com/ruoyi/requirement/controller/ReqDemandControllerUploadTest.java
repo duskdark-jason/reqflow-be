@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.requirement;
+package com.ruoyi.requirement.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

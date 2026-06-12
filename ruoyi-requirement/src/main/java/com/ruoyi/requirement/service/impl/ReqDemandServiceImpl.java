@@ -1,6 +1,8 @@
 package com.ruoyi.requirement.service.impl;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -15,7 +17,9 @@ import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.dto.ReqActionInstruction;
+import com.ruoyi.requirement.mapper.ReqActionTokenMapper;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
+import com.ruoyi.requirement.mapper.ReqPackageVersionMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryIndexBatchMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
@@ -30,8 +34,18 @@ public class ReqDemandServiceImpl implements IReqDemandService
 
     private static final String ACTION_TOKEN_USAGE_RULE = "有效期：24小时内有效，仅可使用一次；过期或已使用后需重新生成。";
 
+    private static final String ROLE_REQUIREMENT_USER = "requirement_user";
+
+    private static final String ROLE_REQUIREMENT_DEVELOPER = "requirement_developer";
+
     @Autowired
     private ReqDemandMapper reqDemandMapper;
+
+    @Autowired
+    private ReqPackageVersionMapper packageVersionMapper;
+
+    @Autowired
+    private ReqActionTokenMapper actionTokenMapper;
 
     @Autowired
     private ReqVariantMapper variantMapper;
@@ -113,6 +127,33 @@ public class ReqDemandServiceImpl implements IReqDemandService
     }
 
     @Override
+    public int deleteReqDemandByDemandIds(Long[] demandIds, String operator)
+    {
+        Long[] normalizedIds = normalizeDemandIds(demandIds);
+        if (normalizedIds.length == 0)
+        {
+            throw new ServiceException("需求ID不能为空");
+        }
+        List<ReqDemand> demands = Arrays.stream(normalizedIds)
+                .map(reqDemandMapper::selectReqDemandByDemandId)
+                .filter(demand -> demand != null)
+                .collect(Collectors.toList());
+        packageVersionMapper.deleteReqPackageVersionByDemandIds(normalizedIds);
+        actionTokenMapper.deleteReqActionTokenByDemandIds(normalizedIds);
+        int rows = reqDemandMapper.deleteReqDemandByDemandIds(normalizedIds);
+        if (rows > 0)
+        {
+            Long operatorId = currentUserId();
+            for (ReqDemand demand : demands)
+            {
+                activityLogService.record(operatorId, demand.getProjectId(), demand.getDemandId(),
+                        "demand_deleted", "web", "删除需求：" + demand.getDemandNo(), null);
+            }
+        }
+        return rows;
+    }
+
+    @Override
     public int updateReqDemandStatus(Long demandId, String status, String updateBy)
     {
         ReqDemand current = reqDemandMapper.selectReqDemandByDemandId(demandId);
@@ -124,6 +165,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("需求状态流转不允许");
         }
+        validateStatusActionRole(status);
         int rows = reqDemandMapper.updateReqDemandStatus(demandId, status, updateBy);
         if (rows > 0 && "submitted".equals(status))
         {
@@ -286,6 +328,70 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException(BRANCH_NOT_INITIALIZED_MESSAGE);
         }
+    }
+
+    private void validateStatusActionRole(String targetStatus)
+    {
+        if (isCurrentAdmin())
+        {
+            return;
+        }
+        String requiredRole = requiredRoleForStatusAction(targetStatus);
+        if (requiredRole == null)
+        {
+            throw new ServiceException("当前角色不能执行该流程动作");
+        }
+        try
+        {
+            if (SecurityUtils.hasRole(requiredRole))
+            {
+                return;
+            }
+        }
+        catch (Exception e)
+        {
+            throw new ServiceException("当前角色不能执行该流程动作");
+        }
+        throw new ServiceException("当前角色不能执行该流程动作");
+    }
+
+    private boolean isCurrentAdmin()
+    {
+        try
+        {
+            return SecurityUtils.isAdmin() || SecurityUtils.hasRole("admin");
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    private String requiredRoleForStatusAction(String targetStatus)
+    {
+        if ("submitted".equals(targetStatus) || "confirmed".equals(targetStatus)
+                || "repairing".equals(targetStatus) || "completed".equals(targetStatus))
+        {
+            return ROLE_REQUIREMENT_USER;
+        }
+        if ("plan_ready".equals(targetStatus) || "plan_pending".equals(targetStatus)
+                || "developing".equals(targetStatus) || "review".equals(targetStatus))
+        {
+            return ROLE_REQUIREMENT_DEVELOPER;
+        }
+        return null;
+    }
+
+    private Long[] normalizeDemandIds(Long[] demandIds)
+    {
+        if (demandIds == null)
+        {
+            return new Long[0];
+        }
+        return Arrays.stream(demandIds)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new))
+                .toArray(new Long[0]);
     }
 
     private void validateDemandContent(ReqDemand reqDemand)

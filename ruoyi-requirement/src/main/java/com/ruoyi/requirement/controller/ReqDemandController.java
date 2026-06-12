@@ -1,10 +1,11 @@
-package com.ruoyi.web.controller.requirement;
+package com.ruoyi.requirement.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -71,6 +72,14 @@ public class ReqDemandController extends BaseController
         reqDemand.setUpdateBy(getUsername());
         reqDemand.setCreatorId(getUserId());
         return toAjax(reqDemandService.updateReqDemand(reqDemand));
+    }
+
+    @PreAuthorize("@ss.hasPermi('req:demand:remove')")
+    @Log(title = "需求", businessType = BusinessType.DELETE)
+    @DeleteMapping("/{demandIds}")
+    public AjaxResult remove(@PathVariable Long[] demandIds)
+    {
+        return toAjax(reqDemandService.deleteReqDemandByDemandIds(demandIds, getUsername()));
     }
 
     @PreAuthorize("@ss.hasAnyPermi('req:demand:add,req:demand:edit')")

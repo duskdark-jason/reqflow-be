@@ -55,6 +55,8 @@
 - 计划阶段：`plan-instruction` 只指向 `save_requirement_package`，只能回写需求设计。
 - 执行阶段：`develop-instruction` 同时给出执行计划和执行报告两个 24 小时内有效、仅可使用一次的 actionToken，分别指向 `save_development_plan` 和 `upload_execution_report`。
 - 资料包读取：需求详情内嵌资料包读取可使用 `req:demand:query`，独立 Agent 资料包页面仍使用 `req:package:list` 菜单权限。
+- 管理员删除：管理员拥有 `req:demand:remove` 删除需求按钮权限，删除时清理需求资料包版本和动作 token；需求人员、开发人员不展示也不能调用删除。
+- 权限隔离：需求人员进入需求列表所需的项目、分支、模块和索引模块只读上下文接口可使用需求权限访问，但不展示项目管理、MCP 管理或 Agent 交接资料独立入口。
 
 ## 验收标准
 
@@ -72,6 +74,8 @@
 - AC-012：`develop-instruction` 指令文案包含执行计划和执行报告两个目标工具，并分别使用一次性 actionToken 回写 `save_development_plan` 和 `upload_execution_report`。
 - AC-013：需求详情读取交接资料包不要求角色拥有独立 Agent 资料包菜单权限，具备 `req:demand:query` 即可查看当前需求资料。
 - AC-014：新增和修改需求时 `demandSource` 必填；`businessBackground` 可保存富文本图片；需求图片和附件上传接口单文件不超过 2MB；执行包上下文包含需求来源、业务背景和附件。
+- AC-015：需求人员账号进入需求列表不出现项目、分支、模块、索引模块四类上下文接口权限不足；首页快捷入口不得展示无权限的 MCP 管理。
+- AC-016：管理员可删除需求；需求人员和开发人员不可见删除按钮，服务端状态流转按角色隔离具体动作。
 
 ## Companion 关联
 

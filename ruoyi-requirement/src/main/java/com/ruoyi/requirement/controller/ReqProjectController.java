@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.requirement;
+package com.ruoyi.requirement.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ public class ReqProjectController extends BaseController
     @Autowired
     private IReqProjectService reqProjectService;
 
-    @PreAuthorize("@ss.hasPermi('req:project:list')")
+    @PreAuthorize("@ss.hasAnyPermi('req:project:list,req:demand:list,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping("/list")
     public TableDataInfo list(ReqProject reqProject)
     {
@@ -38,7 +38,7 @@ public class ReqProjectController extends BaseController
         return getDataTable(list);
     }
 
-    @PreAuthorize("@ss.hasPermi('req:project:query')")
+    @PreAuthorize("@ss.hasAnyPermi('req:project:query,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping(value = "/{projectId}")
     public AjaxResult getInfo(@PathVariable("projectId") Long projectId)
     {

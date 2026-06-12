@@ -12,6 +12,8 @@ class ReqPlatformRoleSqlTest
 {
     private static final String ROLE_SQL = "docs/db/sql/req_platform_req016_role_permissions.sql";
 
+    private static final String MENU_SQL = "docs/db/sql/req_platform_menu.sql";
+
     @Test
     void rolePermissionSqlDefinesRequirementAndDeveloperRoles() throws IOException
     {
@@ -34,6 +36,7 @@ class ReqPlatformRoleSqlTest
         assertTrue(requirementSection.contains("req:demand:add"), requirementSection);
         assertTrue(requirementSection.contains("req:demand:edit"), requirementSection);
         assertTrue(requirementSection.contains("req:stats:view"), requirementSection);
+        assertFalse(requirementSection.contains("req:demand:remove"), requirementSection);
         assertFalse(requirementSection.contains("req:project:"), requirementSection);
         assertFalse(requirementSection.contains("req:mcp:key"), requirementSection);
         assertFalse(requirementSection.contains("req:package:"), requirementSection);
@@ -56,18 +59,38 @@ class ReqPlatformRoleSqlTest
         assertTrue(developerSection.contains("req:package:save"), developerSection);
         assertTrue(developerSection.contains("req:stats:view"), developerSection);
         assertFalse(developerSection.contains("req:demand:add"), developerSection);
+        assertFalse(developerSection.contains("req:demand:remove"), developerSection);
         assertFalse(developerSection.contains("req:project:"), developerSection);
         assertFalse(developerSection.contains("req:index:"), developerSection);
     }
 
+    @Test
+    void menuSqlDefinesDemandRemovePermissionForAdminUse() throws IOException
+    {
+        String menuSql = readMenuSql();
+
+        assertTrue(menuSql.contains("'需求删除'"), menuSql);
+        assertTrue(menuSql.contains("'req:demand:remove'"), menuSql);
+    }
+
     private String readRoleSql() throws IOException
     {
-        Path rootPath = Path.of(ROLE_SQL);
+        return readSql(ROLE_SQL);
+    }
+
+    private String readMenuSql() throws IOException
+    {
+        return readSql(MENU_SQL);
+    }
+
+    private String readSql(String path) throws IOException
+    {
+        Path rootPath = Path.of(path);
         if (Files.exists(rootPath))
         {
             return Files.readString(rootPath);
         }
-        return Files.readString(Path.of("..", ROLE_SQL));
+        return Files.readString(Path.of("..", path));
     }
 
     private String section(String content, String start, String end)

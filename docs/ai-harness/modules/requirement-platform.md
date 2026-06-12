@@ -8,9 +8,9 @@
 
 | 菜单目录 | 子菜单/页面 | 功能说明 | 前端文件 | API 封装 | 后端接口与权限 | 后端核心文件 |
 |---|---|---|---|---|---|---|
-| 需求管理 | 项目管理 | 项目列表、项目维护入口、项目初始化状态 | `reqflow-ui/src/views/requirement/project/index.vue`、`maintain.vue` | `reqflow-ui/src/api/requirement/project.js`、`projectInit.js` | `/requirement/project/**`，`req:project:*`；`/requirement/project/init/**`，`req:project:*` | `ReqProjectController`、`ReqProjectInitController`、`ReqProjectServiceImpl`、`ReqProjectInitServiceImpl` |
-| 需求管理 | 分支知识库详情页签 | 按项目分支查看模块知识、索引批次和初始化指令 | `reqflow-ui/src/views/requirement/project/knowledge.vue` | `reqflow-ui/src/api/requirement/index.js`、`project.js` | `/requirement/index/module/tree`，`req:index:list`；`/requirement/index/batch/list`，`req:index:list` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper`、`ReqRepositoryIndexBatchMapper` |
-| 需求管理 | 需求列表 | 需求维护页签、新增、编辑、查询、状态流转、返修流转、生成需求设计指令和执行任务指令 | `reqflow-ui/src/views/requirement/demand/index.vue`、`maintain.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；`/requirement/index/impact/suggest`，`req:index:list` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
+| 需求管理 | 项目管理 | 项目列表、项目维护入口、项目初始化状态 | `reqflow-ui/src/views/requirement/project/index.vue`、`maintain.vue` | `reqflow-ui/src/api/requirement/project.js`、`projectInit.js` | `/requirement/project/**`，`req:project:*`；需求表单上下文只读可使用 `req:demand:*` 读取项目列表和初始化上下文 | `ReqProjectController`、`ReqProjectInitController`、`ReqProjectServiceImpl`、`ReqProjectInitServiceImpl` |
+| 需求管理 | 分支知识库详情页签 | 按项目分支查看模块知识、索引批次和初始化指令 | `reqflow-ui/src/views/requirement/project/knowledge.vue` | `reqflow-ui/src/api/requirement/index.js`、`project.js` | `/requirement/index/module/tree`，管理页使用 `req:index:list`，需求表单只读可使用 `req:demand:*`；`/requirement/index/batch/list`，`req:index:list` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper`、`ReqRepositoryIndexBatchMapper` |
+| 需求管理 | 需求列表 | 需求维护页签、新增、编辑、查询、删除、状态流转、返修流转、生成需求设计指令和执行任务指令 | `reqflow-ui/src/views/requirement/demand/index.vue`、`maintain.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；管理员删除使用 `req:demand:remove`；`/requirement/index/impact/suggest` 需求表单可使用 `req:demand:add/edit/query` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
 | 需求管理 | 需求执行包 | 保存和读取需求设计、执行计划、执行报告、Review 报告等交接资料；需求详情嵌入读取可使用 `req:demand:query` | `reqflow-ui/src/views/requirement/package/index.vue` | `reqflow-ui/src/api/requirement/package.js` | `/requirement/package/**`，读取为 `req:package:list` 或 `req:demand:query`，保存为 `req:package:save` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
 | 需求管理 | MCP 管理 | 管理人员 MCP Key，创建或重置后返回一次性 Key、Codex 多平台安装命令和高级安装包 | `reqflow-ui/src/views/requirement/mcpKey/index.vue` | `reqflow-ui/src/api/requirement/mcpKey.js` | `/requirement/mcp/key/**`，`/requirement/codex/install.*`，`req:mcp:key:*`；`/requirement/mcp` | `ReqMcpKeyController`、`ReqCodexInstallController`、`ReqMcpController`、`ReqMcpUserKeyServiceImpl`、`McpService` |
 | 需求管理 | 使用统计 | 需求、项目、用户和状态统计 | `reqflow-ui/src/views/requirement/statistics/index.vue` | `reqflow-ui/src/api/requirement/statistics.js` | `/requirement/statistics/**`，`req:stats:view` | `ReqStatisticsController`、`ReqStatisticsService` |
@@ -23,7 +23,7 @@
 | 菜单与权限 SQL | `docs/db/sql/req_platform_menu.sql`、`docs/db/sql/req_platform_req016_role_permissions.sql` | 需求管理一级菜单、子菜单、按钮权限和三类角色授权。 |
 | 接口契约 | `docs/ai-harness/contracts/requirement-platform-api.md` | 后端接口、MCP resource、MCP tool、知识库和初始化契约。 |
 | 领域入口 | `docs/domains/requirement-platform/README.md` | 后端业务边界和长期维护规则。 |
-| 后端 Controller | `ruoyi-admin/src/main/java/com/ruoyi/web/controller/requirement/` | HTTP 接口入口。 |
+| 后端 Controller | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/` | HTTP 接口入口，随需求业务模块发布。 |
 | 后端 Service | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/` | 核心业务规则。 |
 | 数据访问 | `ruoyi-requirement/src/main/resources/mapper/requirement/` | Mapper XML 和 SQL。 |
 | 领域对象 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/domain/` | `req_*` 表对应实体。 |
@@ -45,7 +45,9 @@
 - 新增需求时后端必须覆盖请求体中的需求编号并生成 `REQ-001` 风格编号，不包含日期；后端必须覆盖客户端 `creatorId`，以当前登录用户作为创建人，并将新需求状态置为 `draft`。
 - 新增和修改需求必须提供 `demandSource`；业务背景允许保存富文本 HTML 和粘贴图片，背景图片及需求附件统一通过 `/requirement/demand/upload` 上传，服务端单文件最大 2MB。
 - 普通需求编辑只允许 `draft` 状态且创建人匹配；状态变化必须通过状态流转接口，不得通过通用编辑接口绕过状态机。
+- 删除需求只开放给管理员按钮权限 `req:demand:remove`，会同步删除该需求的资料包版本和动作 token；需求人员和开发人员角色脚本不得分配该权限。
 - 需求主状态流转为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，旧 `plan_pending`、`archived` 仅作为兼容状态保留；`submitted` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发。
+- 状态流转不仅校验 `req:demand:edit` 和状态机，还必须按角色隔离：`requirement_user` 执行提交需求、确认需求设计、返修和验收，`requirement_developer` 执行提交需求设计、开始开发、提交验收和返修验收，`admin` 可执行全部合法动作。
 - 开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令只能用于 MCP `save_requirement_package` 保存 `requirement` 需求设计，不能替代人员 `X-MCP-Key`。
 - 开发人员可通过需求详情获取 `requirement_develop` 动作 token 指令；该指令包含执行计划和执行报告两个一次性 actionToken，分别用于 MCP `save_development_plan` 和 `upload_execution_report`，不能替代人员 `X-MCP-Key`。
 - 项目初始化、需求编排和开发执行动作 token 生成后 24 小时内有效且仅可使用一次；`last_used_time` 非空或 `expire_time` 过期时必须拒绝，重新执行需重新生成指令。

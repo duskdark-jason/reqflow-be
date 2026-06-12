@@ -79,7 +79,7 @@
 ## 必要过滤
 
 - 基础表均含 `status` 字段，当前列表默认展示所有状态；如后续做停用隐藏，需要前后端统一过滤口径。
-- 当前需求表没有逻辑删除字段，删除操作会物理删除基础数据；需求主流程暂不提供需求删除接口。
+- 当前需求表没有逻辑删除字段，管理员删除需求会物理删除基础数据，并同步删除该需求的资料包版本和动作 token；需求人员和开发人员主流程不分配删除权限。
 - 菜单权限依赖 RuoYi `sys_menu.perms`，按钮权限必须与 Controller `@PreAuthorize` 保持一致。
 - 角色初始化脚本 `docs/db/sql/req_platform_req016_role_permissions.sql` 必须在菜单脚本之后执行；需求人员角色不得分配 `req:mcp:key:*`、`req:package:*` 或 `req:project:*`，开发人员角色不得分配 `req:demand:add`、`req:project:*` 或 `req:index:*`。
 - 索引导入必须拒绝个人本机绝对路径，平台只保存 Git 远端、分支、commit、项目分支或真实分支、相对路径和结构化影响面。

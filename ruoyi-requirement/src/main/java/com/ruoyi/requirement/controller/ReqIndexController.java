@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.requirement;
+package com.ruoyi.requirement.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +27,7 @@ public class ReqIndexController extends BaseController
     @Autowired
     private IReqRepositoryIndexService repositoryIndexService;
 
-    @PreAuthorize("@ss.hasPermi('req:index:list')")
+    @PreAuthorize("@ss.hasAnyPermi('req:index:list,req:demand:list,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping("/batch/list")
     public TableDataInfo batchList(ReqRepositoryIndexBatch batch)
     {
@@ -36,7 +36,7 @@ public class ReqIndexController extends BaseController
         return getDataTable(list);
     }
 
-    @PreAuthorize("@ss.hasPermi('req:index:list')")
+    @PreAuthorize("@ss.hasAnyPermi('req:index:list,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping("/module/tree")
     public AjaxResult moduleTree(ReqIndexModule module)
     {
