@@ -50,10 +50,10 @@
 
 ## 执行约束
 
-- 本计划获认可后仍只代表计划阶段完成；开始实现必须另有明确执行授权。
-- Execution Agent 必须从目标基线分支创建 ASCII 任务分支后再实现；新需求不使用 worktree，也不得直接在 `main` 或 `master` 上实现。
+- 本计划由 Execution Agent 基于最终 `requirement.md` 生成；开始实现必须已有明确执行授权。
+- 需求平台模式下，Execution Agent 必须沿用需求设计阶段创建的 ASCII 任务分支，不得在开发阶段重新生成不同任务分支；新需求不使用 worktree，也不得直接在 `main` 或 `master` 上实现。
 - Execution Agent 必须按本计划执行，不得自行扩大范围。
-- 创建任务分支前必须确认基线分支；客户定制需求不得默认从主线创建分支。
+- 沿用任务分支前必须确认平台目标基线分支和任务分支；客户定制需求不得默认从主线恢复分支。
 - 如发现计划缺失、契约冲突或验证无法执行，停止实现并更新 `execution-report.md`。
 - 任务分支模式下，完成修改和验证后必须直接 commit，并在 `execution-report.md` 记录 commit、验证命令和结果；merge、push、rebase 仍需用户确认。
 - `execution-report.md` 必须记录模块知识库动作、模块文档路径和无需更新原因；新增或更新动作必须有实际 `docs/ai-harness/modules/*.md` 路径。

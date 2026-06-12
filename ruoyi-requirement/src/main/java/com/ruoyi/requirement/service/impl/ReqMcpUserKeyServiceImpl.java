@@ -8,7 +8,6 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +18,7 @@ import com.ruoyi.common.constant.UserConstants;
 import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.common.core.domain.model.LoginUser;
 import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
 import com.ruoyi.requirement.dto.ReqMcpUserKeyCreateResult;
@@ -57,6 +57,15 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
     @Override
     public List<ReqMcpUserKey> selectReqMcpUserKeyList(ReqMcpUserKey reqMcpUserKey)
     {
+        if (reqMcpUserKey == null)
+        {
+            reqMcpUserKey = new ReqMcpUserKey();
+        }
+        Long currentUserId = currentUserIdOrNull();
+        if (currentUserId != null && !isCurrentAdmin())
+        {
+            reqMcpUserKey.setUserId(currentUserId);
+        }
         return mcpUserKeyMapper.selectReqMcpUserKeyList(reqMcpUserKey);
     }
 
@@ -69,6 +78,11 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
     @Override
     public List<ReqMcpUserOption> selectUserOptions(String userName)
     {
+        Long currentUserId = currentUserIdOrNull();
+        if (currentUserId != null && !isCurrentAdmin())
+        {
+            return Collections.singletonList(toUserOption(validateUser(currentUserId)));
+        }
         SysUser query = new SysUser();
         query.setUserName(userName);
         query.setStatus(UserConstants.NORMAL);
@@ -91,7 +105,8 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
         {
             throw new ServiceException("Key信息不能为空");
         }
-        validateUser(reqMcpUserKey == null ? null : reqMcpUserKey.getUserId());
+        reqMcpUserKey.setUserId(resolveCreateUserId(reqMcpUserKey.getUserId()));
+        validateUser(reqMcpUserKey.getUserId());
         if (StringUtils.isEmpty(reqMcpUserKey.getKeyName()))
         {
             throw new ServiceException("Key名称不能为空");
@@ -107,58 +122,21 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
     }
 
     @Override
-    public int updateReqMcpUserKey(ReqMcpUserKey reqMcpUserKey)
+    public ReqMcpUserKeyCreateResult createInstruction(Long keyId, String mcpAddress)
     {
-        if (reqMcpUserKey == null || reqMcpUserKey.getKeyId() == null)
-        {
-            throw new ServiceException("Key ID不能为空");
-        }
-        if (StringUtils.isEmpty(reqMcpUserKey.getKeyName()))
-        {
-            throw new ServiceException("Key名称不能为空");
-        }
-        ReqMcpUserKey exists = mcpUserKeyMapper.selectReqMcpUserKeyByKeyId(reqMcpUserKey.getKeyId());
-        if (exists == null)
+        ReqMcpUserKey key = mcpUserKeyMapper.selectReqMcpUserKeyByKeyId(keyId);
+        if (key == null)
         {
             throw new ServiceException("MCP Key不存在");
         }
-        if (reqMcpUserKey.getUserId() != null && !Objects.equals(reqMcpUserKey.getUserId(), exists.getUserId()))
-        {
-            throw new ServiceException("MCP Key不允许换绑用户");
-        }
-        // Key 代表一个用户的 MCP 身份，允许改名称/状态，但不能通过编辑把权限边界换到另一个用户。
-        reqMcpUserKey.setUserId(null);
-        return mcpUserKeyMapper.updateReqMcpUserKey(reqMcpUserKey);
+        validateKeyReadable(key);
+        return buildCreateResult(key, null, mcpAddress);
     }
 
     @Override
     public int deleteReqMcpUserKeyByKeyIds(Long[] keyIds)
     {
         return mcpUserKeyMapper.deleteReqMcpUserKeyByKeyIds(keyIds);
-    }
-
-    @Override
-    @Transactional
-    public ReqMcpUserKeyCreateResult regenerateKey(Long keyId, String operator, String mcpAddress)
-    {
-        ReqMcpUserKey exists = mcpUserKeyMapper.selectReqMcpUserKeyByKeyId(keyId);
-        if (exists == null)
-        {
-            throw new ServiceException("MCP Key不存在");
-        }
-        validateUser(exists.getUserId());
-        GeneratedKey generatedKey = generateUniqueKey();
-        ReqMcpUserKey update = new ReqMcpUserKey();
-        update.setKeyId(keyId);
-        update.setKeyName(exists.getKeyName());
-        update.setKeyPrefix(prefixOf(generatedKey.plainKey));
-        update.setKeyHash(generatedKey.hash);
-        update.setStatus(UserConstants.NORMAL);
-        update.setUpdateBy(operator);
-        mcpUserKeyMapper.updateReqMcpUserKey(update);
-        exists.setKeyPrefix(update.getKeyPrefix());
-        exists.setStatus(update.getStatus());
-        return buildCreateResult(exists, generatedKey.plainKey, mcpAddress);
     }
 
     @Override
@@ -201,6 +179,54 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
         return user;
     }
 
+    private Long resolveCreateUserId(Long requestedUserId)
+    {
+        Long currentUserId = currentUserIdOrNull();
+        if (currentUserId != null && !isCurrentAdmin())
+        {
+            return currentUserId;
+        }
+        return requestedUserId;
+    }
+
+    private void validateKeyReadable(ReqMcpUserKey key)
+    {
+        Long currentUserId = currentUserIdOrNull();
+        if (currentUserId == null || isCurrentAdmin())
+        {
+            return;
+        }
+        if (key != null && key.getUserId() != null && key.getUserId().equals(currentUserId))
+        {
+            return;
+        }
+        throw new ServiceException("只能查看自己的MCP Key指令");
+    }
+
+    private Long currentUserIdOrNull()
+    {
+        try
+        {
+            return SecurityUtils.getUserId();
+        }
+        catch (Exception e)
+        {
+            return null;
+        }
+    }
+
+    private boolean isCurrentAdmin()
+    {
+        try
+        {
+            return SecurityUtils.isAdmin();
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
+
     private boolean isEnabledUser(SysUser user)
     {
         return user != null
@@ -235,7 +261,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
             String hash = hashKey(plainKey);
             if (mcpUserKeyMapper.selectReqMcpUserKeyByKeyHash(hash) == null)
             {
-                // 明文 Key 只在创建/重置响应中返回一次，数据库只保存前缀和哈希用于校验与展示。
+                // 明文 Key 只在创建响应中返回一次，数据库只保存前缀和哈希用于校验与展示。
                 return new GeneratedKey(plainKey, hash);
             }
         }

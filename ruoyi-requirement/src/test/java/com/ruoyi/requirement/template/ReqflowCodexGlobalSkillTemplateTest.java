@@ -22,6 +22,7 @@ class ReqflowCodexGlobalSkillTemplateTest
         String skillContent = ReqflowCodexGlobalSkillTemplate.skillContent();
         assertTrue(skillContent.contains("frontend routes"), skillContent);
         assertTrue(skillContent.contains("frontend page business function"), skillContent);
+        assertTrue(skillContent.contains("snapshot sync"), skillContent);
     }
 
     @SuppressWarnings("unchecked")

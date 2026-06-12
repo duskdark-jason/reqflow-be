@@ -161,7 +161,7 @@ check_spec_meta() {
   check_file "$meta_file"
   check_pattern "$meta_file" '状态[：:][[:space:]]*(planning|executing|review|repairing|complete)' "需求元信息缺少有效状态"
   check_pattern "$meta_file" '当前角色[：:][[:space:]]*(Plan Agent|Execution Agent|Review Agent|用户|人工)' "需求元信息缺少当前角色"
-  check_pattern "$meta_file" '流程模式[：:][[:space:]]*(需求平台编排模式|需求平台开发模式|项目接入初始化模式|平台自身建设模式)' "需求元信息缺少有效流程模式"
+  check_pattern "$meta_file" '流程模式[：:][[:space:]]*(需求平台需求设计模式|需求平台编排模式|需求平台开发模式|项目接入初始化模式|平台自身建设模式)' "需求元信息缺少有效流程模式"
   check_pattern "$meta_file" '需求 Key[：:]' "需求元信息缺少需求 Key"
   check_pattern "$meta_file" '平台关联远端[：:]' "需求元信息缺少平台关联远端"
   check_pattern "$meta_file" '平台目标分支[：:]' "需求元信息缺少平台目标分支"
@@ -448,17 +448,41 @@ check_code_comment_record() {
   check_pattern "$execution_file" '处理说明[：:]' "执行报告缺少代码注释处理说明"
 }
 
+check_requirement_assessment_record() {
+  spec_dir=$1
+  meta_file="$spec_dir/meta.md"
+  requirement_file="$spec_dir/requirement.md"
+  assessment_file="$spec_dir/assessment.md"
+
+  [ -f "$meta_file" ] || return
+  flow_mode=$(extract_meta_field "$meta_file" "流程模式")
+  [ "$flow_mode" = "需求平台需求设计模式" ] || [ "$flow_mode" = "需求平台编排模式" ] || return
+
+  target_file="$requirement_file"
+  [ -f "$assessment_file" ] && target_file="$assessment_file"
+  check_pattern "$target_file" '可行性评估|需求可行性|风险评估' "需求平台需求设计模式缺少可行性评估记录"
+  check_pattern "$target_file" '评估结论|结论' "需求可行性评估缺少评估结论"
+  check_pattern "$target_file" '可继续设计|需澄清|需调整|暂不可实现' "需求可行性评估缺少有效结论类型"
+}
+
 check_one_spec() {
   spec_dir=$1
+  meta_file="$spec_dir/meta.md"
 
   check_file "$spec_dir/requirement.md"
-  check_file "$spec_dir/plan.md"
   check_spec_meta "$spec_dir"
   check_spec_state "$spec_dir"
 
+  status=$(extract_spec_status "$meta_file")
+  if [ "$status" != "planning" ]; then
+    check_file "$spec_dir/plan.md"
+  fi
+
   check_pattern "$spec_dir/requirement.md" 'AC-[A-Z0-9-]*[0-9][0-9][0-9]|AC-[0-9][0-9][0-9]' "需求说明缺少验收 ID"
-  check_pattern "$spec_dir/plan.md" 'L0|L1|L2|L3|L4' "执行计划缺少分层验证"
-  check_ac_coverage "$spec_dir"
+  if [ -f "$spec_dir/plan.md" ]; then
+    check_pattern "$spec_dir/plan.md" 'L0|L1|L2|L3|L4' "执行计划缺少分层验证"
+    check_ac_coverage "$spec_dir"
+  fi
 
   if [ -f "$spec_dir/execution-report.md" ]; then
     check_pattern "$spec_dir/execution-report.md" '命令|未开始|未执行' "执行报告缺少命令或状态说明"
@@ -468,6 +492,7 @@ check_one_spec() {
   check_module_knowledge_record "$spec_dir"
   check_db_change_record "$spec_dir"
   check_code_comment_record "$spec_dir"
+  check_requirement_assessment_record "$spec_dir"
 
   if [ -f "$spec_dir/review-report.md" ] && [ ! -f "$spec_dir/execution-report.md" ]; then
     fail "存在 Review 报告但缺少执行报告：$spec_dir/execution-report.md"

@@ -23,6 +23,7 @@ import com.ruoyi.requirement.mapper.ReqPackageVersionMapper;
 import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqDemandService;
 import com.ruoyi.requirement.service.IReqPackageService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
 import com.ruoyi.requirement.template.RequirementTemplateContext;
@@ -33,6 +34,8 @@ public class ReqPackageServiceImpl implements IReqPackageService
 {
     private static final Set<String> SUPPORTED_ARTIFACT_TYPES = Set.of(
             "requirement_draft",
+            "requirement_supplement",
+            "requirement_assessment",
             "requirement",
             "plan",
             "context_manifest",
@@ -51,10 +54,12 @@ public class ReqPackageServiceImpl implements IReqPackageService
     @Autowired private ReqIndexModuleMapper reqIndexModuleMapper;
     @Autowired private RequirementTemplateService templateService;
     @Autowired private ReqActivityLogService activityLogService;
+    @Autowired private IReqDemandService reqDemandService;
 
     @Override
     public List<ReqPackageVersion> selectReqPackageVersionListByDemandId(Long demandId)
     {
+        reqDemandService.validateDemandReadable(demandId);
         return reqPackageVersionMapper.selectReqPackageVersionListByDemandId(demandId);
     }
 
@@ -62,6 +67,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
     public ReqPackageVersion selectLatest(Long demandId, String artifactType)
     {
         validateArtifactType(artifactType);
+        reqDemandService.validateDemandReadable(demandId);
         return reqPackageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId, artifactType);
     }
 
@@ -69,6 +75,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
     public ReqPackageVersion saveVersion(Long demandId, String artifactType, String content, String versionNote)
     {
         validateArtifactType(artifactType);
+        reqDemandService.validateDemandPackageWritable(demandId, artifactType);
         Integer maxVersion = reqPackageVersionMapper.selectMaxVersionNo(demandId, artifactType);
         ReqPackageVersion version = new ReqPackageVersion();
         version.setDemandId(demandId);
@@ -86,6 +93,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
     @Override
     public List<ReqPackageVersion> generateDraftPackage(Long demandId)
     {
+        reqDemandService.validateDemandPackageWritable(demandId, "requirement_draft");
         ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
         if (demand == null)
         {
@@ -127,6 +135,9 @@ public class ReqPackageServiceImpl implements IReqPackageService
         context.setBaselineBranch(variant == null ? "main" : variant.getBaselineBranch());
         context.setDemandNo(demand.getDemandNo());
         context.setDemandTitle(demand.getTitle());
+        context.setDemandSource(demand.getDemandSource());
+        context.setBusinessBackground(demand.getBusinessBackground());
+        context.setAttachments(demand.getAttachments());
         context.setModuleName(moduleName);
         context.setTaskBranch(buildTaskBranch(demand, moduleName));
         context.setAcceptanceText(demand.getAcceptanceText());
@@ -201,7 +212,8 @@ public class ReqPackageServiceImpl implements IReqPackageService
     {
         ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
         String eventType = "mcp_write";
-        if ("plan".equals(artifactType)) eventType = "plan_saved";
+        if ("requirement_assessment".equals(artifactType)) eventType = "requirement_assessment_uploaded";
+        else if ("plan".equals(artifactType)) eventType = "plan_saved";
         else if ("execution_report".equals(artifactType)) eventType = "execution_report_uploaded";
         else if ("review_report".equals(artifactType)) eventType = "review_report_uploaded";
         activityLogService.record(currentUserId(), demand == null ? null : demand.getProjectId(), demandId, eventType,

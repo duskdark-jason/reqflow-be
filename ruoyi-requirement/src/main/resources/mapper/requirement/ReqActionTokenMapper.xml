@@ -103,5 +103,32 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         update req_action_token
         set last_used_time = sysdate()
         where token_id = #{tokenId}
+          and last_used_time is null
     </update>
+
+    <update id="touchLastUsed">
+        update req_action_token
+        set last_used_time = sysdate()
+        where token_id = #{tokenId}
+    </update>
+
+    <select id="countUsedActionTokenByRemark" resultType="int">
+        select count(1)
+        from req_action_token
+        where action_type = #{actionType}
+          and target_method = #{targetMethod}
+          and project_id = #{projectId}
+          and variant_id = #{variantId}
+          and demand_id = #{demandId}
+          and remark = #{remark}
+          and status = '0'
+          and last_used_time is not null
+    </select>
+
+    <delete id="deleteReqActionTokenByDemandIds" parameterType="Long">
+        delete from req_action_token where demand_id in
+        <foreach item="demandId" collection="array" open="(" separator="," close=")">
+            #{demandId}
+        </foreach>
+    </delete>
 </mapper>

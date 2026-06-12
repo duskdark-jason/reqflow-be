@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.alibaba.fastjson2.JSON;
 import com.ruoyi.common.utils.SecurityUtils;
+import com.ruoyi.requirement.domain.ReqActionToken;
 import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.domain.ReqMemoryIndex;
 import com.ruoyi.requirement.domain.ReqPackageVersion;
@@ -28,6 +29,8 @@ import com.ruoyi.requirement.mapper.ReqMemoryIndexMapper;
 import com.ruoyi.requirement.mapper.ReqProjectMapper;
 import com.ruoyi.requirement.mapper.ReqRepositoryMapper;
 import com.ruoyi.requirement.mapper.ReqVariantMapper;
+import com.ruoyi.requirement.service.IReqActionTokenService;
+import com.ruoyi.requirement.service.IReqDemandService;
 import com.ruoyi.requirement.service.IReqPackageService;
 import com.ruoyi.requirement.service.IReqRepositoryIndexService;
 import com.ruoyi.requirement.service.ReqActivityLogService;
@@ -43,9 +46,11 @@ public class McpService
     @Autowired private ReqRepositoryMapper reqRepositoryMapper;
     @Autowired private ReqVariantMapper variantMapper;
     @Autowired private ReqMemoryIndexMapper memoryIndexMapper;
+    @Autowired private IReqDemandService reqDemandService;
     @Autowired private IReqPackageService reqPackageService;
     @Autowired private IReqRepositoryIndexService repositoryIndexService;
     @Autowired private ReqActivityLogService activityLogService;
+    @Autowired private IReqActionTokenService actionTokenService;
 
     public McpResponse handle(McpRequest request)
     {
@@ -62,8 +67,9 @@ public class McpService
             if ("resources/read".equals(request.getMethod())) return McpResponse.success(request.getId(), resourcesRead(stringParam(request, "uri")));
             if ("resources/templates/list".equals(request.getMethod())) return McpResponse.success(request.getId(), resourceTemplatesList());
             if ("prompts/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("prompts", Arrays.asList(
-                    prompt("generate_agent_requirement_package", "生成需求说明包"),
-                    prompt("generate_development_plan", "生成开发计划"),
+                    prompt("generate_requirement_assessment", "生成需求可行性评估"),
+                    prompt("generate_requirement_design", "生成需求设计"),
+                    prompt("generate_development_plan", "生成执行计划"),
                     prompt("generate_execution_prompt", "生成执行提示"),
                     prompt("generate_review_prompt", "生成 Review 提示"))));
             if ("prompts/get".equals(request.getMethod())) return McpResponse.success(request.getId(), promptsGet(stringParam(request, "name")));
@@ -135,6 +141,7 @@ public class McpService
         return Collections.singletonMap("resources", Arrays.asList(
                 resource("requirement://{demandNo}", "需求详情"),
                 resource("requirement://{demandNo}/draft-package", "需求草稿包"),
+                resource("requirement://{demandNo}/supplement", "需求补充说明"),
                 resource("requirement://{demandNo}/context-manifest", "需求上下文清单"),
                 resource("project://{projectId}/overview", "项目概览"),
                 resource("project://{projectId}/repositories", "项目仓库清单"),
@@ -154,6 +161,7 @@ public class McpService
         return Collections.singletonMap("resourceTemplates", Arrays.asList(
                 resourceTemplate("requirement://{demandNo}", "需求详情", "按稳定需求编号读取需求详情"),
                 resourceTemplate("requirement://{demandNo}/draft-package", "需求草稿包", "读取最新需求草稿包"),
+                resourceTemplate("requirement://{demandNo}/supplement", "需求补充说明", "读取最新需求人补充说明"),
                 resourceTemplate("requirement://{demandNo}/context-manifest", "上下文清单", "读取最新需求上下文清单"),
                 resourceTemplate("project://{projectId}/overview", "项目概览", "读取项目、仓库和项目分支"),
                 resourceTemplate("project://{projectId}/repositories", "项目仓库清单", "读取项目下代码仓库"),
@@ -212,6 +220,7 @@ public class McpService
         {
             return null;
         }
+        reqDemandService.validateDemandReadable(demand.getDemandId());
         activityLogService.record(currentUserId(), demand.getProjectId(), demand.getDemandId(), "mcp_read", "mcp", "读取需求资源：" + demandNo, null);
 
         String artifactType = requirementArtifactType(path);
@@ -364,8 +373,9 @@ public class McpService
     private Map<String, Object> toolsList()
     {
         return Collections.singletonMap("tools", Arrays.asList(
-                tool("save_requirement_package", "保存需求说明包", packageToolSchema(true)),
-                tool("save_development_plan", "保存开发计划", packageToolSchema(false)),
+                tool("upload_requirement_assessment", "上传需求可行性评估", packageToolSchema(false)),
+                tool("save_requirement_package", "保存需求设计", packageToolSchema(true)),
+                tool("save_development_plan", "保存执行计划", packageToolSchema(false)),
                 tool("upload_execution_report", "上传执行报告", packageToolSchema(false)),
                 tool("upload_review_report", "上传 Review 报告", packageToolSchema(false)),
                 tool("register_harness_init_result", "登记项目 harness 初始化结果", registerHarnessSchema()),
@@ -398,12 +408,16 @@ public class McpService
         }
         if ("publish_repository_index".equals(name))
         {
-            // 仓库索引发布会写入模块/影响面知识库，权限必须独立于普通文档保存能力校验。
-            requirePermission("publish_repository_index", "req:index:import");
-            return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(toIndexRequest(arguments), "mcp", currentUsername(), currentUserId())));
+            ReqRepositoryIndexImportRequest indexRequest = toIndexRequest(arguments);
+            // 有 actionToken 时由索引服务按项目初始化或需求归档上下文做一次性校验；无 token 的管理导入仍要求全局索引权限。
+            if (indexRequest.getActionToken() == null || indexRequest.getActionToken().isEmpty())
+            {
+                requirePermission("publish_repository_index", "req:index:import");
+            }
+            return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(indexRequest, "mcp", currentUsername(), currentUserId())));
         }
         requirePermission(name, "req:package:save");
-        Long demandId = longArg(arguments, "demandId");
+        Long demandId = resolvePackageDemandId(name, arguments);
         String artifactType = artifactTypeForTool(name, stringArg(arguments, "artifactType"));
         return toolResult(Collections.singletonMap("version", reqPackageService.saveVersion(demandId, artifactType, stringArg(arguments, "content"), name)));
     }
@@ -444,7 +458,7 @@ public class McpService
         List<ReqRepository> repositories = repositories(projectId);
         List<ReqVariant> variants = variants(projectId);
         List<Map<String, Object>> repositoryInstructions = new ArrayList<>();
-        // 返回 workspace 入口和每个仓库的文件包，调用方负责在真实工作空间合并，平台不执行 shell 或 Git 操作。
+        // 返回 workspace 入口和每个仓库的文件包，调用方负责在真实工作空间合并和 Git 提交，平台不执行 shell 或 Git 操作。
         for (ReqRepository repository : repositories)
         {
             Map<String, Object> item = new HashMap<>();
@@ -481,11 +495,13 @@ public class McpService
         }
         content.append("\n## 初始化要求\n");
         content.append("1. 进入目标仓库后先校验远端和当前分支。\n");
-        content.append("2. 下发或更新仓库 AGENTS.md、docs/ai-harness、docs/process、docs/templates 和 scripts。\n");
-        content.append("3. 先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能生成模块知识库；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n");
-        content.append("4. 运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。\n");
-        content.append("5. 通过 mcp__reqflow.publish_repository_index 发布结构化索引，modules 必须是一行一个前端页面业务功能或后端主能力，pages/apis/permissions/tables/documents 通过 moduleCode 归属。\n");
-        content.append("6. 通过 mcp__reqflow.register_harness_init_result 回写初始化结果。\n");
+        content.append("2. 切换默认基线分支并拉取最新代码：git switch <default-branch> && git pull --ff-only。\n");
+        content.append("3. 下发或更新仓库 AGENTS.md、docs/ai-harness、docs/process、docs/templates 和 scripts。\n");
+        content.append("4. 先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能生成模块知识库；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n");
+        content.append("5. 运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。\n");
+        content.append("6. 校验通过后提交并推送初始化生成或升级的 AGENTS.md、docs/ 和 scripts/。\n");
+        content.append("7. 通过 mcp__reqflow.publish_repository_index 发布结构化索引，modules 必须是一行一个前端页面业务功能或后端主能力，pages/apis/permissions/tables/documents 通过 moduleCode 归属；重复发布按当前仓库当前分支快照同步，平台会让旧模块和旧影响面失效。\n");
+        content.append("8. 通过 mcp__reqflow.register_harness_init_result 回写初始化模式、commit、push 结果和异常说明。\n");
         return content.toString();
     }
 
@@ -690,12 +706,14 @@ public class McpService
                 + "## 执行顺序\n\n"
                 + "1. 确认当前会话已加载 reqflow MCP server，且工具名是 `mcp__reqflow.publish_repository_index`。\n"
                 + "2. 调用 `get_harness_template` 获取 `workspaceFiles` 和 `repositoryHarnessInstructions[].files`。\n"
-                + "3. 在目标 workspace 写入或合并本地 harness 文件，不允许只调用发布索引工具。\n"
-                + "4. 在每个子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
-                + "5. 发布索引前，先扫描前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或前端页面业务功能生成 `modules`；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n"
-                + "6. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
-                + "7. 调用 `register_harness_init_result` 回写 harness 初始化状态和 commit。\n"
-                + "8. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
+                + "3. 在目标 workspace 校验远端后，切换默认基线分支并执行 `git pull --ff-only`。\n"
+                + "4. 写入或合并本地 harness 文件，不允许只调用发布索引工具。\n"
+                + "5. 在每个子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
+                + "6. 校验通过后提交并推送初始化生成或升级的 `AGENTS.md`、`docs/` 和 `scripts/`。\n"
+                + "7. 发布索引前，先扫描前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或前端页面业务功能生成 `modules`；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n"
+                + "8. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。重复发布按当前仓库当前分支快照同步，平台会让旧模块和旧影响面失效。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
+                + "9. 调用 `register_harness_init_result` 回写 harness 初始化状态、commit、push 结果和失败原因。\n"
+                + "10. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
     }
 
     private String escapeJson(String value)
@@ -792,10 +810,118 @@ public class McpService
     private String artifactTypeForTool(String toolName, String requested)
     {
         if ("save_requirement_package".equals(toolName)) return requested == null || requested.isEmpty() ? "requirement" : requested;
+        if ("upload_requirement_assessment".equals(toolName)) return "requirement_assessment";
         if ("save_development_plan".equals(toolName)) return "plan";
         if ("upload_execution_report".equals(toolName)) return "execution_report";
         if ("upload_review_report".equals(toolName)) return "review_report";
         throw new IllegalArgumentException("不支持的MCP工具：" + toolName);
+    }
+
+    private Long resolvePackageDemandId(String toolName, Map<String, Object> arguments)
+    {
+        String actionToken = stringArg(arguments, "actionToken");
+        if (actionToken == null || actionToken.isEmpty())
+        {
+            Long demandId = longArg(arguments, "demandId");
+            if (demandId == null)
+            {
+                throw new IllegalArgumentException("需求ID或actionToken不能为空");
+            }
+            return demandId;
+        }
+        ReqActionToken token = actionTokenService.resolveToken(actionToken);
+        if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
+        {
+            if (IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "submitted");
+                if ("upload_requirement_assessment".equals(toolName))
+                {
+                    return token.getDemandId();
+                }
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            if (IReqActionTokenService.TARGET_REQUIREMENT_GENERATE.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "plan_pending", "plan_ready");
+                if ("save_requirement_package".equals(toolName))
+                {
+                    return token.getDemandId();
+                }
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            if ("upload_requirement_assessment".equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "submitted");
+            }
+            else if ("save_requirement_package".equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "plan_pending", "plan_ready");
+            }
+            else
+            {
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            if (toolName.equals(token.getTargetMethod()))
+            {
+                return token.getDemandId();
+            }
+            throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+        }
+        if (IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType()))
+        {
+            if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "developing");
+                if ("save_development_plan".equals(toolName) || "upload_execution_report".equals(toolName)
+                        || "upload_review_report".equals(toolName))
+                {
+                    return token.getDemandId();
+                }
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            if (IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "repairing");
+                if ("upload_execution_report".equals(toolName) || "upload_review_report".equals(toolName))
+                {
+                    return token.getDemandId();
+                }
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            validateActionTokenDemandStage(token, "developing", "repairing");
+            if (toolName.equals(token.getTargetMethod()))
+            {
+                return token.getDemandId();
+            }
+            throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+        }
+        if (!toolName.equals(token.getTargetMethod()))
+        {
+            throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+        }
+        return token.getDemandId();
+    }
+
+    private void validateActionTokenDemandStage(ReqActionToken token, String... validStatuses)
+    {
+        if (token.getDemandId() == null)
+        {
+            throw new IllegalArgumentException("动作Token未绑定需求");
+        }
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(token.getDemandId());
+        if (demand == null)
+        {
+            throw new IllegalArgumentException("动作Token绑定的需求不存在");
+        }
+        for (String validStatus : validStatuses)
+        {
+            if (validStatus.equals(demand.getStatus()))
+            {
+                return;
+            }
+        }
+        throw new IllegalArgumentException("动作Token所属流程阶段已结束，请重新生成指令");
     }
 
     private Map<String, Object> resource(String uri, String name)
@@ -916,7 +1042,7 @@ public class McpService
         itemProperties.put("sourceRef", property("string", "模块来源说明，例如路由、菜单、页面组件或后台任务"));
         itemProperties.put("summary", property("string", "模块业务摘要"));
         itemProperties.put("orderNum", property("integer", "排序号"));
-        return arrayObjectProperty("模块或功能点索引列表；项目初始化时不能为空，优先按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块",
+        return arrayObjectProperty("模块或功能点索引列表；项目初始化时不能为空，优先按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块；重复发布视为当前仓库当前分支快照，未再次出现的旧模块会从活动知识库中失效",
                 itemProperties, Arrays.asList("moduleCode", "moduleName"));
     }
 
@@ -941,13 +1067,14 @@ public class McpService
     private Map<String, Object> packageToolSchema(boolean allowArtifactType)
     {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("demandId", property("integer", "需求 ID"));
+        properties.put("demandId", property("integer", "需求 ID；未传时可用 actionToken 定位"));
+        properties.put("actionToken", property("string", "生成需求设计或执行任务指令中的动作 token，可用于定位需求上下文"));
         properties.put("content", property("string", "要保存的交接资料正文"));
         if (allowArtifactType)
         {
             properties.put("artifactType", property("string", "产物类型，缺省为 requirement"));
         }
-        return objectSchema(properties, Arrays.asList("demandId", "content"));
+        return objectSchema(properties, Collections.singletonList("content"));
     }
 
     private Map<String, Object> registerHarnessSchema()
@@ -955,7 +1082,9 @@ public class McpService
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("repoId", property("integer", "仓库 ID"));
         properties.put("harnessStatus", property("string", "初始化状态"));
-        properties.put("harnessCommit", property("string", "初始化结果 commit"));
+        properties.put("harnessCommit", property("string", "初始化结果 commit，校验通过后应为已提交并推送的 commit"));
+        properties.put("pushStatus", property("string", "初始化提交推送结果；服务端当前作为扩展字段接收，调用方必须在失败时写明原因"));
+        properties.put("failureReason", property("string", "初始化、提交或推送失败原因"));
         return objectSchema(properties, Arrays.asList("repoId", "harnessStatus"));
     }
 
@@ -969,7 +1098,7 @@ public class McpService
     private Map<String, Object> publishRepositoryIndexSchema()
     {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("actionToken", property("string", "项目分支初始化指令中的动作 token，优先用于定位项目、分支和目标方法"));
+        properties.put("actionToken", property("string", "项目分支初始化或需求合并归档指令中的动作 token，优先用于定位项目、分支、仓库和目标方法"));
         properties.put("remoteUrl", property("string", "当前仓库 Git 远端地址"));
         properties.put("projectId", property("integer", "兼容路径：需求平台项目 ID"));
         properties.put("repoId", property("integer", "兼容路径：需求平台仓库 ID"));
@@ -1046,6 +1175,7 @@ public class McpService
     private String requirementArtifactType(String path)
     {
         if ("draft-package".equals(path)) return "requirement_draft";
+        if ("supplement".equals(path)) return "requirement_supplement";
         if ("context-manifest".equals(path)) return "context_manifest";
         return null;
     }

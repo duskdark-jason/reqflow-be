@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.requirement;
+package com.ruoyi.requirement.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,7 +23,7 @@ public class ReqProjectInitController extends BaseController
     @Autowired
     private IReqProjectInitService projectInitService;
 
-    @PreAuthorize("@ss.hasPermi('req:project:query')")
+    @PreAuthorize("@ss.hasAnyPermi('req:project:query,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping("/{projectId}")
     public AjaxResult getInfo(@PathVariable("projectId") Long projectId)
     {

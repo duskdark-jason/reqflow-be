@@ -1,6 +1,5 @@
 package com.ruoyi.requirement.template;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -8,22 +7,24 @@ import org.junit.jupiter.api.Test;
 class RequirementTemplateServiceTest
 {
     @Test
-    void rendersKnownPlaceholdersDeterministically()
+    void contextManifestEscapesRichTextHtml()
     {
         RequirementTemplateContext context = new RequirementTemplateContext();
+        context.setDemandNo("REQ-001");
+        context.setDemandTitle("带图片需求");
         context.setProjectName("需求平台");
-        context.setProjectCode("REQFLOW");
-        context.setDemandNo("REQ-20260609-001");
-        context.setDemandTitle("提交需求");
-        context.setTaskBranch("feature/req-001-submit-demand");
-        context.setAcceptanceText("可以生成执行包");
+        context.setVariantName("主线");
+        context.setBaselineBranch("main");
+        context.setTaskBranch("fix-demo");
+        context.setModuleName("需求列表");
+        context.setDemandSource("CUSTOMER");
+        context.setBusinessBackground("<p><img src=\"/profile/upload/a.png\"></p>");
+        context.setAttachments("/profile/upload/a.pdf");
+        context.setAcceptanceText("验收");
 
-        String content = new RequirementTemplateService()
-                .render("templates/requirement/requirement-draft.md", context);
+        String result = new RequirementTemplateService().render("templates/requirement/context-manifest.json", context);
 
-        assertTrue(content.contains("需求平台"));
-        assertTrue(content.contains("REQ-20260609-001"));
-        assertTrue(content.contains("可以生成执行包"));
-        assertFalse(content.contains("${"));
+        assertTrue(result.contains("\\\"/profile/upload/a.png\\\""), result);
+        assertTrue(result.contains("\"demandSource\": \"CUSTOMER\""), result);
     }
 }

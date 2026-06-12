@@ -32,6 +32,16 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
 
     private static final int MAX_GENERATE_ATTEMPTS = 10;
 
+    private static final long ACTION_TOKEN_TTL_MILLIS = 24L * 60 * 60 * 1000;
+
+    private static final String ACTION_TOKEN_USAGE_RULE = "有效期：当前动作或流程阶段内有效，流转到下一流程即失效；最长保留24小时，过期或已使用后需重新生成。";
+
+    private static final String DEVELOPMENT_STAGE_TOKEN_USAGE_RULE =
+            "有效期：当前开发阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行计划、执行报告和 Review 报告回写。";
+
+    private static final String REPAIR_STAGE_TOKEN_USAGE_RULE =
+            "有效期：当前返修阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行报告和 Review 报告回写。";
+
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Autowired
@@ -62,6 +72,15 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
     public ReqActionInstruction createInstruction(String actionType, Long projectId, Long variantId, Long demandId,
             String targetMethod, String prompt, String copyLabel, String operator)
     {
+        return createInstruction(actionType, projectId, variantId, demandId, targetMethod, prompt, copyLabel,
+                operator, null);
+    }
+
+    @Override
+    @Transactional
+    public ReqActionInstruction createInstruction(String actionType, Long projectId, Long variantId, Long demandId,
+            String targetMethod, String prompt, String copyLabel, String operator, String remark)
+    {
         validateInstruction(actionType, projectId, targetMethod, prompt);
         GeneratedToken generatedToken = generateUniqueToken();
         ReqActionToken token = new ReqActionToken();
@@ -73,7 +92,9 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         token.setVariantId(variantId);
         token.setDemandId(demandId);
         token.setStatus(UserConstants.NORMAL);
+        token.setExpireTime(new Date(System.currentTimeMillis() + ACTION_TOKEN_TTL_MILLIS));
         token.setCreateBy(operator);
+        token.setRemark(remark);
         actionTokenMapper.insertReqActionToken(token);
 
         ReqActionInstruction instruction = new ReqActionInstruction();
@@ -84,7 +105,8 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         instruction.setPrompt(prompt);
         instruction.setCopyLabel(StringUtils.defaultIfEmpty(copyLabel, "复制指令"));
         instruction.setExpireTime(token.getExpireTime());
-        instruction.setContent(prompt + "\ntargetMethod: " + targetMethod + "\nactionToken: " + generatedToken.plainToken);
+        instruction.setContent(prompt + "\ntargetMethod: " + targetMethod + "\nactionToken: " + generatedToken.plainToken
+                + "\n" + usageRule(actionType, targetMethod));
         return instruction;
     }
 
@@ -97,14 +119,29 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
             throw new ServiceException("动作Token不能为空");
         }
         ReqActionToken token = actionTokenMapper.selectReqActionTokenByTokenHash(hashToken(plainToken));
-        if (token == null || !UserConstants.NORMAL.equals(token.getStatus()) || isExpired(token))
+        if (token == null || !UserConstants.NORMAL.equals(token.getStatus()))
         {
             throw new ServiceException("动作Token不存在或已停用");
         }
-        // 解析成功后记录使用时间，便于后续审计初始化指令是否被实际消费。
+        if (isExpired(token))
+        {
+            throw new ServiceException("动作Token已过期，请重新生成");
+        }
+        boolean reusableStageToken = isReusableStageToken(token);
+        if (isUsed(token) && !reusableStageToken)
+        {
+            throw new ServiceException("动作Token已使用，请重新生成");
+        }
+        // 解析成功后记录使用时间。普通动作通过条件更新保证一次性消费，开发阶段 Token 仅刷新最近使用时间。
         if (token.getTokenId() != null)
         {
-            actionTokenMapper.updateLastUsed(token.getTokenId());
+            int updated = reusableStageToken
+                    ? actionTokenMapper.touchLastUsed(token.getTokenId())
+                    : actionTokenMapper.updateLastUsed(token.getTokenId());
+            if (updated <= 0)
+            {
+                throw new ServiceException("动作Token已使用，请重新生成");
+            }
         }
         return token;
     }
@@ -166,6 +203,31 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         return token.getExpireTime() != null && token.getExpireTime().before(new Date());
     }
 
+    private boolean isUsed(ReqActionToken token)
+    {
+        return token.getLastUsedTime() != null;
+    }
+
+    private boolean isReusableStageToken(ReqActionToken token)
+    {
+        return ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
+                && (TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod())
+                    || TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod()));
+    }
+
+    private String usageRule(String actionType, String targetMethod)
+    {
+        if (ACTION_REQUIREMENT_DEVELOP.equals(actionType) && TARGET_REQUIREMENT_DEVELOP.equals(targetMethod))
+        {
+            return DEVELOPMENT_STAGE_TOKEN_USAGE_RULE;
+        }
+        if (ACTION_REQUIREMENT_DEVELOP.equals(actionType) && TARGET_REQUIREMENT_REPAIR.equals(targetMethod))
+        {
+            return REPAIR_STAGE_TOKEN_USAGE_RULE;
+        }
+        return ACTION_TOKEN_USAGE_RULE;
+    }
+
     private String hashToken(String plainToken)
     {
         try
@@ -208,6 +270,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
                 + "\nprojectId: " + projectId
                 + "\nvariantId: " + variantId
                 + "\nactionToken: " + actionToken
+                + "\n" + ACTION_TOKEN_USAGE_RULE
                 + "\n要求：actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。";
     }
 

@@ -2,7 +2,7 @@
 
 本流程用于新功能、Bug 修复、接口变更、数据库变更、页面变更、权限变更和跨端联调。
 
-如果任务包含需求平台编排 Key、开发 Key、项目接入初始化 Key、MCP 拉取或 MCP 回写，先按 `platform-key-workflow.md` 判断属于编排模式、开发模式、项目接入初始化模式还是平台自身建设模式，再进入本流程。
+如果任务包含需求平台需求设计 Key、开发 Key、项目接入初始化 Key、MCP 拉取或 MCP 回写，先按 `platform-key-workflow.md` 判断属于需求设计模式、开发模式、项目接入初始化模式还是平台自身建设模式，再进入本流程。
 
 ## 1. 需求进入
 
@@ -19,11 +19,11 @@
 ### 授权语义
 
 - 用户描述问题、选择方案、确认方向或同意建议，只代表允许进入需求说明和计划阶段。
-- Plan Agent 可以据此完善 `requirement.md` 和 `plan.md`，但必须在计划完成后停止，不得自动开始实现。
+- Plan Agent 可以据此完善 `requirement.md`；需求平台模式下不得生成 `plan.md`，执行计划由 Execution Agent 在执行阶段基于最终需求设计生成。
 - 开始实现必须有明确执行授权，例如“开始执行”“按计划实现”“允许改代码”或“创建任务分支执行”。
 - 明确执行授权默认包含执行完成后的自动 Review、自动返修和复审循环；用户明确要求只执行不 Review 时除外。
 - Execution Agent 不得把自己的实现直接写成 Review 完成；自动 Review 必须切换到 Review Agent 或等价的独立审查角色。
-- 新需求执行不使用 worktree，必须从目标基线分支创建 ASCII 任务分支；当前分支为 `main` 或 `master` 时，除只读分析和明确的小文档修正外，不得开始功能实现。
+- 新需求执行不使用 worktree；需求平台模式下任务分支在需求设计阶段从目标基线分支创建，开发阶段只沿用该任务分支。当前分支为 `main` 或 `master` 时，除只读分析、项目接入初始化和明确的小文档修正外，不得开始功能实现。
 - 当前需求平台自身建设阶段，可以不通过 MCP 回写设计文档，但必须在本地 `docs/specs` 按阶段记录；后期平台自举接入后，默认改走需求平台 Key 流程。
 
 ## 2. 创建需求说明
@@ -39,7 +39,7 @@ docs/specs/active/REQ-001-中文需求标题/
   review-report.md
 ```
 
-可以从 `../templates/spec-meta-template.md`、`../templates/requirement-template.md`、`../templates/agent-plan-template.md`、`../templates/execution-report-template.md` 和 `../templates/review-report-template.md` 复制；模板选择见 `../templates/README.md`。
+可以从 `../templates/spec-meta-template.md`、`../templates/requirement-template.md`、`../templates/agent-plan-template.md`、`../templates/execution-report-template.md` 和 `../templates/review-report-template.md` 复制；需求设计阶段先落地 `meta.md` 和 `requirement.md`，执行阶段再生成 `plan.md`。模板选择见 `../templates/README.md`。
 
 `meta.md` 必须在计划阶段记录影响模块和模块知识库动作：
 
@@ -60,10 +60,10 @@ docs/specs/active/REQ-001-中文需求标题/
 
 ## 3. 多 Agent 协作入口
 
-- 计划阶段：由 Plan Agent 输出 `requirement.md` 和 `plan.md`，锁定目标、契约、验证计划和不做范围。
-- 执行阶段：由 Execution Agent 按 `plan.md` 实现并写 `execution-report.md`，不得自行扩大范围；完成验证后自动把 `meta.md` 切到 `review`，填写 `Review 授权：已授权`，交给 Review Agent。
+- 需求设计阶段：由 Plan Agent 创建或沿用任务分支，先输出需求可行性评估并通过 MCP `upload_requirement_assessment` 回写；评估结论允许继续后只输出 `requirement.md`，并通过 MCP `save_requirement_package` 回写需求设计版本。需求人补充调整指令时继续更新同一评估、同一文件和同一任务分支。
+- 执行阶段：由 Execution Agent 基于最终 `requirement.md` 先分析是否适合拆分为多个 subagent 并行执行，再生成或更新 `plan.md`，按 `plan.md` 实现并写 `execution-report.md`，不得自行扩大范围；完成验证后自动把 `meta.md` 切到 `review`，填写 `Review 授权：已授权`，交给 Review Agent。
 - 审查阶段：由 Review Agent 只读审查并写 `review-report.md`，结论为 `通过`、`有条件通过` 或 `阻断`。
-- 返修阶段：Review Agent 产生 `RF-*` 后自动回到 Execution Agent；Execution Agent 返修并在 `execution-report.md` 回填同 ID 的 `Review 返修记录`；Review Agent 再复审。循环持续到最终 Review 结论为 `通过`。
+- 返修阶段：Review Agent 产生 `RF-*` 后自动回到 Execution Agent；Execution Agent 返修并在 `execution-report.md` 回填同 ID 的 `Review 返修记录`；Review Agent 再复审并补充 `review-report.md`。需求平台模式下每次执行和 Review 都通过 MCP 回写新版本，循环持续到最终 Review 结论为 `通过`。
 - 任一阶段发现计划缺失、契约冲突或验证无法执行，必须回到计划阶段补齐文件。
 - 阶段切换必须更新 `meta.md`，并记录执行模式、执行授权和 Review 授权状态。
 
@@ -116,6 +116,8 @@ Harness 初始化或纯文档接入时运行：
 sh scripts/check-docs.sh
 sh scripts/check-harness.sh init
 ```
+
+项目接入初始化 Key 必须在写入前先切换默认基线分支并 `git pull --ff-only`；初始化校验通过后提交并推送初始化生成或升级的 `AGENTS.md`、`docs/` 和 `scripts/`，再把 commit、push 结果和失败原因回写需求平台。
 
 真实需求完成态或准备移入 `specs/done/` 前运行：
 

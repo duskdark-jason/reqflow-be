@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.requirement;
+package com.ruoyi.requirement.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ public class ReqVariantController extends BaseController
     @Autowired
     private IReqVariantService reqVariantService;
 
-    @PreAuthorize("@ss.hasPermi('req:variant:list')")
+    @PreAuthorize("@ss.hasAnyPermi('req:variant:list,req:demand:list,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping("/list")
     public TableDataInfo list(ReqVariant reqVariant)
     {
@@ -38,7 +38,7 @@ public class ReqVariantController extends BaseController
         return getDataTable(list);
     }
 
-    @PreAuthorize("@ss.hasPermi('req:variant:query')")
+    @PreAuthorize("@ss.hasAnyPermi('req:variant:query,req:demand:add,req:demand:edit,req:demand:query')")
     @GetMapping(value = "/{variantId}")
     public AjaxResult getInfo(@PathVariable("variantId") Long variantId)
     {

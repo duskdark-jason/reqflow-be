@@ -14,7 +14,7 @@
 | `../scripts/check-docs.sh` | 文档自检脚本 | 文档或 harness 变更后运行 |
 | `../scripts/check-harness.sh` | harness 初始化、spec 和多 agent 交接门禁 | 初始化、需求交接、Review、返修或完成前运行 |
 
-涉及需求平台 Key、需求编排、需求开发或 MCP 回写时，先读 `process/platform-key-workflow.md`。
+涉及需求平台需求设计 Key、需求开发 Key、项目接入初始化 Key 或 MCP 回写时，先读 `process/platform-key-workflow.md`。
 
 涉及多 agent 协作时，先读 `process/agent-workflow.md`。
 

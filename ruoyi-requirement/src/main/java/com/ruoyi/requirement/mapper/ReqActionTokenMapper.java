@@ -14,4 +14,15 @@ public interface ReqActionTokenMapper
     public int updateReqActionToken(ReqActionToken reqActionToken);
 
     public int updateLastUsed(@Param("tokenId") Long tokenId);
+
+    public int touchLastUsed(@Param("tokenId") Long tokenId);
+
+    public int countUsedActionTokenByRemark(@Param("actionType") String actionType,
+                                            @Param("targetMethod") String targetMethod,
+                                            @Param("projectId") Long projectId,
+                                            @Param("variantId") Long variantId,
+                                            @Param("demandId") Long demandId,
+                                            @Param("remark") String remark);
+
+    public int deleteReqActionTokenByDemandIds(Long[] demandIds);
 }

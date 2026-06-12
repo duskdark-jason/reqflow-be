@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.requirement;
+package com.ruoyi.requirement.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,14 +22,14 @@ public class ReqPackageController extends BaseController
     @Autowired
     private IReqPackageService reqPackageService;
 
-    @PreAuthorize("@ss.hasPermi('req:package:list')")
+    @PreAuthorize("@ss.hasAnyPermi('req:package:list,req:demand:query')")
     @GetMapping("/{demandId}")
     public AjaxResult list(@PathVariable Long demandId)
     {
         return success(reqPackageService.selectReqPackageVersionListByDemandId(demandId));
     }
 
-    @PreAuthorize("@ss.hasPermi('req:package:list')")
+    @PreAuthorize("@ss.hasAnyPermi('req:package:list,req:demand:query')")
     @GetMapping("/{demandId}/{artifactType}/latest")
     public AjaxResult latest(@PathVariable Long demandId, @PathVariable String artifactType)
     {
