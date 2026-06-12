@@ -258,19 +258,31 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("当前状态不能生成需求设计指令");
         }
-        String prompt = "请根据基础需求生成详细需求设计，并通过 reqflow MCP 回写资料包。";
-        ReqActionInstruction instruction = actionTokenService.createInstruction(
+        String taskBranch = suggestedTaskBranch(demand);
+        String assessmentPrompt = "请先在需求设计阶段完成需求可行性评估和风险判断，通过 reqflow MCP 回写评估报告。";
+        ReqActionInstruction assessmentInstruction = actionTokenService.createInstruction(
+                IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
+                demand.getProjectId(),
+                demand.getVariantId(),
+                demand.getDemandId(),
+                "upload_requirement_assessment",
+                assessmentPrompt,
+                "生成需求评估与设计",
+                operator);
+        String designPrompt = "请在需求评估允许继续后生成详细需求设计，通过 reqflow MCP 回写资料包。";
+        ReqActionInstruction designInstruction = actionTokenService.createInstruction(
                 IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
                 demand.getProjectId(),
                 demand.getVariantId(),
                 demand.getDemandId(),
                 "save_requirement_package",
-                prompt,
-                "生成详细需求设计",
+                designPrompt,
+                "复制需求设计回写指令",
                 operator);
-        // 编排指令给审批人员复制到 Codex，动作 Token 仅定位需求上下文，不替代人员 MCP Key 鉴权。
-        instruction.setContent(requirementPlanInstructionContent(prompt, instruction.getToken(), demand));
-        return instruction;
+        // 需求设计指令给开发人员复制到 Codex，动作 Token 仅定位需求上下文，不替代人员 MCP Key 鉴权。
+        assessmentInstruction.setContent(requirementPlanInstructionContent(assessmentPrompt, assessmentInstruction.getToken(),
+                designInstruction.getToken(), demand, taskBranch));
+        return assessmentInstruction;
     }
 
     @Override
@@ -307,8 +319,18 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 reportPrompt,
                 "复制执行报告指令",
                 operator);
+        String reviewPrompt = "请根据实现和验证结果完成 Review，并通过 reqflow MCP 回写 Review 报告。";
+        ReqActionInstruction reviewInstruction = actionTokenService.createInstruction(
+                IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
+                demand.getProjectId(),
+                demand.getVariantId(),
+                demand.getDemandId(),
+                "upload_review_report",
+                reviewPrompt,
+                "复制Review报告指令",
+                operator);
         planInstruction.setContent(requirementDevelopInstructionContent(planPrompt, planInstruction.getToken(),
-                reportInstruction.getToken(), demand));
+                reportInstruction.getToken(), reviewInstruction.getToken(), demand, suggestedTaskBranch(demand)));
         return planInstruction;
     }
 
@@ -319,24 +341,34 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return "REQ-" + String.format("%03d", sequence);
     }
 
-    private String requirementPlanInstructionContent(String prompt, String actionToken, ReqDemand demand)
+    private String requirementPlanInstructionContent(String prompt, String assessmentActionToken, String designActionToken,
+            ReqDemand demand, String taskBranch)
     {
         return prompt
                 + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求设计生成。"
                 + "\nmcpServer: reqflow"
+                + "\ntoolName: upload_requirement_assessment"
+                + "\nmcpTool: reqflow.upload_requirement_assessment"
                 + "\ntoolName: save_requirement_package"
                 + "\nmcpTool: reqflow.save_requirement_package"
-                + "\ntargetMethod: save_requirement_package"
+                + "\ntargetMethods: upload_requirement_assessment, save_requirement_package"
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
-                + "\nactionToken: " + actionToken
+                + "\n建议任务分支: " + taskBranch
+                + "\n可行性评估 actionToken: " + assessmentActionToken
+                + "\n需求设计 actionToken: " + designActionToken
                 + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：先读取需求详情中的基础需求、业务背景、预期结果、验收标准和附件，生成详细需求设计。"
-                + "\n保存要求：调用 save_requirement_package，arguments.actionToken 填上面的 actionToken，content 填详细需求设计。"
-                + "\n注意：actionToken 是 save_requirement_package 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n要求：先读取需求详情中的基础需求、业务背景、预期结果、验收标准、附件和历史需求设计版本。"
+                + "\n分支要求：校验当前 workspace 仓库远端与平台项目一致，切换目标基线分支并 git pull --ff-only 后，创建或切换到上面的建议任务分支；需求人补充调整指令时继续使用同一任务分支。"
+                + "\n评估要求：先形成需求可行性评估报告，必须给出评估结论、主要风险、阻断点、需要需求人补充或调整的内容、是否允许继续生成需求设计；结论类型从“可继续设计、需澄清、需调整、暂不可实现”中选择。"
+                + "\n评估回写：先调用 upload_requirement_assessment，arguments.actionToken 填可行性评估 actionToken，content 填评估报告；如果结论是需澄清、需调整或暂不可实现，本轮停止生成 requirement.md，并把该结论作为反馈推送给需求人。"
+                + "\n本地文件：评估通过或有条件允许继续后，只生成或更新 docs/specs/active/REQ-001-中文需求标题/meta.md 和 requirement.md，可在 requirement.md 顶部保留“可行性评估”小节；不生成 plan.md，不改业务代码。"
+                + "\n保存要求：评估允许继续后调用 save_requirement_package，arguments.actionToken 填需求设计 actionToken，content 填详细需求设计；每次补充调整都再次回写评估和需求设计，平台按版本保存，最终版 requirement.md 保留在本地任务分支用于开发。"
+                + "\n注意：两个 actionToken 分别是 upload_requirement_assessment 和 save_requirement_package 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
     }
 
-    private String requirementDevelopInstructionContent(String prompt, String planActionToken, String reportActionToken, ReqDemand demand)
+    private String requirementDevelopInstructionContent(String prompt, String planActionToken, String reportActionToken,
+            String reviewActionToken, ReqDemand demand, String taskBranch)
     {
         return prompt
                 + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求开发。"
@@ -345,15 +377,45 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 + "\nmcpTool: reqflow.save_development_plan"
                 + "\ntoolName: upload_execution_report"
                 + "\nmcpTool: reqflow.upload_execution_report"
-                + "\ntargetMethods: save_development_plan, upload_execution_report"
+                + "\ntoolName: upload_review_report"
+                + "\nmcpTool: reqflow.upload_review_report"
+                + "\ntargetMethods: save_development_plan, upload_execution_report, upload_review_report"
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
+                + "\n任务分支: " + taskBranch
                 + "\n执行计划 actionToken: " + planActionToken
                 + "\n执行报告 actionToken: " + reportActionToken
+                + "\nReview报告 actionToken: " + reviewActionToken
                 + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：先读取需求详情和需求设计，生成执行计划；再按目标仓库规范完成实现、验证和提交。"
-                + "\n回写要求：先调用 save_development_plan，arguments.actionToken 填执行计划 actionToken；开发完成后调用 upload_execution_report，arguments.actionToken 填执行报告 actionToken。"
-                + "\n注意：两个 actionToken 均只能成功使用一次，且都不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n分支要求：开发和返修阶段必须沿用需求设计阶段创建的任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
+                + "\n要求：先读取需求详情、最终需求设计和本地 requirement.md，生成或更新 plan.md；再按目标仓库规范完成实现、验证和提交。"
+                + "\n返修要求：需求人补充返修说明或 Review 产生 RF-* 后，继续在同一任务分支补充 execution-report.md 和 review-report.md，不另建返修文件。"
+                + "\n回写要求：先调用 save_development_plan，arguments.actionToken 填执行计划 actionToken；开发或返修完成后调用 upload_execution_report，arguments.actionToken 填执行报告 actionToken；Review 或复审完成后调用 upload_review_report，arguments.actionToken 填 Review 报告 actionToken。"
+                + "\n注意：三个 actionToken 均只能成功使用一次，且都不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+    }
+
+    private String suggestedTaskBranch(ReqDemand demand)
+    {
+        return "feature/" + requirementBranchToken(demand.getDemandNo()) + "-" + slug(demand.getTitle(), "demand");
+    }
+
+    private String requirementBranchToken(String demandNo)
+    {
+        String token = slug(demandNo, "requirement").toLowerCase();
+        return token.replaceFirst("^req-0*([0-9]+)$", "req-$1");
+    }
+
+    private String slug(String value, String fallback)
+    {
+        if (StringUtils.isEmpty(value))
+        {
+            return fallback;
+        }
+        String slug = value.trim()
+                .replaceAll("[^A-Za-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "")
+                .toLowerCase();
+        return StringUtils.isEmpty(slug) ? fallback + "-" + Integer.toHexString(value.hashCode()) : slug;
     }
 
     private void validateDemandTargetInitialized(Long projectId, Long variantId)

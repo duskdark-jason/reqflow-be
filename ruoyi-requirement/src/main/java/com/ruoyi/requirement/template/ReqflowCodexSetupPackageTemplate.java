@@ -138,7 +138,7 @@ public final class ReqflowCodexSetupPackageTemplate
         metadata.put("$schema", "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json");
         metadata.put("name", "com.reqflow/reqflow-mcp");
         metadata.put("title", "Reqflow");
-        metadata.put("description", "Reqflow requirement-platform MCP server for project onboarding, repository index publishing, and agent handoff package persistence.");
+        metadata.put("description", "Reqflow requirement-platform MCP server for project onboarding, repository index publishing, requirement assessment, design, development, and review package persistence.");
         metadata.put("remotes", remotes(mcpAddress));
         metadata.put("toolsets", toolsets());
         metadata.put("securityNotes", securityNotes());
@@ -172,7 +172,8 @@ public final class ReqflowCodexSetupPackageTemplate
         List<Map<String, Object>> toolsets = new ArrayList<>();
         toolsets.add(toolset("project-init", "Project onboarding and harness initialization.", "get_harness_template", "register_harness_init_result"));
         toolsets.add(toolset("index-publish", "Repository knowledge index publishing.", "publish_repository_index"));
-        toolsets.add(toolset("package-handoff", "Requirement, plan, execution, and review package handoff.", "save_requirement_package", "save_development_plan", "upload_execution_report", "upload_review_report"));
+        toolsets.add(toolset("package-handoff", "Requirement assessment, design, plan, execution, and review package handoff.",
+                "upload_requirement_assessment", "save_requirement_package", "save_development_plan", "upload_execution_report", "upload_review_report"));
         return toolsets;
     }
 
@@ -190,7 +191,7 @@ public final class ReqflowCodexSetupPackageTemplate
         List<String> notes = new ArrayList<>();
         notes.add("The MCP user key is secret and must be configured as a header, not written into skill files.");
         notes.add("After setup, do not call publish_repository_index automatically; wait for an explicit project initialization instruction.");
-        notes.add("The reqflow MCP server returns templates and stores indexes; it does not directly write another local workspace.");
+        notes.add("The reqflow MCP server returns templates and stores indexes; the local agent writes, commits, and pushes harness initialization files in the target workspace.");
         return notes;
     }
 

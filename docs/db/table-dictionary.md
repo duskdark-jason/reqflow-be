@@ -58,10 +58,10 @@
 | `req_demand` | `creator_id` | 需求创建人用户 ID | 新增时由服务端当前登录用户写入；普通编辑只允许创建人在 `draft` 状态修改。 |
 | `req_demand` | `developer_user_id` | 指定开发人员用户 ID | 新增或修改草稿需求时必须指向启用的 `requirement_developer` 用户；需求提交后普通访问、流程按钮、MCP 指令和资料包回写锁定在创建人与该开发人员之间，管理员不受该参与人限制。 |
 | `req_demand` | `project_id`、`variant_id`、`module_id` | 需求归属 | 保存前必须校验项目分支归属和仓库索引证据；新功能提需可以没有既有模块知识。 |
-| `req_demand` | `impact_page`、`impact_api`、`impact_data`、`impact_permission` | 影响面摘要 | 需求编排和开发计划使用，不能替代详细设计文档。 |
+| `req_demand` | `impact_page`、`impact_api`、`impact_data`、`impact_permission` | 影响面摘要 | 需求设计和开发计划使用，不能替代详细设计文档。 |
 | `req_demand` | `business_background`、`attachments` | 业务背景和需求附件 | `business_background` 保存普通文本业务背景；图片和文件只通过 `attachments` 保存上传路径，多个文件用英文逗号分隔，上传接口单文件最大 2MB。 |
 | `req_package_version` | `artifact_type`、`version_no` | 产物类型和版本号 | 多版本并存，查询最新版本时不能直接 join 后分页；返修轮次通过同一需求下的多版本链表达。 |
-| `req_package_version` | `content` | 需求设计、计划或报告内容 | 内容可能较大，列表查询避免直接加载。 |
+| `req_package_version` | `content` | 需求可行性评估、需求设计、计划或报告内容 | 内容可能较大，列表查询避免直接加载。 |
 
 ### 索引与知识库
 
@@ -79,7 +79,7 @@
 |---|---|---|---|
 | `req_mcp_user_key` | `user_id` | 绑定系统用户 | 关联 RuoYi `sys_user.user_id`；权限仍按用户菜单权限判断。 |
 | `req_mcp_user_key` | `key_prefix`、`key_hash` | Key 前缀和哈希 | 明文不得落库、不得写日志、不得进入活动记录。 |
-| `req_action_token` | `action_type`、`target_method` | 动作类型和目标 MCP 方法 | `requirement_plan` 只允许 `save_requirement_package` 回写需求设计；`requirement_develop` 可分别生成 `save_development_plan` 和 `upload_execution_report` 的一次性 token；动作 token 不替代 `X-MCP-Key` 认证。 |
+| `req_action_token` | `action_type`、`target_method` | 动作类型和目标 MCP 方法 | `requirement_plan` 可分别生成 `upload_requirement_assessment` 和 `save_requirement_package` 的一次性 token，先回写需求可行性评估再回写需求设计；`requirement_develop` 可分别生成 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 的一次性 token；动作 token 不替代 `X-MCP-Key` 认证。 |
 | `req_action_token` | `project_id`、`variant_id`、`demand_id` | 动作上下文 | 必须和平台返回的项目、分支和需求一致。 |
 | `req_action_token` | `expire_time`、`last_used_time` | 有效期和消费标记 | 动作 token 生成后 24 小时内有效，且仅可成功解析一次；`last_used_time` 非空或过期后需重新生成。 |
 | `req_activity_log` | `event_type`、`metadata_json` | 事件类型和扩展信息 | 扩展 JSON 只存可审计摘要，不写敏感明文。 |

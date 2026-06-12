@@ -11,7 +11,7 @@
 | 需求管理 | 项目管理 | 项目列表、项目维护入口、项目初始化状态 | `reqflow-ui/src/views/requirement/project/index.vue`、`maintain.vue` | `reqflow-ui/src/api/requirement/project.js`、`projectInit.js` | `/requirement/project/**`，`req:project:*`；需求表单上下文只读可使用 `req:demand:*` 读取项目列表和初始化上下文 | `ReqProjectController`、`ReqProjectInitController`、`ReqProjectServiceImpl`、`ReqProjectInitServiceImpl` |
 | 需求管理 | 分支知识库详情页签 | 按项目分支查看模块知识、索引批次和初始化指令 | `reqflow-ui/src/views/requirement/project/knowledge.vue` | `reqflow-ui/src/api/requirement/index.js`、`project.js` | `/requirement/index/module/tree`，管理页使用 `req:index:list`，需求表单只读可使用 `req:demand:*`；`/requirement/index/batch/list`，`req:index:list` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper`、`ReqRepositoryIndexBatchMapper` |
 | 需求管理 | 需求列表 | 需求维护页签、新增、编辑、查询、删除、状态流转、返修流转、生成需求设计指令和执行任务指令 | `reqflow-ui/src/views/requirement/demand/index.vue`、`maintain.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/demand.js`、`index.js` | `/requirement/demand/**`，`req:demand:*`；管理员删除使用 `req:demand:remove`；`/requirement/index/impact/suggest` 需求表单可使用 `req:demand:add/edit/query` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqDemandStatusTransition`、`ReqIndexController`、`ReqRepositoryIndexServiceImpl` |
-| 需求管理 | 需求执行包 | 保存和读取需求设计、执行计划、执行报告、Review 报告等交接资料；需求详情嵌入读取可使用 `req:demand:query` | `reqflow-ui/src/views/requirement/package/index.vue` | `reqflow-ui/src/api/requirement/package.js` | `/requirement/package/**`，读取为 `req:package:list` 或 `req:demand:query`，保存为 `req:package:save` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
+| 需求管理 | 需求执行包 | 保存和读取需求可行性评估、需求设计、执行计划、执行报告、Review 报告等交接资料；需求详情嵌入读取可使用 `req:demand:query` | `reqflow-ui/src/views/requirement/package/index.vue`、`detail.vue` | `reqflow-ui/src/api/requirement/package.js` | `/requirement/package/**`，读取为 `req:package:list` 或 `req:demand:query`，保存为 `req:package:save` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
 | 需求管理 | MCP 管理 | 管理人员 MCP Key，创建或重置后返回一次性 Key、Codex 多平台安装命令和高级安装包 | `reqflow-ui/src/views/requirement/mcpKey/index.vue` | `reqflow-ui/src/api/requirement/mcpKey.js` | `/requirement/mcp/key/**`，`/requirement/codex/install.*`，`req:mcp:key:*`；`/requirement/mcp` | `ReqMcpKeyController`、`ReqCodexInstallController`、`ReqMcpController`、`ReqMcpUserKeyServiceImpl`、`McpService` |
 | 需求管理 | 使用统计 | 需求、项目、用户和状态统计 | `reqflow-ui/src/views/requirement/statistics/index.vue` | `reqflow-ui/src/api/requirement/statistics.js` | `/requirement/statistics/**`，`req:stats:view` | `ReqStatisticsController`、`ReqStatisticsService` |
 | 需求管理 | 隐藏兼容能力 | 仓库、项目分支、人工模块兼容 CRUD，不作为左侧菜单独立入口 | `reqflow-ui/src/api/requirement/repository.js`、`variant.js`、`module.js` | 同前述 API 文件 | `/requirement/repository/**`、`/requirement/variant/**`、`/requirement/module/**`，`req:repo:*`、`req:variant:*`、`req:module:*` | `ReqRepositoryController`、`ReqVariantController`、`ReqModuleController` 及对应 Service/Mapper |
@@ -50,17 +50,17 @@
 - 删除需求只开放给管理员按钮权限 `req:demand:remove`，会同步删除该需求的资料包版本和动作 token；需求人员和开发人员角色脚本不得分配该权限。
 - 需求主状态流转为 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，验收阶段可走 `review -> repairing -> review` 返修分支，旧 `plan_pending`、`archived` 仅作为兼容状态保留；`submitted` 表示待生成需求设计，`plan_ready` 表示需求设计待确认，`confirmed` 表示待执行开发。
 - 状态流转不仅校验 `req:demand:edit` 和状态机，还必须按角色和参与人隔离：需求创建人执行提交需求、确认需求设计、返修和验收，指定开发人员执行提交需求设计、开始开发、提交验收和返修验收，`admin` 可执行全部合法动作。
-- 指定开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令只能用于 MCP `save_requirement_package` 保存 `requirement` 需求设计，不能替代人员 `X-MCP-Key`。
-- 指定开发人员可通过需求详情获取 `requirement_develop` 动作 token 指令；该指令包含执行计划和执行报告两个一次性 actionToken，分别用于 MCP `save_development_plan` 和 `upload_execution_report`，不能替代人员 `X-MCP-Key`。
-- 项目初始化、需求编排和开发执行动作 token 生成后 24 小时内有效且仅可使用一次；`last_used_time` 非空或 `expire_time` 过期时必须拒绝，重新执行需重新生成指令。
-- 需求资料包通过 `req_package_version` 追加版本记录，返修流程依赖同一需求下需求设计、执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新；保存和 MCP 回写只允许指定开发人员或管理员。
+- 指定开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；该指令先用 `upload_requirement_assessment` 回写 `requirement_assessment` 需求可行性评估，评估结论允许继续后再用 `save_requirement_package` 保存 `requirement` 需求设计。需求设计阶段必须创建或沿用平台建议的任务分支，本地只写评估结论和 `requirement.md`，不能替代人员 `X-MCP-Key`。
+- 指定开发人员可通过需求详情获取 `requirement_develop` 动作 token 指令；该指令包含执行计划、执行报告和 Review 报告三个一次性 actionToken，分别用于 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，不能替代人员 `X-MCP-Key`。
+- 项目初始化、需求设计和开发执行动作 token 生成后 24 小时内有效且仅可使用一次；`last_used_time` 非空或 `expire_time` 过期时必须拒绝，重新执行需重新生成指令。
+- 需求资料包通过 `req_package_version` 追加版本记录，需求设计阶段保留需求可行性评估和需求设计版本，返修流程依赖同一需求下执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新；保存和 MCP 回写只允许指定开发人员或管理员。
 - 管理员角色沿用 `role_key='admin'` 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，供 MCP 回写资料。
 - 需求未选择既有模块时，可以用备注承载新功能名称；执行包模块名解析顺序为人工模块、索引模块、备注。
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。
 - 项目初始化默认复制指令只保留短动态上下文，必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，确保接入项目能触发全局 skill 并定位到指定 MCP server 的指定 tool。
 - `/requirement/mcp` 必须支持 MCP `initialize -> notifications/initialized -> tools/list` lifecycle；新增 tool 时必须同步 `tools/list` 的描述和 `inputSchema`。
 - `/requirement/mcp` 的协议级错误必须返回标准 JSON-RPC `error.code/error.message`，不能同时带 `result:null`；`tools/call` 内的业务错误必须返回 MCP tool result，并设置 `isError=true`。
-- 项目接入初始化由平台存储和下发 harness 模板，后端不直接执行 Git、shell 或写用户本地文件。
+- 项目接入初始化由平台存储和下发 harness 模板，后端不直接执行 Git、shell 或写用户本地文件；执行初始化的 agent 必须在目标仓库先拉取默认基线分支最新代码，初始化校验通过后提交并推送 harness 文件，再登记初始化结果。
 - 项目接入初始化的模块知识库必须按前端页面业务功能优先生成：初始化 agent 先扫描前端路由、菜单、页面组件和 API 封装，再用 `publish_repository_index.modules` 按菜单目录、子菜单、隐藏页签或页面业务功能发布；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务发布。不得把仓库概览、技术层目录或空数组当作模块知识库。
 - 用户可见系统名称统一为“统一需求流转平台”，但底层 RuoYi 包名、权限框架和通用基础能力保持兼容。
 
@@ -75,6 +75,8 @@
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
 - 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
+- 需求设计指令调整时，必须保持 Plan Agent 先做需求可行性评估并通过 `upload_requirement_assessment` 回写平台：结论允许继续后，才在需求设计阶段创建任务分支、落地 `requirement.md`、通过 `save_requirement_package` 回写平台版本；开发阶段只能沿用该分支生成 `plan.md` 和实现。
+- 返修指令调整时，必须保持同一任务分支和同一 spec 目录，持续追加 `execution-report.md` 与 `review-report.md`，并分别通过 `upload_execution_report`、`upload_review_report` 回写新版本。
 - 项目接入初始化索引调整时，必须防止“已发布索引但没有具体业务模块”的假阳性；`actionToken` 或 `mcpKey` 项目初始化上下文下，`modules` 至少包含一个带 `moduleCode` 和 `moduleName` 的页面业务功能或后端主能力。
 - MCP 下发的完整 harness 模板由后端 `ruoyi-requirement/src/main/resources/harness-template/` 保存并随包发布；`files.txt` 是下发清单。该目录是项目接入初始化模板的唯一维护源，workspace 根目录不再保留离线模板副本。
 - 索引表迁移不完整时，`publish_repository_index` 必须返回指向 `docs/db/sql/req_platform_req007_index_tables.sql` 的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。

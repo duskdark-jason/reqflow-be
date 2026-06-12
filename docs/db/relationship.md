@@ -17,7 +17,7 @@
 | `req_index_module` | 仓库索引模块知识 | 一行代表索引得到的一个模块或功能点 |
 | `req_impact_item` | 模块影响面条目 | 一行代表某索引批次、项目分支或真实分支下的一个页面、接口、数据表、权限或文档资源 |
 | `req_mcp_user_key` | 人员 MCP 访问 Key | 一行代表一个绑定到系统用户的 MCP Key，只保存哈希和前缀 |
-| `req_action_token` | MCP 动作 Token | 一行代表一个项目初始化、需求编排或开发执行动作上下文，只保存哈希和前缀 |
+| `req_action_token` | MCP 动作 Token | 一行代表一个项目初始化、需求设计或开发执行动作上下文，只保存哈希和前缀 |
 | `req_activity_log` | 业务事件 | 一行一次用户或 MCP 事件 |
 | `sys_role` / `sys_role_menu` | RuoYi 角色和菜单权限关系 | 一行一个角色 / 一行一个角色菜单授权 |
 
@@ -71,7 +71,7 @@
 - `req_module` 在 REQ-005 后按 `project_id + variant_id + module_code` 保持唯一；新增人工模块、需求表单模块下拉和父级模块选择都必须带 `variant_id`，否则不同分支的同名模块会互相污染。
 - `req_mcp_user_key` 与 `sys_user` 是多对一关系，一个用户可拥有多个 Key。列表页只能 join 用户表展示账号和昵称，不能因一个用户多个 Key 反向放大用户数量或权限判断。
 - `req_action_token` 与项目、项目分支和需求都是上下文定位关系，不代表人员身份。统计或审计时不能把 action token 数量当作用户数量，也不能用 action token 绕过 `X-MCP-Key` 认证和菜单权限。
-- `requirement_plan` 动作 token 可绑定 `req_action_token.demand_id`，只供 MCP `save_requirement_package` 定位需求并回写需求设计；`requirement_develop` 动作 token 可绑定同一字段，分别供 MCP `save_development_plan` 和 `upload_execution_report` 定位需求并回写执行计划和执行报告；人员权限仍由登录态或 `X-MCP-Key` 决定。
+- `requirement_plan` 动作 token 可绑定 `req_action_token.demand_id`，分别供 MCP `upload_requirement_assessment` 和 `save_requirement_package` 定位需求，先回写需求可行性评估，再回写需求设计；`requirement_develop` 动作 token 可绑定同一字段，分别供 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 定位需求并回写执行计划、执行报告和 Review 报告；人员权限仍由登录态或 `X-MCP-Key` 决定。
 - `req_action_token.expire_time` 和 `last_used_time` 是安全边界字段：动作 token 生成后 24 小时内有效且仅可消费一次，不能作为长期项目、分支或需求缓存键。
 - `req_demand.developer_user_id` 与 `sys_user` 是多对一展示关系；列表只允许左连接回显开发人员账号和昵称，不能因角色表 join 放大需求行数。开发人员候选列表可 join `sys_user_role` 和 `sys_role`，但必须使用 `distinct u.user_id`。
 - `sys_role_menu` 与菜单权限是多对多关系，角色授权脚本会重置 `requirement_user` 和 `requirement_developer` 的菜单集合；开发人员角色包含隐藏 `req:package:save` 以允许 MCP 回写资料，但不分配独立“需求执行包”菜单。
@@ -104,14 +104,14 @@
 - 新增统计时先写清输出行的数据粒度，再决定 join 顺序。
 - 对 `req_package_version` 只做追加，不做覆盖更新。
 - 对状态流转只能通过 Service 的状态机方法，不要在 Mapper 外直接更新状态。
-- 验收返修不创建新需求；状态按 `review -> repairing -> review` 循环，返修版本通过 `req_package_version` 追加需求设计、执行方案、执行报告和 Review 报告版本体现。
+- 需求设计阶段先通过 `req_package_version` 追加需求可行性评估版本，评估允许继续后再追加需求设计版本；验收返修不创建新需求，状态按 `review -> repairing -> review` 循环，返修版本通过 `req_package_version` 追加需求设计、执行方案、执行报告和 Review 报告版本体现。
 - 需求编号由服务端生成 `REQ-001` 风格序号，不包含日期；新增请求中的 `demand_no` 和 `creator_id` 只作为客户端输入噪声处理，不参与最终落库值。
 - 需求参与人锁定只使用一个指定开发人员字段，不再拆分需求对接人和实际开发人；用户需求中提到的“开发人员”均映射为 `req_demand.developer_user_id`。
 - MCP 工具只能写平台表，不能扩大到仓库文件、Git 或 shell。
 - MCP resource 可以读取 `req_project`、`req_repository`、`req_variant` 和 `req_memory_index`，但只能按项目和项目分支返回结构化上下文，不能代替执行器访问仓库文件系统。
 - 项目初始化编辑会同步删除本次维护弹窗移除的仓库和分支配置；如果未来为索引批次增加物理外键或软删除语义，必须重新评估删除策略，避免留下不可访问的历史索引。
 - `publish_repository_index` 的输入来自本地 agent 扫描结果，服务端必须再次校验路径和仓库身份，不能信任客户端；优先用 `actionToken + remoteUrl` 解析项目分支和仓库，旧 `mcpKey + remoteUrl` 只作为兼容路径。
-- `publish_repository_index` 只保存平台索引，不写接入项目本地文件；项目接入初始化必须先通过 `get_harness_template` 下发文件清单，由 agent 在目标 workspace 写入本地 harness 并运行 init 校验。
+- `publish_repository_index` 只保存平台索引，不写接入项目本地文件；项目接入初始化必须先通过 `get_harness_template` 下发文件清单，由 agent 在目标 workspace 拉取最新默认基线、写入本地 harness、运行 init 校验、提交并推送初始化文件后再登记结果。
 - `publish_repository_index` 必须校验 `req:index:import`；执行资料保存类 MCP tool 和 harness 登记 tool 继续校验 `req:package:save`。
 - 新增 MCP 管理功能时必须区分 `req_action_token`、`req_variant.mcp_key` 和 `req_mcp_user_key`：动作 token 识别目标动作和上下文，分支 mcp key 仅保留兼容，人员 MCP Key 认证人员身份，三者不能混用。
 - 调整需求人员或开发人员菜单范围时，必须同步 `req_platform_req016_role_permissions.sql`、前端菜单文档和 Controller 权限，避免“菜单不可见但详情资料不可读”或“MCP 可见但无法回写资料”的断裂。

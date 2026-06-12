@@ -10,10 +10,10 @@
 
 | 路径 | 修改说明 |
 |---|---|
-| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 新增需求覆盖客户端编号/创建人，生成 `REQ-001` 风格编号，默认 `draft`，限制非草稿和非创建人修改；生成初始化式 MCP 编排指令、执行开发指令并记录返修事件；按角色隔离状态动作并支持管理员删除清理。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java` | 新增需求覆盖客户端编号/创建人，生成 `REQ-001` 风格编号，默认 `draft`，限制非草稿和非创建人修改；生成初始化式 MCP 需求评估与设计指令、执行开发指令并记录返修事件；按角色隔离状态动作并支持管理员删除清理。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/domain/ReqDemand.java`、`ReqDemandMapper.xml` | 增加指定开发人员字段回显、开发人员候选查询和非管理员参与人列表过滤。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandStatusTransition.java` | 调整主状态流转为提需、资料生成、确认、开发、验收、办结。 |
-| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/IReqDemandService.java` | 增加需求 MCP 编排指令、执行开发指令、开发人员候选和参与人校验服务方法。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/IReqDemandService.java` | 增加需求 MCP 评估与设计指令、执行开发指令、开发人员候选和参与人校验服务方法。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/ReqDemandController.java` | 新增 `/requirement/demand/developer-options`、`/requirement/demand/{demandId}/plan-instruction`、`/requirement/demand/{demandId}/develop-instruction`、`/requirement/demand/upload` 和管理员删除接口，编辑时注入当前用户 ID，上传单文件限制 2MB。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/**` | 将需求管理 Controller 从 admin 模块迁移到需求模块；项目、分支、模块和索引模块只读上下文接口允许需求权限访问，管理类写接口仍保持原权限。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | 支持 `actionToken` 解析需求上下文，允许 MCP 回写需求说明和执行计划。 |
@@ -44,7 +44,7 @@
 
 - 注释动作：新增必要注释
 - 注释文件：`ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqDemandServiceImpl.java`
-- 处理说明：MCP 编排指令中保留一处短说明，强调 `actionToken` 只识别需求上下文，不替代人员 `X-MCP-Key` 鉴权。
+- 处理说明：MCP 需求设计指令中保留一处短说明，强调 `actionToken` 只识别需求上下文，不替代人员 `X-MCP-Key` 鉴权。
 
 ## 验证结果
 
@@ -76,15 +76,15 @@
 | AC-001 | 已完成 | 单测覆盖 `REQ-003`、`REQ-004`、`REQ-007` 风格编号，不含日期。 |
 | AC-002 | 已完成 | 单测覆盖默认 `draft`、创建人来自当前用户、客户端创建人被覆盖。 |
 | AC-003 | 已完成 | 状态机单测覆盖新主路径和兼容路径。 |
-| AC-004 | 已完成 | 单测和 `yfr` 接口冒烟覆盖 MCP 编排指令及 `actionToken` 回写，`xqr` 获取指令被拒绝。 |
+| AC-004 | 已完成 | 单测覆盖 MCP 需求评估与设计指令及 `actionToken` 回写，`xqr` 获取指令被拒绝的历史接口冒烟仍适用。 |
 | AC-005 | 已完成 | API、模块、表字典和关系文档已同步，`check-docs` 通过。 |
-| AC-006 | 已完成 | 单测断言指令包含 `reqflow-mcp`、`mcpServer`、`mcpTool`、`toolName`、`arguments.actionToken` 和非 `X-MCP-Key` 说明。 |
-| AC-007 | 已完成 | 新增执行开发指令接口，单测和 `yfr` 接口冒烟断言目标工具包含 `reqflow.save_development_plan` 与 `reqflow.upload_execution_report`。 |
+| AC-006 | 已完成 | 单测断言指令包含 `reqflow-mcp`、`mcpServer`、`mcpTool`、`toolName`、可行性评估 token、需求设计 token、`arguments.actionToken` 和非 `X-MCP-Key` 说明。 |
+| AC-007 | 已完成 | 新增执行开发指令接口，单测断言目标工具包含 `reqflow.save_development_plan`、`reqflow.upload_execution_report` 与 `reqflow.upload_review_report`；历史 `yfr` 接口冒烟覆盖执行计划和执行报告，Review 报告 token 由本次单测补充覆盖。 |
 | AC-008 | 已完成 | 单测覆盖 `review -> repairing` 记录 `demand_repairing` 事件，返修回到验收记录 `demand_repair_submitted`。 |
 | AC-009 | 已完成 | `ReqActionTokenServiceImplTest` 覆盖 24 小时 `expireTime`、过期拒绝、已使用拒绝和并发条件更新失败拒绝。 |
 | AC-010 | 已完成 | `ReqPlatformRoleSqlTest` 覆盖需求人员、开发人员和管理员角色授权脚本。 |
-| AC-011 | 已完成 | `ReqDemandServiceImplTest` 和 `McpServiceTest` 覆盖计划阶段只回写需求设计。 |
-| AC-012 | 已完成 | `ReqDemandServiceImplTest` 和 `McpServiceTest` 覆盖执行阶段计划和执行报告两个 token。 |
+| AC-011 | 已完成 | `ReqDemandServiceImplTest` 和 `McpServiceTest` 覆盖计划阶段先回写需求可行性评估，评估允许后再回写需求设计，且不允许开发计划工具。 |
+| AC-012 | 已完成 | `ReqDemandServiceImplTest` 覆盖执行阶段计划、执行报告和 Review 报告三个 token；`McpServiceTest` 覆盖 MCP 资料包工具解析。 |
 | AC-013 | 已完成 | `ReqPackageController` 权限允许 `req:demand:query` 读取当前需求资料包。 |
 | AC-014 | 已完成 | `ReqDemandServiceImplTest` 覆盖来源必填，`ReqDemandSchemaSqlTest` 覆盖字段脚本，`ReqDemandControllerUploadTest` 覆盖 2MB 上传限制，`RequirementTemplateServiceTest` 覆盖文本转义。 |
 | AC-015 | 已完成 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController` 和 `ReqIndexController` 的只读上下文接口接受需求权限；`xqr` 账号进入需求列表接口无权限不足；前端首页快捷入口按权限过滤。 |
@@ -93,7 +93,7 @@
 
 ## 计划偏差
 
-- MCP 编排指令没有修改 `ReqActionTokenServiceImpl` 的通用模板，而是在需求服务中生成面向需求说明和执行计划的专用指令文本。
+- MCP 需求评估与设计指令没有修改 `ReqActionTokenServiceImpl` 的通用模板，而是在需求服务中生成面向需求说明和执行计划的专用指令文本。
 - 同步扩展 MCP 包保存工具的 `actionToken` 解析能力，让开发人员复制指令后可以不手填 `demandId`。
 - 根据用户返修反馈，额外增加初始化式指令字段、执行开发指令、返修状态事件和 actionToken 生命周期限制。
 

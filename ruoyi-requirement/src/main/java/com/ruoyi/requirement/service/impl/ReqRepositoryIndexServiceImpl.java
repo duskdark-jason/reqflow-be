@@ -248,7 +248,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             return;
         }
-        // 初始化发布不是简单打点：必须带模块知识，后续需求编排才有可检索的页面/接口/权限归属。
+        // 初始化发布不是简单打点：必须带模块知识，后续需求设计才有可检索的页面/接口/权限归属。
         if (safeList(request.getModules()).isEmpty())
         {
             throw new ServiceException("项目初始化索引必须包含模块知识库，请先按前端页面、菜单或后端主能力分析生成 modules。");

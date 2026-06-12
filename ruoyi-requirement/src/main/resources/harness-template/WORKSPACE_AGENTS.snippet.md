@@ -21,7 +21,7 @@
 | 【后端/API/数据库/任务】 | `【backend-repo/】` | `AGENTS.md`、`docs/README.md`、`docs/process/new-requirement-flow.md` |
 | 【前端/页面/组件/交互】 | `【frontend-repo/】` | `AGENTS.md`、`docs/README.md`、`docs/process/new-requirement-flow.md` |
 | 【跨端联调/接口字段/权限联动/导出一致性】 | 相关子仓库都要读 | 各自的 `AGENTS.md`、`docs/process/agent-workflow.md` 和 `docs/ai-harness/README.md` |
-| 【需求平台 Key 编排、开发或接入初始化】 | 需求平台返回的目标子仓库 | 各自的 `AGENTS.md`、`docs/process/platform-key-workflow.md`、`docs/process/git-workflow.md` |
+| 【需求平台需求设计 Key、开发 Key 或接入初始化 Key】 | 需求平台返回的目标子仓库 | 各自的 `AGENTS.md`、`docs/process/platform-key-workflow.md`、`docs/process/git-workflow.md` |
 
 如果实际目录变化，请先根据构建文件判断子项目类型。
 
@@ -40,10 +40,10 @@
 11. 多仓 workspace 只维护 workspace 级启动提示词；不要在子仓库单独沉淀独立启动提示词。子仓库规则以各自 `AGENTS.md`、`docs/process/` 和 `docs/ai-harness/` 为准。
 12. 各类落地文档必须使用中文描述；必要英文术语、命令、接口名和工具名可以保留，但标题和说明必须给出中文语义。
 13. 需求 spec 目录必须使用 `REQ-001-中文需求标题` 形式，包含稳定需求编号和中文标题；Git 任务分支必须使用 ASCII。
-14. 用户选择方案、确认方向或同意建议，只代表进入计划阶段；不得据此自动创建分支、改代码、写执行报告或写 Review 报告；明确执行授权后，默认自动进入 Review、返修和复审循环，直到最终 Review 通过。
-15. 当前分支为 `main` 或 `master` 时，除只读分析和明确的小文档修正外，不得开始功能实现；需要执行新需求时，先按子仓库 Git 工作流创建 ASCII 任务分支。
-16. Plan、Execution、Review 是独立阶段：Plan 写完计划后停止；Execution 不自我 Review；Review 只读审查并产出 `RF-*`；返修自动回到 Execution，复审自动回到 Review，直到最终 Review 通过。
-17. 出现需求平台编排 Key、开发 Key 或项目接入初始化 Key 时，必须优先按受影响子仓库的 `docs/process/platform-key-workflow.md` 执行；当前需求平台自身建设阶段允许使用平台自身建设模式，把阶段文档写入本地 `docs/specs`。
+14. 用户选择方案、确认方向或同意建议，只代表进入需求设计阶段；不得据此自动改业务代码、写执行报告或写 Review 报告。需求平台需求设计 Key 视为授权在最新基线创建或切换任务分支，但只能先回写需求可行性评估，评估结论允许继续后再写 `requirement.md` 并回写需求设计。
+15. 当前分支为 `main` 或 `master` 时，除只读分析、项目接入初始化和明确的小文档修正外，不得开始功能实现；需要执行新需求时，必须按子仓库 Git 工作流使用 ASCII 任务分支。
+16. Plan、Execution、Review 是独立阶段：Plan 完成可行性评估和需求设计后停止；Execution 不自我 Review；Review 只读审查并产出 `RF-*`；返修自动回到 Execution，复审自动回到 Review，直到最终 Review 通过。
+17. 出现需求平台需求设计 Key、开发 Key 或项目接入初始化 Key 时，必须优先按受影响子仓库的 `docs/process/platform-key-workflow.md` 执行；当前需求平台自身建设阶段允许使用平台自身建设模式，把阶段文档写入本地 `docs/specs`。
 
 ## Harness 维护
 
@@ -57,7 +57,7 @@
 
 功能模块文档应优先和前端菜单对应，记录菜单目录、子菜单或隐藏页签、功能接口、权限标识和涉及文件。项目接入初始化时，对应子仓库必须至少生成一个非模板 `docs/ai-harness/modules/*.md`。
 
-Harness 初始化或纯文档接入后，在受影响子仓库运行：
+Harness 初始化或纯文档接入时，必须先拉取默认基线最新代码；初始化完成后，在受影响子仓库运行：
 
 ```bash
 sh scripts/check-docs.sh
@@ -71,7 +71,7 @@ scripts\check-docs.cmd
 scripts\check-harness.cmd init
 ```
 
-真实需求执行、Review、返修和最终复审通过后才运行 `sh scripts/check-harness.sh complete`。
+项目接入初始化校验通过后，必须提交并推送初始化生成或升级的文件。真实需求执行、Review、返修和最终复审通过后才运行 `sh scripts/check-harness.sh complete`。
 
 Review Agent 刚写完 `review-report.md`、尚未由 Execution Agent 返修时，运行 `sh scripts/check-harness.sh review`。
 

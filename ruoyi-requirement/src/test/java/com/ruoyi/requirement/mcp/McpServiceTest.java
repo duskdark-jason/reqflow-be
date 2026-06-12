@@ -376,6 +376,33 @@ class McpServiceTest
     }
 
     @Test
+    void requirementAssessmentToolCanResolveDemandByPlanActionToken()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        token.setTargetMethod("upload_requirement_assessment");
+        token.setDemandId(9L);
+        when(actionTokenService.resolveToken("reqflow_action_assessment")).thenReturn(token);
+        when(packageService.saveVersion(9L, "requirement_assessment", "可行性评估", "upload_requirement_assessment"))
+                .thenReturn(packageVersion("requirement_assessment", "可行性评估"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_assessment");
+        arguments.put("content", "可行性评估");
+
+        service.handle(request("tools/call", toolParams("upload_requirement_assessment", arguments)));
+
+        verify(actionTokenService).resolveToken("reqflow_action_assessment");
+        verify(packageService).saveVersion(9L, "requirement_assessment", "可行性评估", "upload_requirement_assessment");
+    }
+
+    @Test
     void requirementPlanActionTokenDoesNotAllowDevelopmentPlanTool()
     {
         IReqPackageService packageService = mock(IReqPackageService.class);

@@ -67,6 +67,7 @@ public class McpService
             if ("resources/read".equals(request.getMethod())) return McpResponse.success(request.getId(), resourcesRead(stringParam(request, "uri")));
             if ("resources/templates/list".equals(request.getMethod())) return McpResponse.success(request.getId(), resourceTemplatesList());
             if ("prompts/list".equals(request.getMethod())) return McpResponse.success(request.getId(), Collections.singletonMap("prompts", Arrays.asList(
+                    prompt("generate_requirement_assessment", "生成需求可行性评估"),
                     prompt("generate_requirement_design", "生成需求设计"),
                     prompt("generate_development_plan", "生成执行计划"),
                     prompt("generate_execution_prompt", "生成执行提示"),
@@ -370,6 +371,7 @@ public class McpService
     private Map<String, Object> toolsList()
     {
         return Collections.singletonMap("tools", Arrays.asList(
+                tool("upload_requirement_assessment", "上传需求可行性评估", packageToolSchema(false)),
                 tool("save_requirement_package", "保存需求设计", packageToolSchema(true)),
                 tool("save_development_plan", "保存执行计划", packageToolSchema(false)),
                 tool("upload_execution_report", "上传执行报告", packageToolSchema(false)),
@@ -450,7 +452,7 @@ public class McpService
         List<ReqRepository> repositories = repositories(projectId);
         List<ReqVariant> variants = variants(projectId);
         List<Map<String, Object>> repositoryInstructions = new ArrayList<>();
-        // 返回 workspace 入口和每个仓库的文件包，调用方负责在真实工作空间合并，平台不执行 shell 或 Git 操作。
+        // 返回 workspace 入口和每个仓库的文件包，调用方负责在真实工作空间合并和 Git 提交，平台不执行 shell 或 Git 操作。
         for (ReqRepository repository : repositories)
         {
             Map<String, Object> item = new HashMap<>();
@@ -487,11 +489,13 @@ public class McpService
         }
         content.append("\n## 初始化要求\n");
         content.append("1. 进入目标仓库后先校验远端和当前分支。\n");
-        content.append("2. 下发或更新仓库 AGENTS.md、docs/ai-harness、docs/process、docs/templates 和 scripts。\n");
-        content.append("3. 先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能生成模块知识库；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n");
-        content.append("4. 运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。\n");
-        content.append("5. 通过 mcp__reqflow.publish_repository_index 发布结构化索引，modules 必须是一行一个前端页面业务功能或后端主能力，pages/apis/permissions/tables/documents 通过 moduleCode 归属。\n");
-        content.append("6. 通过 mcp__reqflow.register_harness_init_result 回写初始化结果。\n");
+        content.append("2. 切换默认基线分支并拉取最新代码：git switch <default-branch> && git pull --ff-only。\n");
+        content.append("3. 下发或更新仓库 AGENTS.md、docs/ai-harness、docs/process、docs/templates 和 scripts。\n");
+        content.append("4. 先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能生成模块知识库；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n");
+        content.append("5. 运行 sh scripts/check-docs.sh 和 sh scripts/check-harness.sh init。\n");
+        content.append("6. 校验通过后提交并推送初始化生成或升级的 AGENTS.md、docs/ 和 scripts/。\n");
+        content.append("7. 通过 mcp__reqflow.publish_repository_index 发布结构化索引，modules 必须是一行一个前端页面业务功能或后端主能力，pages/apis/permissions/tables/documents 通过 moduleCode 归属。\n");
+        content.append("8. 通过 mcp__reqflow.register_harness_init_result 回写初始化模式、commit、push 结果和异常说明。\n");
         return content.toString();
     }
 
@@ -696,12 +700,14 @@ public class McpService
                 + "## 执行顺序\n\n"
                 + "1. 确认当前会话已加载 reqflow MCP server，且工具名是 `mcp__reqflow.publish_repository_index`。\n"
                 + "2. 调用 `get_harness_template` 获取 `workspaceFiles` 和 `repositoryHarnessInstructions[].files`。\n"
-                + "3. 在目标 workspace 写入或合并本地 harness 文件，不允许只调用发布索引工具。\n"
-                + "4. 在每个子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
-                + "5. 发布索引前，先扫描前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或前端页面业务功能生成 `modules`；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n"
-                + "6. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
-                + "7. 调用 `register_harness_init_result` 回写 harness 初始化状态和 commit。\n"
-                + "8. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
+                + "3. 在目标 workspace 校验远端后，切换默认基线分支并执行 `git pull --ff-only`。\n"
+                + "4. 写入或合并本地 harness 文件，不允许只调用发布索引工具。\n"
+                + "5. 在每个子仓库运行 `sh scripts/check-docs.sh` 和 `sh scripts/check-harness.sh init`。\n"
+                + "6. 校验通过后提交并推送初始化生成或升级的 `AGENTS.md`、`docs/` 和 `scripts/`。\n"
+                + "7. 发布索引前，先扫描前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或前端页面业务功能生成 `modules`；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务生成模块。\n"
+                + "8. 调用 `publish_repository_index`，`modules` 不能为空，且必须是一行一个前端页面业务功能或后端主能力；`pages/apis/tables/permissions/documents` 通过 `moduleCode` 归属。`actionToken` 必须作为 `arguments.actionToken`，不能作为 `X-MCP-Key`。\n"
+                + "9. 调用 `register_harness_init_result` 回写 harness 初始化状态、commit、push 结果和失败原因。\n"
+                + "10. 多仓 workspace 必须分别处理 BACKEND 和 FRONTEND 仓库，不能用一个仓库的索引代替另一个仓库。\n";
     }
 
     private String escapeJson(String value)
@@ -798,6 +804,7 @@ public class McpService
     private String artifactTypeForTool(String toolName, String requested)
     {
         if ("save_requirement_package".equals(toolName)) return requested == null || requested.isEmpty() ? "requirement" : requested;
+        if ("upload_requirement_assessment".equals(toolName)) return "requirement_assessment";
         if ("save_development_plan".equals(toolName)) return "plan";
         if ("upload_execution_report".equals(toolName)) return "execution_report";
         if ("upload_review_report".equals(toolName)) return "review_report";
@@ -819,7 +826,11 @@ public class McpService
         ReqActionToken token = actionTokenService.resolveToken(actionToken);
         if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
         {
-            if (!"save_requirement_package".equals(toolName))
+            if (!"upload_requirement_assessment".equals(toolName) && !"save_requirement_package".equals(toolName))
+            {
+                throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
+            }
+            if (!toolName.equals(token.getTargetMethod()))
             {
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
@@ -990,7 +1001,9 @@ public class McpService
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("repoId", property("integer", "仓库 ID"));
         properties.put("harnessStatus", property("string", "初始化状态"));
-        properties.put("harnessCommit", property("string", "初始化结果 commit"));
+        properties.put("harnessCommit", property("string", "初始化结果 commit，校验通过后应为已提交并推送的 commit"));
+        properties.put("pushStatus", property("string", "初始化提交推送结果；服务端当前作为扩展字段接收，调用方必须在失败时写明原因"));
+        properties.put("failureReason", property("string", "初始化、提交或推送失败原因"));
         return objectSchema(properties, Arrays.asList("repoId", "harnessStatus"));
     }
 

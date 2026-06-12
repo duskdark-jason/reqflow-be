@@ -463,16 +463,32 @@ class ReqDemandServiceImplTest
         ReqDemand demand = demand(10L, 31L);
         demand.setDemandId(5L);
         demand.setDemandNo("REQ-005");
+        demand.setTitle("Demand");
         demand.setStatus("submitted");
         when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(demand);
         mockLoginUser(8L, "requirement_developer");
 
-        ReqActionInstruction created = new ReqActionInstruction();
-        created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
-        created.setTargetMethod("save_requirement_package");
-        created.setToken("reqflow_action_demo");
-        created.setPrompt("请根据基础需求生成详细需求设计。");
-        created.setContent("base instruction");
+        ReqActionInstruction assessmentInstruction = new ReqActionInstruction();
+        assessmentInstruction.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        assessmentInstruction.setTargetMethod("upload_requirement_assessment");
+        assessmentInstruction.setToken("reqflow_action_assessment_token");
+        assessmentInstruction.setPrompt("请先生成可行性评估。");
+        assessmentInstruction.setContent("base instruction");
+        when(actionTokenService.createInstruction(
+                eq(IReqActionTokenService.ACTION_REQUIREMENT_PLAN),
+                eq(10L),
+                eq(31L),
+                eq(5L),
+                eq("upload_requirement_assessment"),
+                any(),
+                eq("生成需求评估与设计"),
+                eq("approver"))).thenReturn(assessmentInstruction);
+        ReqActionInstruction designInstruction = new ReqActionInstruction();
+        designInstruction.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        designInstruction.setTargetMethod("save_requirement_package");
+        designInstruction.setToken("reqflow_action_design_token");
+        designInstruction.setPrompt("请根据基础需求生成详细需求设计。");
+        designInstruction.setContent("design instruction");
         when(actionTokenService.createInstruction(
                 eq(IReqActionTokenService.ACTION_REQUIREMENT_PLAN),
                 eq(10L),
@@ -480,8 +496,8 @@ class ReqDemandServiceImplTest
                 eq(5L),
                 eq("save_requirement_package"),
                 any(),
-                eq("生成详细需求设计"),
-                eq("approver"))).thenReturn(created);
+                eq("复制需求设计回写指令"),
+                eq("approver"))).thenReturn(designInstruction);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
@@ -490,17 +506,30 @@ class ReqDemandServiceImplTest
         ReqActionInstruction instruction = service.createRequirementPlanInstruction(5L, "approver");
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
+        assertEquals("upload_requirement_assessment", instruction.getTargetMethod());
+        assertTrue(instruction.getContent().contains("upload_requirement_assessment"));
         assertTrue(instruction.getContent().contains("save_requirement_package"));
         assertFalse(instruction.getContent().contains("save_development_plan"));
         assertFalse(instruction.getContent().contains("执行计划"));
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
+        assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_requirement_assessment"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_requirement_package"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
         assertTrue(instruction.getContent().contains("不是 X-MCP-Key"));
         assertTrue(instruction.getContent().contains("24小时内有效"));
         assertTrue(instruction.getContent().contains("仅可使用一次"));
         assertTrue(instruction.getContent().contains("重新生成"));
-        assertTrue(instruction.getContent().contains("根据基础需求生成详细需求设计"));
+        assertTrue(instruction.getContent().contains("需求设计阶段"));
+        assertTrue(instruction.getContent().contains("可行性评估 actionToken: reqflow_action_assessment_token"));
+        assertTrue(instruction.getContent().contains("需求设计 actionToken: reqflow_action_design_token"));
+        assertTrue(instruction.getContent().contains("评估结论"));
+        assertTrue(instruction.getContent().contains("需澄清"));
+        assertTrue(instruction.getContent().contains("暂不可实现"));
+        assertTrue(instruction.getContent().contains("停止生成 requirement.md"));
+        assertTrue(instruction.getContent().contains("建议任务分支: feature/req-5-demand"));
+        assertTrue(instruction.getContent().contains("git pull --ff-only"));
+        assertTrue(instruction.getContent().contains("不生成 plan.md"));
+        assertTrue(instruction.getContent().contains("最终版 requirement.md 保留在本地任务分支"));
         assertTrue(instruction.getContent().contains("业务背景"));
         assertTrue(instruction.getContent().contains("附件"));
         assertTrue(instruction.getContent().contains("demandId: 5"));
@@ -515,6 +544,7 @@ class ReqDemandServiceImplTest
         ReqDemand demand = demand(10L, 31L);
         demand.setDemandId(6L);
         demand.setDemandNo("REQ-006");
+        demand.setTitle("Demand");
         demand.setStatus("confirmed");
         when(reqDemandMapper.selectReqDemandByDemandId(6L)).thenReturn(demand);
         mockLoginUser(8L, "requirement_developer");
@@ -549,6 +579,21 @@ class ReqDemandServiceImplTest
                 any(),
                 eq("复制执行报告指令"),
                 eq("developer"))).thenReturn(reportInstruction);
+        ReqActionInstruction reviewInstruction = new ReqActionInstruction();
+        reviewInstruction.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        reviewInstruction.setTargetMethod("upload_review_report");
+        reviewInstruction.setToken("reqflow_action_review_token");
+        reviewInstruction.setPrompt("请回写 Review 报告。");
+        reviewInstruction.setContent("review instruction");
+        when(actionTokenService.createInstruction(
+                eq(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP),
+                eq(10L),
+                eq(31L),
+                eq(6L),
+                eq("upload_review_report"),
+                any(),
+                eq("复制Review报告指令"),
+                eq("developer"))).thenReturn(reviewInstruction);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
@@ -560,14 +605,20 @@ class ReqDemandServiceImplTest
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_development_plan"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_execution_report"));
+        assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_review_report"));
+        assertTrue(instruction.getContent().contains("任务分支: feature/req-6-demand"));
         assertTrue(instruction.getContent().contains("执行计划 actionToken: reqflow_action_plan_token"));
         assertTrue(instruction.getContent().contains("执行报告 actionToken: reqflow_action_report_token"));
+        assertTrue(instruction.getContent().contains("Review报告 actionToken: reqflow_action_review_token"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
         assertTrue(instruction.getContent().contains("24小时内有效"));
         assertTrue(instruction.getContent().contains("仅可使用一次"));
         assertTrue(instruction.getContent().contains("重新生成"));
+        assertTrue(instruction.getContent().contains("不得重新生成不同任务分支"));
+        assertTrue(instruction.getContent().contains("继续在同一任务分支补充 execution-report.md 和 review-report.md"));
         assertTrue(instruction.getContent().contains("执行计划"));
         assertTrue(instruction.getContent().contains("执行报告"));
+        assertTrue(instruction.getContent().contains("Review 报告"));
         assertTrue(instruction.getContent().contains("demandId: 6"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-006"));
     }

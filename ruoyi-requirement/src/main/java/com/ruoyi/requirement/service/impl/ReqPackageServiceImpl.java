@@ -34,6 +34,7 @@ public class ReqPackageServiceImpl implements IReqPackageService
 {
     private static final Set<String> SUPPORTED_ARTIFACT_TYPES = Set.of(
             "requirement_draft",
+            "requirement_assessment",
             "requirement",
             "plan",
             "context_manifest",
@@ -210,7 +211,8 @@ public class ReqPackageServiceImpl implements IReqPackageService
     {
         ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
         String eventType = "mcp_write";
-        if ("plan".equals(artifactType)) eventType = "plan_saved";
+        if ("requirement_assessment".equals(artifactType)) eventType = "requirement_assessment_uploaded";
+        else if ("plan".equals(artifactType)) eventType = "plan_saved";
         else if ("execution_report".equals(artifactType)) eventType = "execution_report_uploaded";
         else if ("review_report".equals(artifactType)) eventType = "review_report_uploaded";
         activityLogService.record(currentUserId(), demand == null ? null : demand.getProjectId(), demandId, eventType,
