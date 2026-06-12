@@ -2,6 +2,8 @@
 
 本规范区分需求平台对外使用时的需求设计、开发执行和项目接入初始化流程，以及当前需求平台自身建设时的本地流程。所有模式都必须先确认影响仓库、远端地址、基线分支、任务分支和当前工作区状态，再决定是否允许写入本地仓库。
 
+未提供需求平台 Key、未接入 MCP 或当前 Codex 会话没有可用 MCP 工具时，不进入本文件的模式一到三，改按 `local-harness-workflow.md` 执行。本地 Harness 模式的 spec、Review、返修和完成门禁与 MCP 模式一致，但不得伪造平台读取或回写结果。
+
 ## 模式一：需求平台需求设计模式
 
 适用场景：编排人员或指定开发人员拿到需求设计 Key，在 Codex 中通过需求平台 MCP 获取需求初稿、关联项目、目标远端仓库、目标基线分支、建议任务分支、影响模块、历史需求设计版本和需求人补充调整指令，并推演详细需求设计。
@@ -53,7 +55,9 @@
 - 单仓项目只下发子仓库 `AGENTS.md`、`docs/` 和 `scripts/`；多仓 workspace 必须同时下发 workspace 根目录 `AGENTS.md` 和每个子仓库的 harness。
 - workspace 根目录 `AGENTS.md` 只写项目分流、通用授权语义和子仓库入口，不沉淀具体业务规则。
 - 子仓库 harness 必须写入 `docs/process/platform-key-workflow.md`，确保后续编排 Key 和开发 Key 都按平台驱动流程执行。
-- 子仓库初始化不能只保留 `docs/ai-harness/modules/.gitkeep`；必须至少生成一个 `docs/ai-harness/modules/*.md` 非模板模块文档。初始化阶段必须先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能建立具体业务知识库；纯后端项目按它服务的 companion 前端菜单、MCP 能力或后台任务写清对应关系，不得只生成仓库概览。
+- 子仓库 harness 必须写入 `docs/process/local-harness-workflow.md`，确保未接入 MCP 或无 Key 时也有和 MCP 模式一致的本地阶段闭环。
+- 子仓库 harness 必须写入 `docs/ai-harness/search-map.md`，并在 `harness-index.json` 的 `entrypoints.searchMap` 中登记，确保初次接触模型能按关键词定位模块、契约、决策和流程。
+- 子仓库初始化不能只保留 `docs/ai-harness/modules/.gitkeep`；必须至少生成一个 `docs/ai-harness/modules/*.md` 非模板模块文档。初始化阶段必须先分析前端路由、菜单、页面组件和 API 封装，按菜单目录、子菜单、隐藏页签或页面业务功能建立具体业务知识库；纯后端项目按它服务的 companion 前端菜单、MCP 能力或后台任务写清对应关系，不得只生成仓库概览。初始化生成或升级模块文档后，必须同步更新 `docs/ai-harness/search-map.md` 的关键词、入口文档和代码入口。
 - 如果需求平台登记或项目扫描表明子仓库承担数据库、SQL、Mapper 或统计口径职责，初始化时必须生成 `docs/db/README.md`、`docs/db/table-dictionary.md` 和 `docs/db/relationship.md`。纯前端或无数据库职责项目可以不创建 `docs/db/`。如果仓库没有 DDL、迁移脚本、schema 导出或可信数据库字典，只能生成“暂无确认表结构来源/暂无确认关系来源”的待补齐骨架，记录已扫描路径和后续补齐方式，不得虚构表、字段或关系。
 - 已初始化项目禁止整包覆盖。必须保留项目自有的 `docs/ai-harness/modules/**`、`docs/ai-harness/contracts/**`、`docs/ai-harness/decisions/**`、`docs/domains/**`、`docs/db/**`、`docs/specs/**` 和 `docs/runbooks/local-run.md`；除非用户明确授权，不得删除、重命名或改写这些文件。
 - 已存在 `AGENTS.md` 时只能合并 snippet，不得覆盖全文；如果自动合并有冲突，停止并列出冲突段和建议人工处理方式。
@@ -68,12 +72,14 @@
 
 - 可以不通过需求平台 MCP 回写设计文档。
 - 可以按阶段把需求、计划、执行报告和 Review 报告写入本地 `docs/specs`。
+- 可以使用 `local-harness-workflow.md` 完成本地文件闭环。
 - 可以按当前项目 Git 工作流进行本地文档与代码变更；涉及 commit、push、merge 仍按 `git-workflow.md` 和用户授权执行。
 
 限制：
 
 - 不能把平台自身建设模式推广到其他业务项目。
 - 如果任务已经给出需求平台 Key，优先按需求设计模式、开发模式或项目接入初始化模式执行，不能退回本地自由流程。
+- 不得把本地文件闭环写成 MCP 回写成功；没有真实工具调用证据时，只能记录“未接入 MCP，本地文件闭环”。
 - 当前项目自身建设完成后，应把长期有效规则沉淀到 `docs/ai-harness`、`docs/process` 或模板中。
 
 ## 自举接入规则

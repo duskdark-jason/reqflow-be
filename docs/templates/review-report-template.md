@@ -5,6 +5,8 @@
 - 结论：【通过/有条件通过/阻断】
 - Review Agent：【名称或工具】
 - Review 时间：【日期】
+- 流程模式：【MCP 接入模式/本地 Harness 模式】
+- MCP 回写：【真实回写结果；未接入时写“未接入 MCP，本地文件闭环”】
 
 完成态要求最终 Review 结论为 `通过`。`有条件通过` 或 `阻断` 只能作为中间交接结论，必须填写 `RF-*` 并自动回到 Execution Agent 返修。
 
@@ -13,6 +15,7 @@
 - `requirement.md`
 - `plan.md`
 - `execution-report.md`
+- `docs/ai-harness/search-map.md`
 - 代码 diff
 - 验证输出
 

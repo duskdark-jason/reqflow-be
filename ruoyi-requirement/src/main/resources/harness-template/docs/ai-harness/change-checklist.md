@@ -34,6 +34,9 @@
 ## 需求平台流程
 
 - [ ] 如果任务来自需求平台 Key，已按 `docs/process/platform-key-workflow.md` 判断需求设计模式、开发模式、项目接入初始化模式或平台自身建设模式。
+- [ ] 如果没有需求平台 Key、未接入 MCP 或 MCP 不可用，已按 `docs/process/local-harness-workflow.md` 使用本地 Harness 模式。
+- [ ] 本地 Harness 模式下未把本地文件写入伪造成 MCP 回写成功。
+- [ ] 本地或平台需求设计阶段仍停留在 `planning`，需求确认前未生成 `plan.md`、`execution-report.md` 或 `review-report.md`。
 - [ ] 项目接入初始化时，已校验目标 workspace Git 远端与需求平台登记一致，先拉取默认基线最新代码，并同步下发 workspace `AGENTS.md` 和子仓库 harness。
 - [ ] 项目接入初始化校验通过后，已提交并推送初始化生成或升级的文件，并把 commit、push 结果回写需求平台。
 - [ ] 项目接入初始化时，已生成至少一个 `docs/ai-harness/modules/*.md` 非模板模块文档，并按菜单目录、子菜单、接口、权限和涉及文件建立初始索引。
@@ -43,11 +46,13 @@
 
 ## 模块知识库
 
+- [ ] 已读取 `docs/ai-harness/search-map.md` 并按关键词定位相关模块、契约、决策或数据库文档。
 - [ ] `meta.md` 已记录影响模块。
 - [ ] `meta.md` 已记录模块知识库动作：新增、更新或无需更新。
 - [ ] 如果模块知识库动作是新增或更新，已同步 `docs/ai-harness/modules/*.md`。
 - [ ] 模块文档已对齐前端菜单目录、子菜单或隐藏页签，并记录对应功能接口、权限标识和涉及文件。
 - [ ] 如果模块知识库动作是无需更新，已在 `meta.md` 或执行报告写明原因。
+- [ ] 新增、拆分、重命名模块、契约、决策、菜单、接口、权限、数据库口径或核心流程时，已同步 `docs/ai-harness/search-map.md`。
 
 ## 验证
 

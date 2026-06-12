@@ -80,10 +80,12 @@ write_harness_index() {
     '    "workspace": "",' \
     '    "companionRepositories": []' \
     '  },' \
-  '  "entrypoints": {' \
-  '    "workflow": "docs/process/agent-workflow.md",' \
-  '    "platformKeyWorkflow": "docs/process/platform-key-workflow.md",' \
-  '    "verification": "docs/ai-harness/verification.md",' \
+    '  "entrypoints": {' \
+    '    "workflow": "docs/process/agent-workflow.md",' \
+    '    "platformKeyWorkflow": "docs/process/platform-key-workflow.md",' \
+    '    "localHarnessWorkflow": "docs/process/local-harness-workflow.md",' \
+    '    "searchMap": "docs/ai-harness/search-map.md",' \
+    '    "verification": "docs/ai-harness/verification.md",' \
     "    \"localRun\": \"$local_run\"," \
     '    "localRunTemplate": "docs/runbooks/local-run-template.md",' \
     '    "localRunDetected": "docs/runbooks/local-run.detected.md",' \
@@ -121,6 +123,18 @@ write_module_doc() {
     '| 后端入口 | `DemoController` | 演示接口 |' > "$file"
 }
 
+write_search_map() {
+  file=$1
+  printf '%s\n' \
+    '# Harness 功能导航' \
+    '' \
+    '## 关键词索引' \
+    '' \
+    '| 关键词 | 功能/场景 | 入口文档 | 代码入口 |' \
+    '|---|---|---|---|' \
+    '| 演示 | 演示功能 | `docs/ai-harness/modules/demo.md` | `src/views/demo/index.vue` |' > "$file"
+}
+
 append_code_comment_record() {
   file=$1
   printf '%s\n' \
@@ -140,8 +154,10 @@ make_root() {
   write_harness_index "$root/docs/ai-harness/harness-index.json" confirmed
   printf '%s\n' '# workflow' > "$root/docs/process/agent-workflow.md"
   printf '%s\n' '# platform key workflow' > "$root/docs/process/platform-key-workflow.md"
+  printf '%s\n' '# local harness workflow' > "$root/docs/process/local-harness-workflow.md"
   printf '%s\n' '# local run' > "$root/docs/runbooks/local-run.md"
   write_module_doc "$root/docs/ai-harness/modules/demo.md"
+  write_search_map "$root/docs/ai-harness/search-map.md"
   printf '%s\n' '# meta' '' '- 状态：executing' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/REQ-001-演示需求/meta.md"
   printf '%s\n' '# requirement' '' '- AC-001: demo' > "$root/docs/specs/active/REQ-001-演示需求/requirement.md"
   printf '%s\n' '# plan' '' '- AC-001: L0 L1 L2 L3' > "$root/docs/specs/active/REQ-001-演示需求/plan.md"
@@ -155,8 +171,10 @@ make_init_root() {
   write_harness_index "$root/docs/ai-harness/harness-index.json"
   printf '%s\n' '# workflow' > "$root/docs/process/agent-workflow.md"
   printf '%s\n' '# platform key workflow' > "$root/docs/process/platform-key-workflow.md"
+  printf '%s\n' '# local harness workflow' > "$root/docs/process/local-harness-workflow.md"
   printf '%s\n' '# detected local run' > "$root/docs/runbooks/local-run.detected.md"
   write_module_doc "$root/docs/ai-harness/modules/demo.md"
+  write_search_map "$root/docs/ai-harness/search-map.md"
   printf '%s\n' '# requirement' '' '- AC-999: intentionally incomplete during init' > "$root/docs/specs/active/REQ-001-演示需求/requirement.md"
 }
 
@@ -198,6 +216,24 @@ rm "$root/docs/ai-harness/modules/demo.md"
 expect_fail "$root" init "missing module knowledge doc" "模块知识库文档"
 
 make_init_root "$root"
+rm "$root/docs/ai-harness/search-map.md"
+expect_fail "$root" init "missing search map" "search-map.md"
+
+make_init_root "$root"
+grep -v '"searchMap"' "$root/docs/ai-harness/harness-index.json" > "$root/docs/ai-harness/harness-index.tmp"
+mv "$root/docs/ai-harness/harness-index.tmp" "$root/docs/ai-harness/harness-index.json"
+expect_fail "$root" init "harness index without search map" "searchMap"
+
+make_init_root "$root"
+grep -v '"localHarnessWorkflow"' "$root/docs/ai-harness/harness-index.json" > "$root/docs/ai-harness/harness-index.tmp"
+mv "$root/docs/ai-harness/harness-index.tmp" "$root/docs/ai-harness/harness-index.json"
+expect_fail "$root" init "harness index without local harness workflow" "localHarnessWorkflow"
+
+make_init_root "$root"
+printf '%s\n' '# 演示模块 Harness' '' '初始化待补齐' > "$root/docs/ai-harness/modules/demo.md"
+expect_fail "$root" init "module doc still has generated placeholder" "初始化待补齐"
+
+make_init_root "$root"
 mkdir -p "$root/docs/db"
 printf '%s\n' '# relationship' > "$root/docs/db/relationship.md"
 expect_fail "$root" init "db directory without readme" "docs/db/README.md"
@@ -230,6 +266,14 @@ expect_fail "$root" complete "status role mismatch" "状态和当前角色不匹
 make_root "$root"
 printf '%s\n' '# requirement' '' '- AC-001: demo' '- AC-002: another demo' > "$root/docs/specs/active/REQ-001-演示需求/requirement.md"
 expect_fail "$root" complete "plan misses acceptance id" "AC-002"
+
+make_root "$root"
+printf '%s\n' '# meta' '' '- 状态：planning' '- 当前角色：Plan Agent' '- 执行模式：不适用' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：未授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/REQ-001-演示需求/meta.md"
+expect_fail "$root" complete "planning state with execution plan" "需求设计确认点"
+
+make_root "$root"
+printf '%s\n' '# meta' '' '- 状态：planning' '- 当前角色：Plan Agent' '- 执行模式：不适用' '- 流程模式：需求平台需求设计模式' '- 需求 Key：REQFLOW-001' '- 平台关联远端：git@example.com/demo.git' '- 平台目标分支：feature/demo' '- 执行授权：未授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/REQ-001-演示需求/meta.md"
+expect_fail "$root" complete "requirement design mode with execution plan" "需求平台需求设计确认前"
 
 make_root "$root"
 printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' > "$root/docs/specs/active/REQ-001-演示需求/review-report.md"
@@ -302,6 +346,13 @@ make_root "$root"
 printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' > "$root/docs/specs/active/REQ-001-演示需求/execution-report.md"
 printf '%s\n' '# meta' '' '- 状态：planning' '- 当前角色：Plan Agent' '- 执行模式：不适用' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：未授权' '- Review 授权：未授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/REQ-001-演示需求/meta.md"
 expect_fail "$root" complete "planning state with execution report" "planning"
+
+make_root "$root"
+printf '%s\n' '# execution' '' '## 执行结论' '' '- commit：abc1234' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '' '## 验证结果' '' '- AC-001 命令：sh test.sh' '' 'MCP 回写：已成功上传需求平台。' > "$root/docs/specs/active/REQ-001-演示需求/execution-report.md"
+append_code_comment_record "$root/docs/specs/active/REQ-001-演示需求/execution-report.md"
+printf '%s\n' '# review' '' '## Review 结论' '' '- 结论：通过' '' '- AC-001：通过' > "$root/docs/specs/active/REQ-001-演示需求/review-report.md"
+printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agent' '- 执行模式：任务分支模式' '- 流程模式：平台自身建设模式' '- 需求 Key：无，本地平台建设' '- 平台关联远端：未配置' '- 平台目标分支：feature/demo' '- 执行授权：已授权' '- Review 授权：已授权' '- 当前分支：feature/demo' '- companion 仓库：无' '- 影响模块：需求管理/演示模块' '- 模块知识库动作：更新' '- 模块知识库文档：docs/ai-harness/modules/demo.md' '- 无需更新原因：不适用' > "$root/docs/specs/active/REQ-001-演示需求/meta.md"
+expect_fail "$root" complete "local harness mode claims mcp upload" "伪造 MCP 回写"
 
 make_root "$root"
 mkdir -p "$root/docs/specs/active/broken"

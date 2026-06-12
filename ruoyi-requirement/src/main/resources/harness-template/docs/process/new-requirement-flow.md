@@ -2,7 +2,7 @@
 
 本流程用于新功能、Bug 修复、接口变更、数据库变更、页面变更、权限变更和跨端联调。
 
-如果任务包含需求平台需求设计 Key、开发 Key、项目接入初始化 Key、MCP 拉取或 MCP 回写，先按 `platform-key-workflow.md` 判断属于需求设计模式、开发模式、项目接入初始化模式还是平台自身建设模式，再进入本流程。
+如果任务包含需求平台需求设计 Key、开发 Key、项目接入初始化 Key、MCP 拉取或 MCP 回写，先按 `platform-key-workflow.md` 判断属于需求设计模式、开发模式、项目接入初始化模式还是平台自身建设模式，再进入本流程。没有需求平台 Key、未接入 MCP 或 MCP 不可用时，先按 `local-harness-workflow.md` 进入本地 Harness 模式；本地模式和 MCP 模式使用同一套 spec、Review、返修和完成门禁，只是不执行平台读写。
 
 ## 1. 需求进入
 
@@ -18,13 +18,15 @@
 
 ### 授权语义
 
-- 用户描述问题、选择方案、确认方向或同意建议，只代表允许进入需求说明和计划阶段。
-- Plan Agent 可以据此完善 `requirement.md`；需求平台模式下不得生成 `plan.md`，执行计划由 Execution Agent 在执行阶段基于最终需求设计生成。
+- 用户描述问题、选择方案、确认方向或同意建议，只代表允许进入需求设计阶段。
+- Plan Agent 可以据此完善 `requirement.md`；需求平台模式和本地 Harness 模式都不得在需求设计确认前生成 `plan.md`，执行计划由 Execution Agent 在执行阶段基于最终确认的需求设计生成。
 - 开始实现必须有明确执行授权，例如“开始执行”“按计划实现”“允许改代码”或“创建任务分支执行”。
 - 明确执行授权默认包含执行完成后的自动 Review、自动返修和复审循环；用户明确要求只执行不 Review 时除外。
 - Execution Agent 不得把自己的实现直接写成 Review 完成；自动 Review 必须切换到 Review Agent 或等价的独立审查角色。
 - 新需求执行不使用 worktree；需求平台模式下任务分支在需求设计阶段从目标基线分支创建，开发阶段只沿用该任务分支。当前分支为 `main` 或 `master` 时，除只读分析、项目接入初始化和明确的小文档修正外，不得开始功能实现。
 - 当前需求平台自身建设阶段，可以不通过 MCP 回写设计文档，但必须在本地 `docs/specs` 按阶段记录；后期平台自举接入后，默认改走需求平台 Key 流程。
+- 本地 Harness 模式不得把本地文件写入伪造成 MCP 回写成功；执行报告和 Review 报告只能记录真实执行过的回写动作。
+- 本地需求设计也允许多轮补充和调整；在明确执行授权前，`meta.md` 必须保持 `planning`，只能迭代 `requirement.md`。
 
 ## 2. 创建需求说明
 
@@ -63,7 +65,7 @@ docs/specs/active/REQ-001-中文需求标题/
 - 需求设计阶段：由 Plan Agent 创建或沿用任务分支，先输出需求可行性评估并通过 MCP `upload_requirement_assessment` 回写；评估结论允许继续后只输出 `requirement.md`，并通过 MCP `save_requirement_package` 回写需求设计版本。需求人补充调整指令时继续更新同一评估、同一文件和同一任务分支。
 - 执行阶段：由 Execution Agent 基于最终 `requirement.md` 先分析是否适合拆分为多个 subagent 并行执行，再生成或更新 `plan.md`，按 `plan.md` 实现并写 `execution-report.md`，不得自行扩大范围；完成验证后自动把 `meta.md` 切到 `review`，填写 `Review 授权：已授权`，交给 Review Agent。
 - 审查阶段：由 Review Agent 只读审查并写 `review-report.md`，结论为 `通过`、`有条件通过` 或 `阻断`。
-- 返修阶段：Review Agent 产生 `RF-*` 后自动回到 Execution Agent；Execution Agent 返修并在 `execution-report.md` 回填同 ID 的 `Review 返修记录`；Review Agent 再复审并补充 `review-report.md`。需求平台模式下每次执行和 Review 都通过 MCP 回写新版本，循环持续到最终 Review 结论为 `通过`。
+- 返修阶段：Review Agent 产生 `RF-*` 后自动回到 Execution Agent；Execution Agent 返修并在 `execution-report.md` 回填同 ID 的 `Review 返修记录`；Review Agent 再复审并补充 `review-report.md`。需求平台模式下每次执行和 Review 都通过 MCP 回写新版本，本地 Harness 模式不执行 MCP 回写但仍按同样的文件和 `RF-*` 闭环；循环持续到最终 Review 结论为 `通过`。
 - 任一阶段发现计划缺失、契约冲突或验证无法执行，必须回到计划阶段补齐文件。
 - 阶段切换必须更新 `meta.md`，并记录执行模式、执行授权和 Review 授权状态。
 
@@ -73,7 +75,8 @@ docs/specs/active/REQ-001-中文需求标题/
 
 | 影响范围 | 必读文档 |
 |---|---|
-| 任意修改 | `../ai-harness/README.md`、`../ai-harness/change-checklist.md` |
+| 任意修改 | `../ai-harness/README.md`、`../ai-harness/search-map.md`、`../ai-harness/change-checklist.md` |
+| 无 MCP 或本地闭环 | `local-harness-workflow.md` |
 | 业务领域 | `../domains/【领域名】/README.md` |
 | 接口字段 | `../ai-harness/contracts/` |
 | 页面或交互 | `../ai-harness/modules/`、`../ai-harness/contracts/` |
@@ -87,6 +90,7 @@ docs/specs/active/REQ-001-中文需求标题/
 - `ai-harness/modules/*.md`：模块业务、入口文件、不变量。
 - `ai-harness/contracts/*.md`：接口字段、结果结构、前后端约定或 UI 状态。
 - `ai-harness/decisions/*.md`：长期有效的业务或技术决策。
+- `ai-harness/search-map.md`：关键词、入口文档、代码入口和模块拆分后的导航。
 - `db/README.md`、`db/table-dictionary.md` 和 `db/relationship.md`：数据库表、字段、索引、SQL、Mapper、join、统计口径、分页粒度或数据迁移。
 - `domains/*/README.md`：业务领域当前入口。
 
@@ -94,7 +98,7 @@ docs/specs/active/REQ-001-中文需求标题/
 
 数据库变更必须优先复用 `../templates/db-change-template.md`，在当前 spec 目录落地数据库变更说明；DDL、DML、迁移、清理脚本优先沉淀到稳定 `docs/db/sql/` 路径，不能只写在对话或临时命令里。新增或修改表、字段、索引或约束时更新 `docs/db/table-dictionary.md`；仅查询口径、Mapper 或统计逻辑变更时，也要在 `execution-report.md` 说明是否更新 `docs/db/relationship.md`，以及无需 SQL 脚本的原因。若当前项目没有确认表结构来源，数据库相关需求必须先补齐证据或把字典标为推断/待确认，不能凭字段名相似直接当作确认结构开发。
 
-如果变更会影响长期理解，先更新文档再编码。若无需更新，必须在 `meta.md` 填写 `模块知识库动作：无需更新` 和无需更新原因，并在完成说明中写明原因。
+如果变更会影响长期理解，先更新文档再编码。若新增、拆分或重命名模块、契约、决策、数据库口径、接口、菜单、权限或核心流程，必须同步更新 `search-map.md`。若无需更新，必须在 `meta.md` 填写 `模块知识库动作：无需更新` 和无需更新原因，并在完成说明中写明原因。
 
 ## 6. 编码实现
 
@@ -119,6 +123,13 @@ sh scripts/check-harness.sh init
 
 项目接入初始化 Key 必须在写入前先切换默认基线分支并 `git pull --ff-only`；初始化校验通过后提交并推送初始化生成或升级的 `AGENTS.md`、`docs/` 和 `scripts/`，再把 commit、push 结果和失败原因回写需求平台。
 
+未接入 MCP 或无需求平台 Key 的本地 Harness 模式完成态运行同样的文档和 harness 门禁，但报告中不得声明已经上传需求平台：
+
+```bash
+sh scripts/check-docs.sh
+sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-001-中文需求标题
+```
+
 真实需求完成态或准备移入 `specs/done/` 前运行：
 
 ```bash
@@ -135,6 +146,7 @@ Review Agent 刚写完 `review-report.md`、尚未返修时，运行 `sh scripts
 - 需求说明是否需要从 `specs/active/` 移到 `specs/done/`。
 - 是否有长期有效结论要沉淀到 `ai-harness/` 或 `domains/`。
 - 是否有重要决策要写入 `ai-harness/decisions/`。
+- 是否新增、拆分或重命名入口，需要同步 `ai-harness/search-map.md`。
 - 是否涉及数据库、SQL、Mapper 或数据口径；如涉及，`execution-report.md` 必须记录 `docs/db/sql/` 或 `docs/db/` 路径。
 - `execution-report.md` 是否记录模块知识库动作、更新的模块文档路径和无需更新原因。
 

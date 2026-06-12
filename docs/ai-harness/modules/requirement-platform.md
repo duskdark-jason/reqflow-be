@@ -28,6 +28,8 @@
 | 数据访问 | `ruoyi-requirement/src/main/resources/mapper/requirement/` | Mapper XML 和 SQL。 |
 | 领域对象 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/domain/` | `req_*` 表对应实体。 |
 | MCP 能力 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | MCP resources、tools 和权限兜底。 |
+| Harness 导航 | `docs/ai-harness/search-map.md`、`docs/process/local-harness-workflow.md` | 初次接触模型的关键词索引，以及未接入 MCP 时的本地闭环流程。 |
+| Harness 模板源 | `ruoyi-requirement/src/main/resources/harness-template/` | 项目接入初始化下发的 AGENTS、docs、scripts 和检查脚本。 |
 
 ## 接口与数据契约
 
@@ -66,6 +68,8 @@
 - `/requirement/mcp` 必须支持 MCP `initialize -> notifications/initialized -> tools/list` lifecycle；新增 tool 时必须同步 `tools/list` 的描述和 `inputSchema`。
 - `/requirement/mcp` 的协议级错误必须返回标准 JSON-RPC `error.code/error.message`，不能同时带 `result:null`；`tools/call` 内的业务错误必须返回 MCP tool result，并设置 `isError=true`。
 - 项目接入初始化由平台存储和下发 harness 模板，后端不直接执行 Git、shell 或写用户本地文件；执行初始化的 agent 必须在目标仓库先拉取默认基线分支最新代码，初始化校验通过后提交并推送 harness 文件，再登记初始化结果。
+- 项目接入初始化下发的 harness 必须包含 `docs/ai-harness/search-map.md`、`docs/process/local-harness-workflow.md`，并在 `harness-index.json` 登记 `searchMap` 和 `localHarnessWorkflow` 入口。
+- 本地 Harness 模式和 MCP 模式必须共享需求设计确认点：`planning` 阶段只允许迭代 `meta.md` 和 `requirement.md`；`plan.md`、`execution-report.md`、`review-report.md` 必须等明确执行授权后由 Execution Agent/Review Agent 按阶段生成。
 - 项目接入初始化的模块知识库必须按前端页面业务功能优先生成：初始化 agent 先扫描前端路由、菜单、页面组件和 API 封装，再用 `publish_repository_index.modules` 按菜单目录、子菜单、隐藏页签或页面业务功能发布；纯后端仓库按 companion 前端菜单、MCP 能力或后台任务发布。不得把仓库概览、技术层目录或空数组当作模块知识库。重复发布同一仓库分支索引是快照同步，旧模块和旧影响面会失效；前后端项目给需求人员提需求时应优先选择前端页面/菜单模块。
 - 用户可见系统名称统一为“统一需求流转平台”，但底层 RuoYi 包名、权限框架和通用基础能力保持兼容。
 
@@ -80,6 +84,7 @@
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
 - 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
+- Harness 模板或脚本调整时，必须同步后端模板源、当前后端 harness、前端 harness 和 `search-map.md`；确认点门禁不能只写在文档里，必须由 `scripts/check-harness.sh` 测试覆盖。
 - 需求分析和需求生成指令调整时，必须保持阶段收敛：需求分析阶段只给 `upload_requirement_assessment` 和需求分析 actionToken；需求生成阶段只给 `save_requirement_package` 和需求生成 actionToken。结论允许继续后，才在需求生成阶段落地 `requirement.md`、通过 `save_requirement_package` 回写平台版本；开发阶段只能沿用该分支生成 `plan.md` 和实现。
 - 返修指令调整时，必须保持同一任务分支和同一 spec 目录，只给 `upload_execution_report`、`upload_review_report` 和同一个返修阶段 actionToken，持续追加 `execution-report.md` 与 `review-report.md`，不得携带执行计划或需求设计生成要求。
 - 合并归档指令调整时，必须保持“本地任务分支 squash merge 到需求基线分支、push、发布完整知识库快照、平台验证通过、删除本地开发分支”的顺序；平台未验证归档结果前不得允许需求办结。
