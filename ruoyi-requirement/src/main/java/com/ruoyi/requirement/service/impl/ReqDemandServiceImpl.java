@@ -258,7 +258,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("当前状态不能生成需求设计指令");
         }
-        String prompt = "请基于需求上下文生成需求设计，并通过 reqflow MCP 回写资料包。";
+        String prompt = "请根据基础需求生成详细需求设计，并通过 reqflow MCP 回写资料包。";
         ReqActionInstruction instruction = actionTokenService.createInstruction(
                 IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
                 demand.getProjectId(),
@@ -266,7 +266,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 demand.getDemandId(),
                 "save_requirement_package",
                 prompt,
-                "复制生成需求设计指令",
+                "生成详细需求设计",
                 operator);
         // 编排指令给审批人员复制到 Codex，动作 Token 仅定位需求上下文，不替代人员 MCP Key 鉴权。
         instruction.setContent(requirementPlanInstructionContent(prompt, instruction.getToken(), demand));
@@ -295,7 +295,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 demand.getDemandId(),
                 "save_development_plan",
                 planPrompt,
-                "复制执行任务指令",
+                "生成执行任务指令",
                 operator);
         String reportPrompt = "请根据已确认需求设计和执行计划完成开发、验证并通过 reqflow MCP 回写执行报告。";
         ReqActionInstruction reportInstruction = actionTokenService.createInstruction(
@@ -331,8 +331,8 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 + "\ndemandNo: " + demand.getDemandNo()
                 + "\nactionToken: " + actionToken
                 + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：先读取需求详情和现有资料包，迭代出完整需求设计。"
-                + "\n保存要求：调用 save_requirement_package，arguments.actionToken 填上面的 actionToken，content 填完整需求设计。"
+                + "\n要求：先读取需求详情中的基础需求、业务背景、预期结果、验收标准和附件，生成详细需求设计。"
+                + "\n保存要求：调用 save_requirement_package，arguments.actionToken 填上面的 actionToken，content 填详细需求设计。"
                 + "\n注意：actionToken 是 save_requirement_package 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
     }
 

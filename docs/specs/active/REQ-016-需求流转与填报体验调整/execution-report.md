@@ -19,10 +19,10 @@
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` | 支持 `actionToken` 解析需求上下文，允许 MCP 回写需求说明和执行计划。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/service/impl/ReqActionTokenServiceImpl.java`、`ReqActionTokenMapper.xml` | actionToken 生成后写入 24 小时过期时间，成功解析后写入 `last_used_time`，过期、已使用或并发重复消费时拒绝。 |
 | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mapper/ReqDemandMapper.java`、`ReqDemandMapper.xml` | 编号统计改为全量需求计数，不按日期生成，并读写需求来源和附件字段。 |
-| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/**`、`templates/requirement/**` | 执行包上下文增加需求来源、富文本业务背景和附件，JSON 模板对富文本引号做转义。 |
+| `ruoyi-requirement/src/main/java/com/ruoyi/requirement/template/**`、`templates/requirement/**` | 执行包上下文增加需求来源、纯文本业务背景和附件，JSON 模板对文本引号做转义。 |
 | `docs/db/sql/req_platform_req016_demand_form_fields.sql` | 新增需求来源和附件字段幂等升级脚本。 |
 | `docs/db/sql/req_platform_req017_demand_developer_lock.sql` | 新增指定开发人员字段和索引幂等升级脚本。 |
-| `ruoyi-requirement/src/test/java/**` | 覆盖编号、创建人、草稿编辑、状态主路径、MCP actionToken 回写、需求来源必填、上传 2MB 限制、模板富文本转义、角色动作隔离和管理员删除权限 SQL。 |
+| `ruoyi-requirement/src/test/java/**` | 覆盖编号、创建人、草稿编辑、状态主路径、MCP actionToken 回写、需求来源必填、上传 2MB 限制、模板文本转义、角色动作隔离和管理员删除权限 SQL。 |
 | `docs/ai-harness/modules/requirement-platform.md`、`docs/ai-harness/contracts/requirement-platform-api.md`、`docs/db/table-dictionary.md`、`docs/db/relationship.md` | 同步 API、模块、状态和编号语义。 |
 
 ## 模块知识库沉淀
@@ -86,7 +86,7 @@
 | AC-011 | 已完成 | `ReqDemandServiceImplTest` 和 `McpServiceTest` 覆盖计划阶段只回写需求设计。 |
 | AC-012 | 已完成 | `ReqDemandServiceImplTest` 和 `McpServiceTest` 覆盖执行阶段计划和执行报告两个 token。 |
 | AC-013 | 已完成 | `ReqPackageController` 权限允许 `req:demand:query` 读取当前需求资料包。 |
-| AC-014 | 已完成 | `ReqDemandServiceImplTest` 覆盖来源必填，`ReqDemandSchemaSqlTest` 覆盖字段脚本，`ReqDemandControllerUploadTest` 覆盖 2MB 上传限制，`RequirementTemplateServiceTest` 覆盖富文本转义。 |
+| AC-014 | 已完成 | `ReqDemandServiceImplTest` 覆盖来源必填，`ReqDemandSchemaSqlTest` 覆盖字段脚本，`ReqDemandControllerUploadTest` 覆盖 2MB 上传限制，`RequirementTemplateServiceTest` 覆盖文本转义。 |
 | AC-015 | 已完成 | `ReqProjectController`、`ReqVariantController`、`ReqModuleController` 和 `ReqIndexController` 的只读上下文接口接受需求权限；`xqr` 账号进入需求列表接口无权限不足；前端首页快捷入口按权限过滤。 |
 | AC-016 | 已完成 | `ReqDemandServiceImplTest` 覆盖需求人员/开发人员状态动作互斥、管理员合法流转和删除关联数据；`ReqPlatformRoleSqlTest` 覆盖角色脚本不分配删除权限。 |
 | AC-017 | 已完成 | `ReqDemandServiceImplTest` 覆盖未指定开发人员拒绝、指定开发人员可执行开发动作、非参与人拒绝读取；`xqr/yfr` 真实接口流转验证提交前后可见性、指令权限和同一开发人员进入开发中。 |

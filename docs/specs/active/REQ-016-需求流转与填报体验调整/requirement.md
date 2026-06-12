@@ -50,7 +50,7 @@
 - 创建人：`creatorId` 来自当前登录用户 ID，不使用客户端提交值。
 - 指定开发人员：`developerUserId` 必须指向启用的 `requirement_developer` 用户；该字段同时表示需求设计负责人和实际开发执行人，不再拆分两段开发人员。
 - 需求来源：`demandSource` 为新增和修改需求必填字段，历史数据默认归类为 `BUSINESS`。
-- 业务背景与附件：`businessBackground` 支持富文本 HTML 和粘贴图片；`attachments` 保存通过需求上传接口返回的文件路径，单文件不超过 2MB。
+- 业务背景与附件：`businessBackground` 保存普通文本业务背景；图片和文件通过需求上传接口返回路径后写入 `attachments`，单文件不超过 2MB。
 - 默认状态：新增为 `draft`，中文语义为“未提交”。
 - 主状态流转：`draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed`，其中 `submitted` 表示待开发人员生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待开发人员生成执行计划并开始开发。
 - 返修流转：`review -> repairing -> review`，返修完成后重新走验收确认。
@@ -77,7 +77,7 @@
 - AC-011：`plan-instruction` 指令文案和 MCP token 只允许调用 `save_requirement_package` 保存需求设计，不再包含 `save_development_plan`。
 - AC-012：`develop-instruction` 指令文案包含执行计划和执行报告两个目标工具，并分别使用一次性 actionToken 回写 `save_development_plan` 和 `upload_execution_report`。
 - AC-013：需求详情读取交接资料包不要求角色拥有独立 Agent 资料包菜单权限，具备 `req:demand:query` 即可查看当前需求资料。
-- AC-014：新增和修改需求时 `demandSource` 必填；`businessBackground` 可保存富文本图片；需求图片和附件上传接口单文件不超过 2MB；执行包上下文包含需求来源、业务背景和附件。
+- AC-014：新增和修改需求时 `demandSource` 必填；`businessBackground` 保存纯文本业务背景；图片和文件作为需求附件上传，接口单文件不超过 2MB；执行包上下文包含需求来源、业务背景和附件。
 - AC-015：需求人员账号进入需求列表不出现项目、分支、模块、索引模块四类上下文接口权限不足；首页快捷入口不得展示无权限的 MCP 管理。
 - AC-016：管理员可删除需求；需求人员和开发人员不可见删除按钮，服务端状态流转按角色隔离具体动作。
 - AC-017：新增和修改草稿需求必须指定开发人员；提交后只有创建人、指定开发人员和管理员可查看或操作该需求，开发人员不能看到他人未提交草稿。

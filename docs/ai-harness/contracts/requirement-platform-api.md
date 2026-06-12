@@ -122,14 +122,14 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | `/requirement/demand` | POST | `req:demand:add` | 新增未提交需求 |
 | `/requirement/demand` | PUT | `req:demand:edit` | 修改未提交需求正文 |
 | `/requirement/demand/{demandIds}` | DELETE | `req:demand:remove` | 管理员删除一个或多个需求，并删除关联资料包版本和动作 token |
-| `/requirement/demand/upload` | POST | `req:demand:add` 或 `req:demand:edit` | 上传需求背景图片或附件，单文件不超过 2MB |
+| `/requirement/demand/upload` | POST | `req:demand:add` 或 `req:demand:edit` | 上传需求附件，单文件不超过 2MB |
 | `/requirement/demand/{demandId}/status/{status}` | POST | `req:demand:edit` | 状态流转 |
 | `/requirement/demand/{demandId}/plan-instruction` | GET | `req:demand:query` | 获取生成需求设计并回写需求设计的 MCP 指令 |
 | `/requirement/demand/{demandId}/develop-instruction` | GET | `req:demand:query` | 获取生成执行计划、执行开发并回写执行报告的 MCP 指令 |
 
 新增需求时后端始终生成 `demandNo`，格式为 `REQ-001` 风格递增编号，不包含日期；即使请求体传入编号也会被覆盖。创建人 ID 由当前登录用户获取，即使请求体传入 `creatorId` 也会被覆盖。`demandSource` 必填，用于记录需求来源。`developerUserId` 必填，且必须指向启用的 `requirement_developer` 用户；这个指定开发人员同时负责需求设计、执行开发和返修，不再拆分对接开发人与实际开发人。新增后状态设为 `draft`，中文语义为“未提交”。
 
-`businessBackground` 可保存富文本 HTML，用于承载粘贴图片后的 `<img>` 内容；图片和 `attachments` 附件均通过 `/requirement/demand/upload` 获取上传路径。该上传接口服务端硬限制单文件最大 2MB，返回字段沿用 RuoYi 上传结构：`url`、`fileName`、`newFileName`、`originalFilename`。`attachments` 保存多个文件路径时使用英文逗号分隔。
+`businessBackground` 保存普通文本业务背景，不承载富文本 HTML 或图片内容；图片和文件通过 `/requirement/demand/upload` 获取上传路径后写入 `attachments`。该上传接口服务端硬限制单文件最大 2MB，返回字段沿用 RuoYi 上传结构：`url`、`fileName`、`newFileName`、`originalFilename`。`attachments` 保存多个文件路径时使用英文逗号分隔。
 
 新增和修改需求时，`projectId + variantId` 必须指向同一项目下已启用且初始化完成的项目分支；未初始化完成的分支不得作为需求提交目标。分支初始化完成口径为：项目存在有效代码仓库，且所有有效仓库都已有该分支真实 `baselineBranch` 的 `imported` 索引批次。新功能提需允许当前分支暂时没有既有模块知识，该校验必须在后端服务层兜底，不能只依赖前端下拉过滤。
 
@@ -159,7 +159,7 @@ completed -> archived
 
 其中 `draft -> submitted -> plan_ready -> confirmed -> developing -> review -> completed` 是新主流程；`submitted` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发；`review -> repairing -> review` 是验收返修分支；`plan_pending`、`archived` 用于兼容历史或归档场景。不允许跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
 
-`plan-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_plan`，仅指定开发人员或管理员可生成。复制内容必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: save_requirement_package`、`mcpTool: reqflow.save_requirement_package`、`demandId`、`demandNo`、`actionToken`、`arguments.actionToken` 使用说明，以及 24 小时内有效、仅可使用一次、过期或已使用后重新生成的提示。该 actionToken 只用于生成需求设计上下文定位，只允许调用 `save_requirement_package`，不能替代人员 `X-MCP-Key`。
+`plan-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_plan`，仅指定开发人员或管理员可生成。指令内容语义是“根据基础需求生成详细需求设计”，必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: save_requirement_package`、`mcpTool: reqflow.save_requirement_package`、`demandId`、`demandNo`、`actionToken`、`arguments.actionToken` 使用说明，以及 24 小时内有效、仅可使用一次、过期或已使用后重新生成的提示。该 actionToken 只用于生成需求设计上下文定位，只允许调用 `save_requirement_package`，不能替代人员 `X-MCP-Key`。
 
 `develop-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_develop`，仅指定开发人员或管理员可生成。复制内容必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`mcpTool: reqflow.save_development_plan`、`mcpTool: reqflow.upload_execution_report`、`demandId`、`demandNo`、执行计划 `actionToken`、执行报告 `actionToken`、`arguments.actionToken` 使用说明，以及 24 小时内有效、仅可使用一次、过期或已使用后重新生成的提示。两个 actionToken 分别只允许调用 `save_development_plan` 和 `upload_execution_report`，不能替代人员 `X-MCP-Key`。
 

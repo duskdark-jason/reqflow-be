@@ -59,7 +59,7 @@
 | `req_demand` | `developer_user_id` | 指定开发人员用户 ID | 新增或修改草稿需求时必须指向启用的 `requirement_developer` 用户；需求提交后普通访问、流程按钮、MCP 指令和资料包回写锁定在创建人与该开发人员之间，管理员不受该参与人限制。 |
 | `req_demand` | `project_id`、`variant_id`、`module_id` | 需求归属 | 保存前必须校验项目分支归属和仓库索引证据；新功能提需可以没有既有模块知识。 |
 | `req_demand` | `impact_page`、`impact_api`、`impact_data`、`impact_permission` | 影响面摘要 | 需求编排和开发计划使用，不能替代详细设计文档。 |
-| `req_demand` | `business_background`、`attachments` | 业务背景和需求附件 | `business_background` 可保存富文本 HTML 与图片 URL；`attachments` 保存上传附件路径，多个文件用英文逗号分隔，上传接口单文件最大 2MB。 |
+| `req_demand` | `business_background`、`attachments` | 业务背景和需求附件 | `business_background` 保存普通文本业务背景；图片和文件只通过 `attachments` 保存上传路径，多个文件用英文逗号分隔，上传接口单文件最大 2MB。 |
 | `req_package_version` | `artifact_type`、`version_no` | 产物类型和版本号 | 多版本并存，查询最新版本时不能直接 join 后分页；返修轮次通过同一需求下的多版本链表达。 |
 | `req_package_version` | `content` | 需求设计、计划或报告内容 | 内容可能较大，列表查询避免直接加载。 |
 

@@ -471,7 +471,7 @@ class ReqDemandServiceImplTest
         created.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
         created.setTargetMethod("save_requirement_package");
         created.setToken("reqflow_action_demo");
-        created.setPrompt("请基于需求上下文生成需求设计。");
+        created.setPrompt("请根据基础需求生成详细需求设计。");
         created.setContent("base instruction");
         when(actionTokenService.createInstruction(
                 eq(IReqActionTokenService.ACTION_REQUIREMENT_PLAN),
@@ -480,7 +480,7 @@ class ReqDemandServiceImplTest
                 eq(5L),
                 eq("save_requirement_package"),
                 any(),
-                eq("复制生成需求设计指令"),
+                eq("生成详细需求设计"),
                 eq("approver"))).thenReturn(created);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
@@ -500,7 +500,9 @@ class ReqDemandServiceImplTest
         assertTrue(instruction.getContent().contains("24小时内有效"));
         assertTrue(instruction.getContent().contains("仅可使用一次"));
         assertTrue(instruction.getContent().contains("重新生成"));
-        assertTrue(instruction.getContent().contains("需求设计"));
+        assertTrue(instruction.getContent().contains("根据基础需求生成详细需求设计"));
+        assertTrue(instruction.getContent().contains("业务背景"));
+        assertTrue(instruction.getContent().contains("附件"));
         assertTrue(instruction.getContent().contains("demandId: 5"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-005"));
     }
@@ -530,7 +532,7 @@ class ReqDemandServiceImplTest
                 eq(6L),
                 eq("save_development_plan"),
                 any(),
-                eq("复制执行任务指令"),
+                eq("生成执行任务指令"),
                 eq("developer"))).thenReturn(created);
         ReqActionInstruction reportInstruction = new ReqActionInstruction();
         reportInstruction.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
