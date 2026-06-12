@@ -10,13 +10,14 @@
 | `relationship.md` | 表关系、数据粒度、必要过滤、聚合风险和开发指导。 |
 | `../templates/db-change-template.md` | 单次需求的数据库变更说明模板，复制到对应 spec 目录使用。 |
 | `sql/req_platform_schema.sql` | 当前需求平台表结构基线。 |
-| `sql/req_platform_req*.sql` | 按需求编号沉淀的增量 SQL、迁移 SQL 或数据清理 SQL。 |
+| `sql/req_platform_menu.sql` | 需求管理菜单和按钮权限脚本。 |
+| `sql/req_platform_release_settings.sql` | 初始发布系统参数、角色授权和品牌清理脚本。 |
 
 `docs/db/sql/` 是当前项目统一的可执行 SQL、迁移脚本、菜单脚本和历史基线目录。`docs/db/` 同时维护可阅读、可复用的数据库知识；执行报告需要分别记录执行脚本路径和同步过的数据库文档路径。
 
 ## 维护规则
 
-- 新增或修改表、字段、索引、约束、数据迁移或清理 SQL 时，必须新增或更新 `docs/db/sql/req_platform_reqNNN_*.sql`，并在当前 spec 的执行报告记录脚本路径。
+- 新增或修改表、字段、索引或约束时，必须更新 `docs/db/sql/req_platform_schema.sql`；新增菜单、系统参数、角色授权或发布清理数据时，必须更新对应命名的可执行 SQL，并在当前 spec 的执行报告记录脚本路径。
 - SQL 脚本必须说明用途；能幂等时优先幂等，不能幂等时在变更说明里写明原因、执行前检查和回滚方案。
 - 新增或修改表、字段、索引或约束时，必须同步更新 `table-dictionary.md`。
 - 修改表关系、join、聚合、分页或统计口径时，必须同步更新 `relationship.md` 的关系、数据粒度、必要过滤或聚合风险。

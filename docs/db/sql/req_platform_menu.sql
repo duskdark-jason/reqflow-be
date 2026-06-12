@@ -88,10 +88,7 @@ INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame,
 SELECT 'MCP Key新增', @req_mcp_key_id, 2, '#', '', 1, 0, 'F', '0', '0', 'req:mcp:key:add', '#', 'admin', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_mcp_key_id AND perms = 'req:mcp:key:add');
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT 'MCP Key修改', @req_mcp_key_id, 3, '#', '', 1, 0, 'F', '0', '0', 'req:mcp:key:edit', '#', 'admin', NOW()
-WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_mcp_key_id AND perms = 'req:mcp:key:edit');
-INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)
-SELECT 'MCP Key删除', @req_mcp_key_id, 4, '#', '', 1, 0, 'F', '0', '0', 'req:mcp:key:remove', '#', 'admin', NOW()
+SELECT 'MCP Key删除', @req_mcp_key_id, 3, '#', '', 1, 0, 'F', '0', '0', 'req:mcp:key:remove', '#', 'admin', NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE parent_id = @req_mcp_key_id AND perms = 'req:mcp:key:remove');
 
 INSERT INTO sys_menu(menu_name, parent_id, order_num, path, component, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time)

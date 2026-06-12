@@ -20,7 +20,7 @@
 
 | 类型 | 优先查看文件 | 说明 |
 |---|---|---|
-| 菜单与权限 SQL | `docs/db/sql/req_platform_menu.sql`、`docs/db/sql/req_platform_req016_role_permissions.sql` | 需求管理一级菜单、子菜单、按钮权限和三类角色授权。 |
+| 菜单与权限 SQL | `docs/db/sql/req_platform_menu.sql`、`docs/db/sql/req_platform_release_settings.sql` | 需求管理一级菜单、子菜单、按钮权限、系统参数和三类角色授权。 |
 | 接口契约 | `docs/ai-harness/contracts/requirement-platform-api.md` | 后端接口、MCP resource、MCP tool、知识库和初始化契约。 |
 | 领域入口 | `docs/domains/requirement-platform/README.md` | 后端业务边界和长期维护规则。 |
 | 后端 Controller | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/` | HTTP 接口入口，随需求业务模块发布。 |
@@ -34,8 +34,9 @@
 - 相关契约文档：`docs/ai-harness/contracts/requirement-platform-api.md`。
 - 相关领域入口：`docs/domains/requirement-platform/README.md`。
 - 关键菜单脚本：`docs/db/sql/req_platform_menu.sql`。
-- 关键角色脚本：`docs/db/sql/req_platform_req016_role_permissions.sql`。
-- 关键表结构：`docs/db/sql/req_platform_schema.sql` 以及后续 `docs/db/sql/req_platform_req*.sql` 增量脚本。
+- 关键角色脚本：`docs/db/sql/req_platform_release_settings.sql`。
+- 关键表结构：`docs/db/sql/req_platform_schema.sql`。
+- 初始发布设置脚本：`docs/db/sql/req_platform_release_settings.sql`。
 
 ## 不变量
 
@@ -60,6 +61,7 @@
 - 管理员角色沿用 `role_key='admin'` 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，供 MCP 回写资料。
 - 需求未选择既有模块时，可以用备注承载新功能名称；执行包模块名解析顺序为人工模块、索引模块、备注。
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。
+- 发布默认后端 context-path 为 `/reqflow-api`，MCP 客户端入口为 `/reqflow-api/requirement/mcp`。前端访问项目名 `/reqflow/` 只用于静态资源和页面路由，不参与 MCP endpoint 拼接。
 - 项目初始化默认复制指令只保留短动态上下文，必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，确保接入项目能触发全局 skill 并定位到指定 MCP server 的指定 tool。
 - `/requirement/mcp` 必须支持 MCP `initialize -> notifications/initialized -> tools/list` lifecycle；新增 tool 时必须同步 `tools/list` 的描述和 `inputSchema`。
 - `/requirement/mcp` 的协议级错误必须返回标准 JSON-RPC `error.code/error.message`，不能同时带 `result:null`；`tools/call` 内的业务错误必须返回 MCP tool result，并设置 `isError=true`。
@@ -72,7 +74,7 @@
 - 修改项目初始化上下文时，必须同步检查前端项目管理、项目维护、分支知识库页签和需求表单的字段使用。
 - 修改索引导入、模块知识查询或影响面推荐时，必须确认项目分支、真实 Git 分支、索引批次和模块知识的粒度一致，并保持活动知识库只取最新 imported 批次。
 - MCP tools 新增、改名或 actionToken 解析调整时，必须同步人员权限校验、接口契约、流程阶段有效期语义、`tools/list` schema、前端文案和平台初始化指令。
-- MCP 管理 Key 创建或使用指令调整时，必须同步前端 MCP 管理页。页面不再提供配置查询、修改或重置入口；普通用户新增 Key 默认绑定自己且不可改绑，管理员才可指定绑定用户。创建响应返回一次性 `plainKey` 与 `codexSetupPackage`；安装指令界面必须明文展示 Key，并把明文渲染进可复制命令。历史 Key 打开指令只返回模板和 Key 元信息，不反向恢复明文。`codexSetupPackage.installCommands` 是主复制入口，提供 macOS/Linux 和 Windows PowerShell 代码块命令模板；模板使用 `${REQFLOW_MCP_KEY}` 占位，前端只在当前结果弹窗中用一次性 `plainKey` 渲染。长 JSON 安装包仅作为高级配置/调试信息保留。MCP 服务对外地址不得写在项目 yml 中，系统管理员应登录系统参数维护 `reqflow.mcp.public-host`，仅填写 `IP:端口`，后端按请求协议和上下文路径拼出 `/requirement/mcp`；为空时按请求头自动推导。
+- MCP 管理 Key 创建或使用指令调整时，必须同步前端 MCP 管理页。页面不再提供配置查询、修改或重置入口；普通用户新增 Key 默认绑定自己且不可改绑，管理员才可指定绑定用户。创建响应返回一次性 `plainKey` 与 `codexSetupPackage`；安装指令界面必须明文展示 Key，并把明文渲染进可复制命令。历史 Key 打开指令只返回模板和 Key 元信息，不反向恢复明文。`codexSetupPackage.installCommands` 是主复制入口，提供 macOS/Linux 和 Windows PowerShell 代码块命令模板；模板使用 `${REQFLOW_MCP_KEY}` 占位，前端只在当前结果弹窗中用一次性 `plainKey` 渲染。长 JSON 安装包仅作为高级配置/调试信息保留。MCP 服务对外 host 不得写在项目 yml 中，系统管理员应登录系统参数维护 `reqflow.mcp.public-host`，仅填写 `IP:端口` 或域名端口；后端按请求协议和后端 context-path 拼出 `/requirement/mcp`。发布默认 endpoint 为 `/reqflow-api/requirement/mcp`，不得使用前端静态项目名作为 MCP 前缀；为空时按请求头自动推导。
 - `/requirement/codex/install.sh` 和 `/requirement/codex/install.ps1` 是匿名可读安装脚本端点，脚本内容不得内置人员 Key，不得自动调用 reqflow MCP tools，只写入本机 Codex MCP 配置和全局 `reqflow-mcp` skill。
 - 全局 `reqflow-mcp` skill 模板的 `SKILL.md` frontmatter 必须保持合法 YAML；`name` 和 `description` 使用双引号包裹，描述中不得出现未转义的 `: `，避免 Codex 启动扫描时跳过该 skill。
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
@@ -83,7 +85,7 @@
 - 合并归档指令调整时，必须保持“本地任务分支 squash merge 到需求基线分支、push、发布完整知识库快照、平台验证通过、删除本地开发分支”的顺序；平台未验证归档结果前不得允许需求办结。
 - 项目接入初始化索引调整时，必须防止“已发布索引但没有具体业务模块”的假阳性；`actionToken` 或 `mcpKey` 项目初始化上下文下，`modules` 至少包含一个带 `moduleCode` 和 `moduleName` 的页面业务功能或后端主能力。
 - MCP 下发的完整 harness 模板由后端 `ruoyi-requirement/src/main/resources/harness-template/` 保存并随包发布；`files.txt` 是下发清单。该目录是项目接入初始化模板的唯一维护源，workspace 根目录不再保留离线模板副本。
-- 索引表迁移不完整时，`publish_repository_index` 必须返回指向 `docs/db/sql/req_platform_req007_index_tables.sql` 的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
+- 索引表初始化不完整时，`publish_repository_index` 必须返回指向 `docs/db/sql/req_platform_schema.sql` 对应建表段的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
 - 菜单权限调整时，必须同时检查 `docs/db/sql/req_platform_menu.sql`、Controller `@PreAuthorize` 和前端按钮权限。
 
 ## 验证建议

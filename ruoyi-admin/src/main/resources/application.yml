@@ -7,7 +7,7 @@ ruoyi:
   # 版权年份
   copyrightYear: 2026
   # 文件路径 示例（ Windows配置D:/reqflow/uploadPath，Linux配置 /home/reqflow/uploadPath）
-  profile: D:/reqflow/uploadPath
+  profile: /reqflow/uploadPath
   # 获取ip地址开关
   addressEnabled: false
   # 验证码类型 math 数字计算 char 字符验证
@@ -19,7 +19,7 @@ server:
   port: 8080
   servlet:
     # 应用的访问路径
-    context-path: /
+    context-path: /reqflow-api
   tomcat:
     # tomcat的URI编码
     uri-encoding: UTF-8

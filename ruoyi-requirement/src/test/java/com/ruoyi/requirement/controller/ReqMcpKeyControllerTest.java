@@ -45,6 +45,22 @@ class ReqMcpKeyControllerTest
     }
 
     @Test
+    void mcpAddressKeepsBackendContextPathWithConfiguredHost()
+    {
+        ReqMcpKeyController controller = new ReqMcpKeyController();
+        ISysConfigService configService = mock(ISysConfigService.class);
+        ReflectionTestUtils.setField(controller, "configService", configService);
+        when(configService.selectConfigByKey("reqflow.mcp.public-host")).thenReturn("reqflow.example.com");
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("X-Forwarded-Proto")).thenReturn("https");
+        when(request.getContextPath()).thenReturn("/reqflow-api");
+
+        assertEquals("https://reqflow.example.com/reqflow-api/requirement/mcp",
+                ReflectionTestUtils.invokeMethod(controller, "mcpAddress", request));
+    }
+
+    @Test
     void mcpAddressFallsBackToForwardedHostWhenPublicUrlIsBlank()
     {
         ReqMcpKeyController controller = new ReqMcpKeyController();

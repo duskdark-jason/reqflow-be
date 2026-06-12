@@ -17,7 +17,7 @@
 - 启动模块：`ruoyi-admin`
 - 默认启动类：`ruoyi-admin/src/main/java/com/ruoyi/RuoYiApplication.java`
 - 默认端口：`8080`
-- 默认 context path：`/`
+- 默认 context path：`/reqflow-api`
 - 主配置：`ruoyi-admin/src/main/resources/application.yml`
 - 数据源配置：`ruoyi-admin/src/main/resources/application-druid.yml`
 - 测试配置预留：`ruoyi-admin/src/main/resources/application-test.yml`
