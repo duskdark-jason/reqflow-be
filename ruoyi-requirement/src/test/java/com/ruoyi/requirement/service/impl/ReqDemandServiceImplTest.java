@@ -1294,19 +1294,14 @@ class ReqDemandServiceImplTest
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(backend, frontend));
         mockLoginUser(8L, "requirement_developer");
 
-        ReqActionInstruction first = new ReqActionInstruction();
-        first.setActionType("requirement_closeout");
-        first.setTargetMethod("publish_repository_index");
-        first.setToken("reqflow_action_closeout_backend");
-        first.setPrompt("归档发布后端仓库索引。");
-        ReqActionInstruction second = new ReqActionInstruction();
-        second.setActionType("requirement_closeout");
-        second.setTargetMethod("publish_repository_index");
-        second.setToken("reqflow_action_closeout_frontend");
-        second.setPrompt("归档发布前端仓库索引。");
+        ReqActionInstruction created = new ReqActionInstruction();
+        created.setActionType("requirement_closeout");
+        created.setTargetMethod("publish_repository_index");
+        created.setToken("reqflow_action_closeout_stage");
+        created.setPrompt("归档发布全部仓库索引。");
         when(actionTokenService.createInstruction(eq("requirement_closeout"), eq(10L), eq(31L), eq(6L),
-                eq("publish_repository_index"), any(), eq("生成合并归档指令"), eq("developer"), any()))
-                .thenReturn(first, second);
+                eq("publish_repository_index"), any(), eq("生成合并归档指令"), eq("developer")))
+                .thenReturn(created);
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
@@ -1320,9 +1315,8 @@ class ReqDemandServiceImplTest
         assertEquals("publish_repository_index", instruction.getTargetMethod());
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
-        assertTrue(instruction.getContent().contains("actionTokens:"));
-        assertTrue(instruction.getContent().contains("reqflow_action_closeout_backend"));
-        assertTrue(instruction.getContent().contains("reqflow_action_closeout_frontend"));
+        assertTrue(instruction.getContent().contains("actionToken: reqflow_action_closeout_stage"));
+        assertFalse(instruction.getContent().contains("actionTokens:"));
         assertTrue(instruction.getContent().contains("get_action_context"));
         assertFalse(instruction.getContent().contains("stage:"));
         assertFalse(instruction.getContent().contains("targetMethod:"));
@@ -1337,13 +1331,8 @@ class ReqDemandServiceImplTest
         assertFalse(instruction.getContent().contains("前端仓库"));
         assertFalse(instruction.getContent().contains("arguments.actionToken"));
         assertFalse(instruction.getContent().contains("git branch -d feature/req-6-demand"));
-        assertTrue(instruction.getContent().length() < 360);
         verify(actionTokenService).createInstruction(eq("requirement_closeout"), eq(10L), eq(31L), eq(6L),
-                eq("publish_repository_index"), any(), eq("生成合并归档指令"), eq("developer"),
-                eq("closeoutRepoId=21"));
-        verify(actionTokenService).createInstruction(eq("requirement_closeout"), eq(10L), eq(31L), eq(6L),
-                eq("publish_repository_index"), any(), eq("生成合并归档指令"), eq("developer"),
-                eq("closeoutRepoId=22"));
+                eq("publish_repository_index"), any(), eq("生成合并归档指令"), eq("developer"));
     }
 
     private ReqDemand demand(Long projectId, Long variantId)

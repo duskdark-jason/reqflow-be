@@ -492,17 +492,11 @@ public class McpService
         }
         if (IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType()))
         {
-            Long repoId = repoIdFromTokenRemark(token.getRemark());
-            if (repoId != null)
-            {
-                ReqRepository repository = reqRepositoryMapper.selectReqRepositoryByRepoId(repoId);
-                if (repository != null)
-                {
-                    context.put("targetRepository", repositorySummary(repository));
-                }
-            }
+            context.put("repositories", repositorySummaries(token.getProjectId()));
         }
         context.put("syncPolicy", "先读取本地 meta.md 的 platformSync；仅当平台 versionNo 或 contentHash 更新时，再按 resourceUri 读取对应全文。");
+        context.put("tokenPersistence", "Persist the copied actionToken in local meta.md platformSync.actionToken so agents can resume after context compaction and later write back with the same stage token.");
+        context.put("writebackPolicy", "requiresExplicitUserConfirmation=true; Do not call writeback tools until the user explicitly confirms submission, acceptance, upload, or publish.");
         return context;
     }
 
@@ -555,8 +549,9 @@ public class McpService
 
     private String tokenUsage(ReqActionToken token)
     {
-        if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod())
-                || IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod()))
+        if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType())
+                || IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
+                || IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType()))
         {
             return "reusable_stage_token";
         }
@@ -624,6 +619,26 @@ public class McpService
         return summary;
     }
 
+    private List<Map<String, Object>> repositorySummaries(Long projectId)
+    {
+        if (projectId == null)
+        {
+            return Collections.emptyList();
+        }
+        ReqRepository query = new ReqRepository();
+        query.setProjectId(projectId);
+        List<Map<String, Object>> summaries = new ArrayList<>();
+        for (ReqRepository repository : safeList(reqRepositoryMapper.selectReqRepositoryList(query)))
+        {
+            if (repository != null && repository.getRepoId() != null && repository.getRepoUrl() != null
+                    && !repository.getRepoUrl().isEmpty() && !"1".equals(repository.getStatus()))
+            {
+                summaries.add(repositorySummary(repository));
+            }
+        }
+        return summaries;
+    }
+
     private Map<String, Object> requirementResourceUris(String demandNo)
     {
         Map<String, Object> resources = new LinkedHashMap<>();
@@ -689,23 +704,6 @@ public class McpService
         catch (NoSuchAlgorithmException e)
         {
             throw new IllegalStateException("SHA-256不可用", e);
-        }
-    }
-
-    private Long repoIdFromTokenRemark(String remark)
-    {
-        String prefix = "closeoutRepoId=";
-        if (remark == null || !remark.startsWith(prefix))
-        {
-            return null;
-        }
-        try
-        {
-            return Long.valueOf(remark.substring(prefix.length()));
-        }
-        catch (NumberFormatException e)
-        {
-            return null;
         }
     }
 

@@ -188,6 +188,66 @@ class McpServiceTest
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void closeoutActionContextReturnsRepositoryListAndWritebackGate()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT);
+        token.setTargetMethod(IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
+        token.setProjectId(10L);
+        token.setVariantId(31L);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveTokenForContext("reqflow_action_closeout")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "closeout_pending"));
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqVariant variant = new ReqVariant();
+        variant.setVariantId(31L);
+        variant.setProjectId(10L);
+        variant.setBaselineBranch("release/main");
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepository backend = new ReqRepository();
+        backend.setRepoId(21L);
+        backend.setProjectId(10L);
+        backend.setRepoName("后端");
+        backend.setRepoUrl("git@example.com:reqflow-be.git");
+        ReqRepository frontend = new ReqRepository();
+        frontend.setRepoId(22L);
+        frontend.setProjectId(10L);
+        frontend.setRepoName("前端");
+        frontend.setRepoUrl("git@example.com:reqflow-ui.git");
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(List.of(backend, frontend));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "reqRepositoryMapper", repositoryMapper);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_closeout");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("get_action_context", arguments)));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        Map<String, Object> content = (Map<String, Object>) result.get("structuredContent");
+        assertEquals("requirement_closeout", content.get("stage"));
+        assertTrue(String.valueOf(content.get("repositories")).contains("reqflow-be.git"));
+        assertTrue(String.valueOf(content.get("repositories")).contains("reqflow-ui.git"));
+        assertFalse(content.containsKey("targetRepository"), String.valueOf(content));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("requiresExplicitUserConfirmation=true"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("tokenPersistence")).contains("meta.md"),
+                String.valueOf(content.get("tokenPersistence")));
+        verify(actionTokenService).resolveTokenForContext("reqflow_action_closeout");
+        verify(actionTokenService, never()).resolveToken("reqflow_action_closeout");
+    }
+
+    @Test
     void resourceTemplatesListReturnsMcpTemplates()
     {
         McpResponse response = new McpService().handle(request("resources/templates/list", null));

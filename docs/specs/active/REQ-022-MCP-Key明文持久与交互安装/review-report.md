@@ -27,6 +27,9 @@
 | 返修报告增量回写 | 通过 | 覆盖 AC-016。返修阶段 MCP 上传片段时基于上一版报告追加返修记录，上传完整报告时按完整内容保存新版本，避免平台最新版报告只剩返修片段。 |
 | 阶段短指令与全局 skill | 通过 | 覆盖 AC-017。平台复制指令不再列具体工具和完整步骤；全局 `reqflow-mcp` skill 维护 `stage -> MCP tool` 映射和阶段边界。 |
 | 轻量上下文与增量读取 | 通过 | 覆盖 AC-018。平台复制指令只保留 actionToken，`get_action_context` 不消费 token 且只返回阶段、允许工具、资源 URI 和资料包版本 hash；skill 按 `platformSync` 判断是否拉取全文。 |
+| 阶段 token 控制 | 通过 | 覆盖 AC-019。需求分析、需求设计、开发、返修和归档 token 均在当前阶段内可复用；项目初始化 token 仍保持一次性。 |
+| 平台回写确认门禁 | 通过 | 覆盖 AC-020。`get_action_context` 和全局 skill 返回并执行 `writebackPolicy`，需求设计、开发、返修和归档均先本地迭代，用户明确确认后才调用写平台工具。 |
+| actionToken 本地持久化 | 通过 | 覆盖 AC-021。全局 skill 和流程模板要求将阶段 token 写入本地 `meta.md platformSync.actionToken`，多轮对话或上下文压缩后先从本地恢复 token。 |
 
 ## 风险说明
 
@@ -35,6 +38,7 @@
 - MCP 请求地址只保存 host/port，完整地址由后端按协议、context-path 和 `/requirement/mcp` 生成；部署时不能把前端静态项目名当作 MCP 路径前缀。
 - Trae/Qoder 官方路径以设置页 JSON 导入为主，脚本只能生成片段和全局 skill；用户必须按 `Manual MCP import required` 完成导入后再验证 MCP 连接。
 - `get_action_context` 只是上下文探针，后续真实上传仍会消费或复用对应阶段 actionToken；客户端必须避免把 actionToken 当作人员 `X-MCP-Key`。
+- 本地 `meta.md platformSync.actionToken` 会保存阶段 actionToken；该文件只用于当前任务本地恢复，不能复制到公开文档、安装脚本、skill 文件、日志或无关仓库。
 
 ## RF项
 

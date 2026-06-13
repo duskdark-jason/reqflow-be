@@ -18,7 +18,9 @@
 14. 返修报告增量回写：返修阶段 MCP 上传完整报告时直接保存完整报告新版本；上传返修片段时由服务端基于上一版追加返修记录，避免最新版报告丢失原正文。覆盖 AC-016。
 15. 阶段指令瘦身：平台复制指令不再列具体 MCP 工具和完整阶段步骤，具体 MCP 工具映射迁移到全局 `reqflow-mcp` skill。覆盖 AC-017。
 16. 轻量上下文拉取：新增 MCP `get_action_context`，平台复制指令进一步压缩为 token-only；全局 skill 先取轻量上下文，再按 `platformSync` 比对版本和 hash，仅拉取缺失或变化资源。覆盖 AC-018。
-17. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-012、AC-013、AC-014、AC-015、AC-016、AC-017、AC-018。
+17. 阶段 token 统一：需求分析、需求设计、执行、返修和归档阶段 actionToken 都改为阶段内可复用；归档阶段只生成一个需求级 token，仓库由 `remoteUrl` 解析。覆盖 AC-019。
+18. 平台回写确认门禁：`get_action_context` 返回 `writebackPolicy` 和 `tokenPersistence`，全局 skill 要求本地生成/验证后停住，等用户明确确认再调用写平台工具，并把 actionToken 持久到本地 `meta.md platformSync`。覆盖 AC-020、AC-021。
+19. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-012、AC-013、AC-014、AC-015、AC-016、AC-017、AC-018、AC-019、AC-020、AC-021。
 
 ## 分层验证
 
@@ -35,8 +37,9 @@
 | L2 | AC-016 | `mvn -pl ruoyi-requirement -am -Dtest=McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L2 | AC-017 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqflowCodexGlobalSkillTemplateTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L2 | AC-018 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqflowCodexGlobalSkillTemplateTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` |
+| L2 | AC-019、AC-020、AC-021 | `mvn -pl ruoyi-requirement -am -Dtest=ReqActionTokenServiceImplTest,ReqDemandServiceImplTest,ReqRepositoryIndexServiceImplTest,McpServiceTest,ReqflowCodexGlobalSkillTemplateTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L1 | AC-005 | companion 前端 `npm run build:prod` |
-| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-013、AC-014、AC-015、AC-016、AC-017、AC-018 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` |
+| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-013、AC-014、AC-015、AC-016、AC-017、AC-018、AC-019、AC-020、AC-021 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` |
 
 ## 风险与处理
 
@@ -50,3 +53,5 @@
 - 返修验收提前提交：服务端按最新返修问题说明校验新执行报告和 Review 报告，旧报告或缺失报告不能推进到待验收。
 - 返修片段掩盖原报告：MCP 服务端在返修阶段识别 `requirement_repair` actionToken，片段上传时合并上一版报告，完整文件上传时避免重复追加。
 - 指令过短导致 agent 不知道调用哪个工具：token-only 指令必须要求先调用 `get_action_context`，由轻量上下文返回稳定 `stage` 和允许工具；全局 skill 必须维护 `stage -> MCP tool` 映射表，并由测试锁定。
+- 多轮本地迭代后丢失 actionToken：`get_action_context` 和全局 skill 明确把 actionToken 存入本地 `meta.md platformSync.actionToken`，上下文压缩后先读本地 meta 恢复。
+- agent 过早回写平台：全局 skill 明确写平台工具必须等待用户确认；平台上下文返回 `writebackPolicy`，测试锁定关键语句。

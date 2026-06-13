@@ -62,10 +62,10 @@ docs/specs/active/REQ-001-中文需求标题/
 
 ## 3. 多 Agent 协作入口
 
-- 需求设计阶段：由 Plan Agent 创建或沿用任务分支，先输出需求可行性评估并通过 MCP `upload_requirement_assessment` 回写；评估结论允许继续后只输出 `requirement.md`，并通过 MCP `save_requirement_package` 回写需求设计版本。需求人补充调整指令时继续更新同一评估、同一文件和同一任务分支。
+- 需求设计阶段：由 Plan Agent 创建或沿用任务分支，先输出需求可行性评估；用户确认提交后通过 MCP `upload_requirement_assessment` 回写。评估结论允许继续后只输出或迭代 `requirement.md`，用户确认定稿后再通过 MCP `save_requirement_package` 回写需求设计版本。需求人补充调整指令时继续更新同一评估、同一文件和同一任务分支。
 - 执行阶段：由 Execution Agent 基于最终 `requirement.md` 先分析是否适合拆分为多个 subagent 并行执行，再生成或更新 `plan.md`，按 `plan.md` 实现并写 `execution-report.md`，不得自行扩大范围；完成验证后自动把 `meta.md` 切到 `review`，填写 `Review 授权：已授权`，交给 Review Agent。
 - 审查阶段：由 Review Agent 只读审查并写 `review-report.md`，结论为 `通过`、`有条件通过` 或 `阻断`。
-- 返修阶段：Review Agent 产生 `RF-*` 后自动回到 Execution Agent；Execution Agent 返修并在 `execution-report.md` 回填同 ID 的 `Review 返修记录`；Review Agent 再复审并补充 `review-report.md`。MCP 接入模式下每次执行和 Review 都通过 MCP 回写新版本，本地 Harness 模式不执行 MCP 回写但仍按同样的文件和 `RF-*` 闭环；循环持续到最终 Review 结论为 `通过`。
+- 返修阶段：Review Agent 产生 `RF-*` 后自动回到 Execution Agent；Execution Agent 返修并在 `execution-report.md` 回填同 ID 的 `Review 返修记录`；Review Agent 再复审并补充 `review-report.md`。MCP 接入模式下先完成本地报告和复审，多轮迭代期间持续复用本地 `meta.md` 保存的阶段 actionToken；用户确认提交返修验收或回写平台后才通过 MCP 回写新版本。本地 Harness 模式不执行 MCP 回写但仍按同样的文件和 `RF-*` 闭环；循环持续到最终 Review 结论为 `通过`。
 - 任一阶段发现计划缺失、契约冲突或验证无法执行，必须回到计划阶段补齐文件。
 - 阶段切换必须更新 `meta.md`，并记录执行模式、执行授权和 Review 授权状态。
 

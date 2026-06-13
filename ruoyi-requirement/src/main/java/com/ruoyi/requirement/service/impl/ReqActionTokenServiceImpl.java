@@ -34,13 +34,22 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
 
     private static final long ACTION_TOKEN_TTL_MILLIS = 24L * 60 * 60 * 1000;
 
-    private static final String ACTION_TOKEN_USAGE_RULE = "有效期：当前动作或流程阶段内有效，流转到下一流程即失效；最长保留24小时，过期或已使用后需重新生成。";
+    private static final String ACTION_TOKEN_USAGE_RULE = "有效期：当前动作内有效，最长保留24小时，过期或已使用后需重新生成。";
+
+    private static final String REQUIREMENT_ANALYSIS_STAGE_TOKEN_USAGE_RULE =
+            "有效期：当前需求可行性分析阶段内有效，流转到下一阶段后即失效；最长保留24小时，可在本阶段多次用于本地迭代后的评估报告回写。";
+
+    private static final String REQUIREMENT_GENERATE_STAGE_TOKEN_USAGE_RULE =
+            "有效期：当前需求设计阶段内有效，流转到下一阶段后即失效；最长保留24小时，可在本阶段多次用于本地迭代后的需求设计回写。";
 
     private static final String DEVELOPMENT_STAGE_TOKEN_USAGE_RULE =
             "有效期：当前开发阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行计划、执行报告和 Review 报告回写。";
 
     private static final String REPAIR_STAGE_TOKEN_USAGE_RULE =
             "有效期：当前返修阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行报告和 Review 报告回写。";
+
+    private static final String CLOSEOUT_STAGE_TOKEN_USAGE_RULE =
+            "有效期：当前合并归档阶段内有效，流转到办结后即失效；最长保留24小时，可在本阶段多次用于各仓库知识库索引发布。";
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -227,13 +236,30 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
 
     private boolean isReusableStageToken(ReqActionToken token)
     {
-        return ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
-                && (TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod())
-                    || TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod()));
+        if (ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
+        {
+            return TARGET_REQUIREMENT_ANALYSIS.equals(token.getTargetMethod())
+                    || TARGET_REQUIREMENT_GENERATE.equals(token.getTargetMethod());
+        }
+        if (ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType()))
+        {
+            return TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod())
+                    || TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod());
+        }
+        return ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType())
+                && TARGET_PUBLISH_REPOSITORY_INDEX.equals(token.getTargetMethod());
     }
 
     private String usageRule(String actionType, String targetMethod)
     {
+        if (ACTION_REQUIREMENT_PLAN.equals(actionType) && TARGET_REQUIREMENT_ANALYSIS.equals(targetMethod))
+        {
+            return REQUIREMENT_ANALYSIS_STAGE_TOKEN_USAGE_RULE;
+        }
+        if (ACTION_REQUIREMENT_PLAN.equals(actionType) && TARGET_REQUIREMENT_GENERATE.equals(targetMethod))
+        {
+            return REQUIREMENT_GENERATE_STAGE_TOKEN_USAGE_RULE;
+        }
         if (ACTION_REQUIREMENT_DEVELOP.equals(actionType) && TARGET_REQUIREMENT_DEVELOP.equals(targetMethod))
         {
             return DEVELOPMENT_STAGE_TOKEN_USAGE_RULE;
@@ -241,6 +267,10 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         if (ACTION_REQUIREMENT_DEVELOP.equals(actionType) && TARGET_REQUIREMENT_REPAIR.equals(targetMethod))
         {
             return REPAIR_STAGE_TOKEN_USAGE_RULE;
+        }
+        if (ACTION_REQUIREMENT_CLOSEOUT.equals(actionType) && TARGET_PUBLISH_REPOSITORY_INDEX.equals(targetMethod))
+        {
+            return CLOSEOUT_STAGE_TOKEN_USAGE_RULE;
         }
         return ACTION_TOKEN_USAGE_RULE;
     }

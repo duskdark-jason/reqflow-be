@@ -37,17 +37,6 @@ public class ReqDemandServiceImpl implements IReqDemandService
 {
     private static final String BRANCH_NOT_INITIALIZED_MESSAGE = "项目分支尚未初始化完成，请先完成分支初始化后再提交需求";
 
-    private static final String ACTION_TOKEN_USAGE_RULE = "有效期：当前流程阶段内有效，流转到下一流程即失效；最长保留24小时，过期或已使用后需重新生成。";
-
-    private static final String DEVELOPMENT_STAGE_TOKEN_USAGE_RULE =
-            "有效期：当前开发阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行计划、执行报告和 Review 报告回写。";
-
-    private static final String REPAIR_STAGE_TOKEN_USAGE_RULE =
-            "有效期：当前返修阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行报告和 Review 报告回写。";
-
-    private static final String CLOSEOUT_TOKEN_USAGE_RULE =
-            "有效期：当前合并归档阶段内有效，最长保留24小时；每个仓库一枚一次性 actionToken，过期或已使用后需重新生成。";
-
     private static final String ROLE_REQUIREMENT_USER = "requirement_user";
 
     private static final String ROLE_REQUIREMENT_DEVELOPER = "requirement_developer";
@@ -531,36 +520,17 @@ public class ReqDemandServiceImpl implements IReqDemandService
         }
 
         String prompt = "请在需求验收通过后完成合并归档：将本地开发分支压缩合并到需求分支并推送，同时发布需求平台知识库索引。";
-        List<ReqActionInstruction> repositoryInstructions = repositories.stream()
-                .map(repository -> actionTokenService.createInstruction(
-                        IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
-                        demand.getProjectId(),
-                        demand.getVariantId(),
-                        demand.getDemandId(),
-                        IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
-                        prompt + "目标仓库：" + repository.getRepoName(),
-                        "生成合并归档指令",
-                        operator,
-                        ReqCloseoutContext.tokenRemark(repository.getRepoId())))
-                .collect(Collectors.toList());
-        ReqActionInstruction firstInstruction = repositoryInstructions.get(0);
-        firstInstruction.setContent(requirementCloseoutInstructionContent(prompt, repositoryInstructions));
-        return firstInstruction;
-    }
-
-    private String requirementCloseoutInstructionContent(String prompt, List<ReqActionInstruction> repositoryInstructions)
-    {
-        StringBuilder content = new StringBuilder();
-        content.append(prompt)
-                .append("\n请按全局 skill `reqflow-mcp` 执行。")
-                .append("\nmcpServer: reqflow")
-                .append("\nactionTokens:");
-        for (ReqActionInstruction instruction : repositoryInstructions)
-        {
-            content.append("\n- ").append(instruction.getToken());
-        }
-        content.append("\n逐个 actionToken 调用 get_action_context 获取归档上下文。");
-        return content.toString();
+        ReqActionInstruction instruction = actionTokenService.createInstruction(
+                IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
+                demand.getProjectId(),
+                demand.getVariantId(),
+                demand.getDemandId(),
+                IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
+                prompt,
+                "生成合并归档指令",
+                operator);
+        instruction.setContent(actionTokenInstructionContent(prompt, instruction.getToken()));
+        return instruction;
     }
 
     private String suggestedTaskBranch(ReqDemand demand)
@@ -789,8 +759,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 .map(ReqRepositoryIndexBatch::getRepoId)
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
-        if (!closeoutIndexedRepositoryIds.containsAll(repositoryIds) || !hasUsedCloseoutTokensForAllRepositories(demand,
-                repositoryIds))
+        if (!closeoutIndexedRepositoryIds.containsAll(repositoryIds))
         {
             throw new ServiceException("归档结果未通过平台验证：请先按合并归档指令完成全部仓库 push 和知识库发布");
         }
@@ -822,25 +791,6 @@ public class ReqDemandServiceImpl implements IReqDemandService
             }
         }
         return batches;
-    }
-
-    private boolean hasUsedCloseoutTokensForAllRepositories(ReqDemand demand, Set<Long> repositoryIds)
-    {
-        for (Long repositoryId : repositoryIds)
-        {
-            int usedTokenCount = actionTokenMapper.countUsedActionTokenByRemark(
-                    IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
-                    IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
-                    demand.getProjectId(),
-                    demand.getVariantId(),
-                    demand.getDemandId(),
-                    ReqCloseoutContext.tokenRemark(repositoryId));
-            if (usedTokenCount < 1)
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
     private boolean isPackageVersionNotEarlier(ReqPackageVersion candidate, ReqPackageVersion baseline)

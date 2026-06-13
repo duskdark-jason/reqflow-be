@@ -30,11 +30,12 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - MCP 合并归档指令、全局 skill 和本地 Harness 流程都明确：先在任务分支完成 `active -> done` 迁移，再 squash merge 到需求基线分支。
 - 新增合并归档验证只读接口，复用 `closeout_pending -> completed` 的平台验证口径，前端只在验证通过后展示确认归档完成。
 - 进一步压缩需求阶段复制指令：复制文本只保留 `reqflow-mcp`、`mcpServer: reqflow` 和 actionToken，详细阶段上下文由 MCP `get_action_context` 返回；全局 skill 按 `platformSync` 做增量读取，减少重复上下文。
+- 需求分析、需求设计、执行、返修和归档阶段都需要统一为一个阶段一枚可复用 actionToken；复制指令后默认只做本地生成、修改和验证，必须等用户明确确认后才回写平台。
+- 执行端需要把 actionToken 写入本地 `meta.md platformSync.actionToken`，避免多轮本地迭代或上下文压缩后丢失回写凭证。
 
 ## 非目标
 
 - 不回填升级前只保存哈希的历史 Key 明文，历史记录无法从哈希反推明文，需要重新生成 Key。
-- 不改变 MCP actionToken 的一次性和阶段性规则。
 - 不自动调用任何 reqflow MCP tool。
 
 ## 验收标准
@@ -56,15 +57,18 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - AC-015：指定开发人员在 `repairing` 返修中状态提交返修验收前，服务端必须校验最新“需求人返修问题说明”之后已有新的 `execution_report` 和 `review_report`；未回写齐全时拒绝 `repairing -> review`，提示先复制返修任务指令并回写返修执行报告和 Review 报告。
 - AC-016：返修阶段 MCP `upload_execution_report` 或 `upload_review_report` 上传完整本地报告时按完整报告保存新版本；只上传返修片段时，服务端必须基于上一版报告追加“返修执行记录”或“返修 Review 记录”后保存新版本，不得让返修片段成为最新版全文并掩盖原执行报告或 Review 报告。
 - AC-017：需求分析、需求生成、开发、返修和合并归档阶段的平台复制指令必须压缩为短动态上下文，不再在指令正文列出具体 `mcpTool` 清单或完整阶段步骤；全局 `reqflow-mcp` skill 必须提供 `stage -> MCP tool` 映射和各阶段本地文件/停止条件。
-- AC-018：平台复制指令进一步收敛为 token-only 形式，只保留 `reqflow-mcp`、`mcpServer: reqflow`、actionToken 或 actionTokens，以及先调用 `get_action_context` 的提醒；`get_action_context` 必须不消费一次性 token，返回轻量阶段上下文、允许工具、资源 URI、资料包版本号和内容 hash，不直接返回资料包正文；全局 skill 必须用本地 `meta.md platformSync` 与返回版本比对，仅拉取缺失或变化的全文资源。
+- AC-018：平台复制指令进一步收敛为 token-only 形式，只保留 `reqflow-mcp`、`mcpServer: reqflow`、actionToken，以及先调用 `get_action_context` 的提醒；`get_action_context` 必须不消费 actionToken，返回轻量阶段上下文、允许工具、资源 URI、资料包版本号和内容 hash，不直接返回资料包正文；全局 skill 必须用本地 `meta.md platformSync` 与返回版本比对，仅拉取缺失或变化的全文资源。
+- AC-019：需求可行性分析、需求设计、执行开发、返修和合并归档阶段 actionToken 都是阶段内可复用 token；服务端解析后刷新最近使用时间但不立即作废，阶段流转后失效，最长 24 小时；项目初始化 token 仍保持一次性动作语义。
+- AC-020：全局 `reqflow-mcp` skill 和 `get_action_context` 必须声明写平台门禁：复制指令后默认只允许本地生成、修改、验证和报告草稿；只有用户明确说“提交到平台/回写平台/提交验收/发布归档”等等价指令后，agent 才能调用 `upload_requirement_assessment`、`save_requirement_package`、`save_development_plan`、`upload_execution_report`、`upload_review_report` 或 `publish_repository_index`。
+- AC-021：执行端拿到 `actionToken` 后必须写入本地 `meta.md platformSync.actionToken`，同时记录 `stage`、`targetMethod`、`demandNo`、版本 hash 和 `lastContextAt`，以便多轮本地迭代或上下文压缩后恢复同一阶段 token；actionToken 不得写入 skill 文件、安装脚本、操作日志或公开文档。
 
 ## 影响范围
 
 - 接口：是，`/requirement/mcp/key/**` 返回 `plainKey` 的长期语义变化，并新增管理员 `/requirement/mcp/key/config` 读写接口。
 - 需求流程接口：是，新增 `/requirement/demand/{demandId}/closeout-verification` 只读接口。
 - 返修流程接口：是，新增 `/requirement/demand/{demandId}/repair` 提交返修问题说明。
-- MCP 回写语义：是，返修阶段执行报告和 Review 报告上传支持完整文件或增量片段，服务端保存新版本时保留上一版正文。
-- 阶段指令语义：是，平台复制指令改为 token-only 短上下文，详细阶段识别、工具映射和增量读取规则迁移到 MCP `get_action_context` 与全局 skill。
+- MCP 回写语义：是，返修阶段执行报告和 Review 报告上传支持完整文件或增量片段，服务端保存新版本时保留上一版正文；所有写平台工具必须等待用户明确确认。
+- 阶段指令语义：是，平台复制指令改为 token-only 短上下文，详细阶段识别、工具映射、写平台门禁和增量读取规则迁移到 MCP `get_action_context` 与全局 skill。
 - 数据库：是，新增 `req_mcp_user_key.plain_key`。
 - 权限：是，MCP 请求地址配置使用 `admin` 角色控制，不扩展给开发人员角色。
 - 页面展示：是，MCP 管理页隐藏明文 Key 和 Key 前缀字段，统一命令执行后选择工具；管理员额外通过弹窗配置 MCP 请求地址。
