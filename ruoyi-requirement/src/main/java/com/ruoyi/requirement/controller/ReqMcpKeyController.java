@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,7 +19,9 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.requirement.domain.ReqMcpUserKey;
+import com.ruoyi.requirement.dto.ReqMcpPublicHostConfig;
 import com.ruoyi.requirement.service.IReqMcpUserKeyService;
+import com.ruoyi.system.domain.SysConfig;
 import com.ruoyi.system.service.ISysConfigService;
 
 /**
@@ -29,6 +32,8 @@ import com.ruoyi.system.service.ISysConfigService;
 public class ReqMcpKeyController extends BaseController
 {
     private static final String MCP_PUBLIC_HOST_CONFIG_KEY = "reqflow.mcp.public-host";
+
+    private static final String MCP_PUBLIC_HOST_CONFIG_NAME = "MCP服务对外访问地址";
 
     @Autowired
     private IReqMcpUserKeyService reqMcpUserKeyService;
@@ -64,6 +69,60 @@ public class ReqMcpKeyController extends BaseController
     public AjaxResult instruction(@PathVariable("keyId") Long keyId, HttpServletRequest request)
     {
         return success(reqMcpUserKeyService.createInstruction(keyId, mcpAddress(request)));
+    }
+
+    @PreAuthorize("@ss.hasRole('admin')")
+    @GetMapping("/config")
+    public AjaxResult config(HttpServletRequest request)
+    {
+        ReqMcpPublicHostConfig config = new ReqMcpPublicHostConfig();
+        config.setConfigKey(MCP_PUBLIC_HOST_CONFIG_KEY);
+        config.setPublicHost(normalizeMcpPublicHost());
+        config.setMcpAddress(mcpAddress(request));
+        return success(config);
+    }
+
+    @PreAuthorize("@ss.hasRole('admin')")
+    @PutMapping("/config")
+    public AjaxResult updateConfig(@RequestBody ReqMcpPublicHostConfig request, HttpServletRequest httpRequest)
+    {
+        request = request == null ? new ReqMcpPublicHostConfig() : request;
+        String publicHost = validatePublicHost(request.getPublicHost());
+        if (publicHost == null)
+        {
+            return error("MCP请求地址只填写域名/IP和端口，不要填写协议或路径");
+        }
+        if (StringUtils.isEmpty(publicHost))
+        {
+            return error("MCP请求地址不能为空");
+        }
+
+        if (!publicHost.equals(request.getPublicHost()))
+        {
+            request.setPublicHost(publicHost);
+        }
+
+        SysConfig existingConfig = loadPublicHostConfig();
+        SysConfig config = new SysConfig();
+        config.setConfigName(MCP_PUBLIC_HOST_CONFIG_NAME);
+        config.setConfigKey(MCP_PUBLIC_HOST_CONFIG_KEY);
+        config.setConfigValue(publicHost);
+        config.setConfigType("Y");
+        config.setRemark("MCP服务对外访问host:port，服务端自动拼接/requirement/mcp");
+
+        int rows;
+        if (existingConfig == null)
+        {
+            config.setCreateBy(getUsername());
+            rows = configService.insertConfig(config);
+        }
+        else
+        {
+            config.setConfigId(existingConfig.getConfigId());
+            config.setUpdateBy(getUsername());
+            rows = configService.updateConfig(config);
+        }
+        return rows > 0 ? config(httpRequest) : error("保存MCP请求地址失败");
     }
 
     @PreAuthorize("@ss.hasPermi('req:mcp:key:add')")
@@ -122,6 +181,42 @@ public class ReqMcpKeyController extends BaseController
             publicHost = publicHost.substring(0, publicHost.length() - 1);
         }
         return publicHost;
+    }
+
+    private String validatePublicHost(String publicHost)
+    {
+        publicHost = StringUtils.trim(publicHost);
+        if (StringUtils.isEmpty(publicHost))
+        {
+            return "";
+        }
+        String lowerPublicHost = publicHost.toLowerCase();
+        if (lowerPublicHost.startsWith("http://") || lowerPublicHost.startsWith("https://")
+                || publicHost.contains("/") || publicHost.contains("\\") || publicHost.contains("?")
+                || publicHost.contains("#") || publicHost.matches(".*\\s+.*"))
+        {
+            return null;
+        }
+        return publicHost;
+    }
+
+    private SysConfig loadPublicHostConfig()
+    {
+        if (configService == null)
+        {
+            return null;
+        }
+        SysConfig query = new SysConfig();
+        query.setConfigKey(MCP_PUBLIC_HOST_CONFIG_KEY);
+        List<SysConfig> configs = configService.selectConfigList(query);
+        if (configs == null)
+        {
+            return null;
+        }
+        return configs.stream()
+                .filter(config -> MCP_PUBLIC_HOST_CONFIG_KEY.equals(config.getConfigKey()))
+                .findFirst()
+                .orElse(null);
     }
 
     private String contextPath(HttpServletRequest request)

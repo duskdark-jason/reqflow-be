@@ -580,6 +580,14 @@ check_active_specs() {
       fail "指定 spec 目录不存在：$TARGET_SPEC_DIR"
       return
     fi
+    case "$TARGET_SPEC_DIR/" in
+      "$REPO_ROOT/docs/specs/active/"*)
+        ;;
+      *)
+        fail "指定 spec 必须位于 docs/specs/active，完成态门禁通过后再按需移入 docs/specs/done：$TARGET_SPEC_DIR"
+        return
+        ;;
+    esac
     check_spec_dir_name "$TARGET_SPEC_DIR"
     check_one_spec "$TARGET_SPEC_DIR"
     return

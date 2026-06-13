@@ -551,7 +551,7 @@ class ReqRepositoryIndexServiceImplTest
     }
 
     @Test
-    void rejectsCloseoutIndexWhenActionTokenBelongsToAnotherRepository()
+    void reusableCloseoutActionTokenCanPublishAnotherRepositoryByRemoteUrl()
     {
         ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
         ReqIndexModuleMapper moduleMapper = mock(ReqIndexModuleMapper.class);
@@ -569,7 +569,6 @@ class ReqRepositoryIndexServiceImplTest
         token.setVariantId(8L);
         token.setDemandId(6L);
         token.setTargetMethod(IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
-        token.setRemark("closeoutRepoId=2");
         when(actionTokenService.resolveToken("reqflow_action_closeout")).thenReturn(token);
 
         ReqVariant branch = new ReqVariant();
@@ -591,6 +590,11 @@ class ReqRepositoryIndexServiceImplTest
         repository.setRepoUrl("git@example.com:reqflow-be.git");
         repository.setRepoType("BACKEND");
         when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Collections.singletonList(repository));
+        doAnswer(invocation -> {
+            ReqRepositoryIndexBatch batch = invocation.getArgument(0);
+            batch.setBatchId(106L);
+            return 1;
+        }).when(batchMapper).insertReqRepositoryIndexBatch(any(ReqRepositoryIndexBatch.class));
 
         ReqRepositoryIndexImportRequest request = new ReqRepositoryIndexImportRequest();
         request.setActionToken("reqflow_action_closeout");
@@ -599,11 +603,12 @@ class ReqRepositoryIndexServiceImplTest
         request.setIndexVersion("v1");
         request.setModules(Collections.singletonList(module("requirement-demand", "需求提交")));
 
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> service.importRepositoryIndex(request, "mcp", "tester", 7L));
+        ReqIndexImportResult result = service.importRepositoryIndex(request, "mcp", "tester", 7L);
 
-        assertTrue(exception.getMessage().contains("归档动作Token与目标仓库不一致"));
-        verify(batchMapper, never()).insertReqRepositoryIndexBatch(any());
+        assertEquals(106L, result.getBatchId());
+        ArgumentCaptor<ReqRepositoryIndexBatch> batchCaptor = forClass(ReqRepositoryIndexBatch.class);
+        verify(batchMapper).insertReqRepositoryIndexBatch(batchCaptor.capture());
+        assertEquals("closeoutDemandId=6;repoId=3", batchCaptor.getValue().getRemark());
     }
 
     @Test

@@ -32,6 +32,9 @@ public class ReqMcpUserKey extends BaseEntity
     /** Key前缀 */
     private String keyPrefix;
 
+    /** 明文Key */
+    private String plainKey;
+
     /** Key哈希 */
     @JsonIgnore
     private String keyHash;
@@ -104,6 +107,16 @@ public class ReqMcpUserKey extends BaseEntity
     public void setKeyPrefix(String keyPrefix)
     {
         this.keyPrefix = keyPrefix;
+    }
+
+    public String getPlainKey()
+    {
+        return plainKey;
+    }
+
+    public void setPlainKey(String plainKey)
+    {
+        this.plainKey = plainKey;
     }
 
     public String getKeyHash()

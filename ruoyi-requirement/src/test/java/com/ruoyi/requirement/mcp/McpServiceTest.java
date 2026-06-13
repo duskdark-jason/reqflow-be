@@ -91,6 +91,7 @@ class McpServiceTest
 
         assertTrue(String.valueOf(response.getResult()).contains("publish_repository_index"));
         assertTrue(String.valueOf(response.getResult()).contains("get_harness_template"));
+        assertTrue(String.valueOf(response.getResult()).contains("get_action_context"));
     }
 
     @Test
@@ -129,6 +130,121 @@ class McpServiceTest
         Map<String, Object> pageItemProperties = (Map<String, Object>) pageItems.get("properties");
         assertTrue(pageItemProperties.containsKey("moduleCode"), String.valueOf(pageItems));
         assertTrue(String.valueOf(pageItemProperties.get("moduleCode")).contains("modules[].moduleCode"), String.valueOf(pageItemProperties));
+        Map<String, Object> actionContext = tools.stream()
+                .filter(tool -> "get_action_context".equals(tool.get("name")))
+                .findFirst()
+                .orElseThrow();
+        Map<String, Object> actionContextSchema = (Map<String, Object>) actionContext.get("inputSchema");
+        Map<String, Object> actionContextProperties = (Map<String, Object>) actionContextSchema.get("properties");
+        assertTrue(actionContextProperties.containsKey("actionToken"), String.valueOf(actionContextSchema));
+        assertTrue(((List<String>) actionContextSchema.get("required")).contains("actionToken"),
+                String.valueOf(actionContextSchema));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void actionContextReturnsLightweightStageAndVersionSummaryWithoutConsumingToken()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP);
+        token.setProjectId(10L);
+        token.setVariantId(31L);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveTokenForContext("reqflow_action_develop")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        ReqDemand demand = demand(9L, "developing");
+        demand.setTitle("缩短指令");
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand);
+        ReqPackageVersion requirement = packageVersion("requirement", "需求设计正文不应直接进入上下文");
+        requirement.setVersionNo(3);
+        requirement.setVersionNote("需求设计");
+        when(packageService.selectReqPackageVersionListByDemandId(9L)).thenReturn(Collections.singletonList(requirement));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", mock(ReqVariantMapper.class));
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_develop");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("get_action_context", arguments)));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        Map<String, Object> content = (Map<String, Object>) result.get("structuredContent");
+        assertEquals("requirement_develop", content.get("stage"));
+        assertEquals("requirement_develop", content.get("targetMethod"));
+        assertTrue(String.valueOf(content.get("allowedTools")).contains("save_development_plan"));
+        assertTrue(String.valueOf(content.get("resources")).contains("requirement://REQ-20260609-001"));
+        assertTrue(String.valueOf(content.get("packageVersions")).contains("versionNo=3"),
+                String.valueOf(content.get("packageVersions")));
+        assertFalse(String.valueOf(content).contains("需求设计正文不应直接进入上下文"), String.valueOf(content));
+        verify(actionTokenService).resolveTokenForContext("reqflow_action_develop");
+        verify(actionTokenService, never()).resolveToken("reqflow_action_develop");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void closeoutActionContextReturnsRepositoryListAndWritebackGate()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT);
+        token.setTargetMethod(IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
+        token.setProjectId(10L);
+        token.setVariantId(31L);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveTokenForContext("reqflow_action_closeout")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "closeout_pending"));
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqVariant variant = new ReqVariant();
+        variant.setVariantId(31L);
+        variant.setProjectId(10L);
+        variant.setBaselineBranch("release/main");
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepository backend = new ReqRepository();
+        backend.setRepoId(21L);
+        backend.setProjectId(10L);
+        backend.setRepoName("后端");
+        backend.setRepoUrl("git@example.com:reqflow-be.git");
+        ReqRepository frontend = new ReqRepository();
+        frontend.setRepoId(22L);
+        frontend.setProjectId(10L);
+        frontend.setRepoName("前端");
+        frontend.setRepoUrl("git@example.com:reqflow-ui.git");
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(List.of(backend, frontend));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "reqRepositoryMapper", repositoryMapper);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_closeout");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("get_action_context", arguments)));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        Map<String, Object> content = (Map<String, Object>) result.get("structuredContent");
+        assertEquals("requirement_closeout", content.get("stage"));
+        assertTrue(String.valueOf(content.get("repositories")).contains("reqflow-be.git"));
+        assertTrue(String.valueOf(content.get("repositories")).contains("reqflow-ui.git"));
+        assertFalse(content.containsKey("targetRepository"), String.valueOf(content));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("requiresExplicitUserConfirmation=true"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("tokenPersistence")).contains("meta.md"),
+                String.valueOf(content.get("tokenPersistence")));
+        verify(actionTokenService).resolveTokenForContext("reqflow_action_closeout");
+        verify(actionTokenService, never()).resolveToken("reqflow_action_closeout");
     }
 
     @Test
@@ -515,6 +631,34 @@ class McpServiceTest
     }
 
     @Test
+    void requirementGenerateTokenExpiresAfterDemandIsReadyForRequesterConfirmation()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveToken("reqflow_action_generate")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "plan_ready"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_generate");
+        arguments.put("content", "需求设计");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("save_requirement_package", arguments)));
+
+        assertToolErrorResult(response, "动作Token所属流程阶段已结束");
+        verify(packageService, never()).saveVersion(any(), any(), any(), any());
+    }
+
+    @Test
     void developmentToolsCanResolveDemandBySameDevelopStageActionToken()
     {
         IReqPackageService packageService = mock(IReqPackageService.class);
@@ -618,6 +762,7 @@ class McpServiceTest
     void repairToolsCanResolveDemandBySameRepairStageActionToken()
     {
         IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqDemandService demandService = mock(IReqDemandService.class);
         IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
         ReqActionToken token = new ReqActionToken();
         token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
@@ -626,13 +771,18 @@ class McpServiceTest
         when(actionTokenService.resolveToken("reqflow_action_repair_stage")).thenReturn(token);
         ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
         when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "repairing"));
-        when(packageService.saveVersion(9L, "execution_report", "返修执行报告", "upload_execution_report"))
-                .thenReturn(packageVersion("execution_report", "返修执行报告"));
-        when(packageService.saveVersion(9L, "review_report", "返修 Review 报告", "upload_review_report"))
-                .thenReturn(packageVersion("review_report", "返修 Review 报告"));
+        when(packageService.selectLatest(9L, "execution_report"))
+                .thenReturn(packageVersion("execution_report", "# 执行报告\n\n原始执行内容"));
+        when(packageService.selectLatest(9L, "review_report"))
+                .thenReturn(packageVersion("review_report", "# Review 报告\n\n原始 Review 内容"));
+        when(packageService.saveVersion(eq(9L), eq("execution_report"), any(), eq("upload_execution_report")))
+                .thenReturn(packageVersion("execution_report", "合并后的返修执行报告"));
+        when(packageService.saveVersion(eq(9L), eq("review_report"), any(), eq("upload_review_report")))
+                .thenReturn(packageVersion("review_report", "合并后的返修 Review 报告"));
 
         McpService service = new TestableMcpService(true);
         ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "reqDemandService", demandService);
         ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
         ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
 
@@ -647,8 +797,17 @@ class McpServiceTest
         service.handle(request("tools/call", toolParams("upload_review_report", reviewArguments)));
 
         verify(actionTokenService, org.mockito.Mockito.times(2)).resolveToken("reqflow_action_repair_stage");
-        verify(packageService).saveVersion(9L, "execution_report", "返修执行报告", "upload_execution_report");
-        verify(packageService).saveVersion(9L, "review_report", "返修 Review 报告", "upload_review_report");
+        ArgumentCaptor<String> executionContent = forClass(String.class);
+        verify(packageService).saveVersion(eq(9L), eq("execution_report"), executionContent.capture(), eq("upload_execution_report"));
+        assertTrue(executionContent.getValue().contains("原始执行内容"));
+        assertTrue(executionContent.getValue().contains("## 返修执行记录"));
+        assertTrue(executionContent.getValue().contains("返修执行报告"));
+        ArgumentCaptor<String> reviewContent = forClass(String.class);
+        verify(packageService).saveVersion(eq(9L), eq("review_report"), reviewContent.capture(), eq("upload_review_report"));
+        assertTrue(reviewContent.getValue().contains("原始 Review 内容"));
+        assertTrue(reviewContent.getValue().contains("## 返修 Review 记录"));
+        assertTrue(reviewContent.getValue().contains("返修 Review 报告"));
+        verify(demandService).updateReqDemandStatus(9L, "review", "mcp");
     }
 
     @Test
@@ -733,6 +892,11 @@ class McpServiceTest
         assertTrue(resultText.contains("docs/templates/review-report-template.md"), resultText);
         assertTrue(resultText.contains("scripts/check-harness.sh"), resultText);
         assertTrue(resultText.contains("scripts/test-check-harness.sh"), resultText);
+        assertTrue(resultText.contains("指定 spec 必须位于 docs/specs/active"), resultText);
+        assertTrue(resultText.contains("expected target spec under done directory to fail"), resultText);
+        assertTrue(resultText.contains("不要在 `done/` 中边执行边修改"), resultText);
+        assertTrue(resultText.contains("收到归档、办结或结束任务指令"), resultText);
+        assertTrue(resultText.contains("git mv \"$SPEC_DIR\" docs/specs/done/"), resultText);
         assertTrue(resultText.contains("自动 Review、返修和复审循环"), resultText);
         assertTrue(resultText.contains("publish_repository_index"), resultText);
         assertTrue(resultText.contains("register_harness_init_result"), resultText);

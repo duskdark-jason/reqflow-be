@@ -114,6 +114,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
 
         GeneratedKey generatedKey = generateUniqueKey();
         reqMcpUserKey.setKeyPrefix(prefixOf(generatedKey.plainKey));
+        reqMcpUserKey.setPlainKey(generatedKey.plainKey);
         reqMcpUserKey.setKeyHash(generatedKey.hash);
         reqMcpUserKey.setStatus(StringUtils.defaultIfEmpty(reqMcpUserKey.getStatus(), UserConstants.NORMAL));
         reqMcpUserKey.setCreateBy(operator);
@@ -130,7 +131,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
             throw new ServiceException("MCP Key不存在");
         }
         validateKeyReadable(key);
-        return buildCreateResult(key, null, mcpAddress);
+        return buildCreateResult(key, key.getPlainKey(), mcpAddress);
     }
 
     @Override
@@ -261,7 +262,7 @@ public class ReqMcpUserKeyServiceImpl implements IReqMcpUserKeyService
             String hash = hashKey(plainKey);
             if (mcpUserKeyMapper.selectReqMcpUserKeyByKeyHash(hash) == null)
             {
-                // 明文 Key 只在创建响应中返回一次，数据库只保存前缀和哈希用于校验与展示。
+                // 哈希继续用于鉴权查找，明文字段用于后续列表和安装指令展示。
                 return new GeneratedKey(plainKey, hash);
             }
         }

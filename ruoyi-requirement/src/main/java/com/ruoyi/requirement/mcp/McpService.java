@@ -3,8 +3,10 @@ package com.ruoyi.requirement.mcp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -143,6 +145,7 @@ public class McpService
                 resource("requirement://{demandNo}/draft-package", "需求草稿包"),
                 resource("requirement://{demandNo}/supplement", "需求补充说明"),
                 resource("requirement://{demandNo}/context-manifest", "需求上下文清单"),
+                resource("requirement://{demandNo}/package/{artifactType}", "需求资料包最新版本"),
                 resource("project://{projectId}/overview", "项目概览"),
                 resource("project://{projectId}/repositories", "项目仓库清单"),
                 resource("variant://{variantId}/overview", "项目分支概览"),
@@ -163,6 +166,7 @@ public class McpService
                 resourceTemplate("requirement://{demandNo}/draft-package", "需求草稿包", "读取最新需求草稿包"),
                 resourceTemplate("requirement://{demandNo}/supplement", "需求补充说明", "读取最新需求人补充说明"),
                 resourceTemplate("requirement://{demandNo}/context-manifest", "上下文清单", "读取最新需求上下文清单"),
+                resourceTemplate("requirement://{demandNo}/package/{artifactType}", "需求资料包最新版本", "按产物类型读取最新资料包全文"),
                 resourceTemplate("project://{projectId}/overview", "项目概览", "读取项目、仓库和项目分支"),
                 resourceTemplate("project://{projectId}/repositories", "项目仓库清单", "读取项目下代码仓库"),
                 resourceTemplate("variant://{variantId}/overview", "项目分支概览", "读取项目分支详情"),
@@ -378,6 +382,7 @@ public class McpService
                 tool("save_development_plan", "保存执行计划", packageToolSchema(false)),
                 tool("upload_execution_report", "上传执行报告", packageToolSchema(false)),
                 tool("upload_review_report", "上传 Review 报告", packageToolSchema(false)),
+                tool("get_action_context", "按 actionToken 读取轻量阶段上下文", actionContextSchema()),
                 tool("register_harness_init_result", "登记项目 harness 初始化结果", registerHarnessSchema()),
                 tool("get_harness_template", "读取项目 harness 初始化模板包", getHarnessTemplateSchema()),
                 tool("publish_repository_index", "发布当前仓库索引到需求平台项目分支知识库", publishRepositoryIndexSchema())));
@@ -416,10 +421,24 @@ public class McpService
             }
             return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(indexRequest, "mcp", currentUsername(), currentUserId())));
         }
+        if ("get_action_context".equals(name))
+        {
+            requirePermission(name, "req:package:save");
+            return toolResult(getActionContext(stringArg(arguments, "actionToken")));
+        }
         requirePermission(name, "req:package:save");
-        Long demandId = resolvePackageDemandId(name, arguments);
+        PackageToolContext packageContext = resolvePackageContext(name, arguments);
+        Long demandId = packageContext.getDemandId();
         String artifactType = artifactTypeForTool(name, stringArg(arguments, "artifactType"));
-        return toolResult(Collections.singletonMap("version", reqPackageService.saveVersion(demandId, artifactType, stringArg(arguments, "content"), name)));
+        String content = contentForPackageSave(name, packageContext, artifactType, stringArg(arguments, "content"));
+        ReqPackageVersion version = reqPackageService.saveVersion(demandId, artifactType, content, name);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("version", version);
+        if (shouldSubmitRepairReview(name, packageContext))
+        {
+            result.put("statusUpdated", reqDemandService.updateReqDemandStatus(demandId, "review", currentUsername()));
+        }
+        return toolResult(result);
     }
 
     private ReqRepositoryIndexImportRequest toIndexRequest(Map<String, Object> arguments)
@@ -442,6 +461,274 @@ public class McpService
         request.setPermissions(impactListArg(arguments, "permissions"));
         request.setDocuments(impactListArg(arguments, "documents"));
         return request;
+    }
+
+    private Map<String, Object> getActionContext(String actionToken)
+    {
+        ReqActionToken token = actionTokenService.resolveTokenForContext(actionToken);
+        validateActionContextStage(token);
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("actionType", token.getActionType());
+        context.put("stage", stageForToken(token));
+        context.put("targetMethod", token.getTargetMethod());
+        context.put("projectId", token.getProjectId());
+        context.put("variantId", token.getVariantId());
+        context.put("demandId", token.getDemandId());
+        context.put("tokenUsage", tokenUsage(token));
+        context.put("allowedTools", allowedTools(token));
+
+        ReqDemand demand = token.getDemandId() == null ? null : reqDemandMapper.selectReqDemandByDemandId(token.getDemandId());
+        if (demand != null)
+        {
+            context.put("demand", demandSummary(demand));
+            context.put("taskBranch", suggestedTaskBranch(demand));
+            context.put("resources", requirementResourceUris(demand.getDemandNo()));
+            context.put("packageVersions", packageVersionSummaries(demand.getDemandId(), demand.getDemandNo()));
+        }
+        ReqVariant variant = token.getVariantId() == null ? null : variantMapper.selectReqVariantByVariantId(token.getVariantId());
+        if (variant != null)
+        {
+            context.put("variant", variantSummary(variant));
+        }
+        if (IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType()))
+        {
+            context.put("repositories", repositorySummaries(token.getProjectId()));
+        }
+        context.put("syncPolicy", "先读取本地 meta.md 的 platformSync；仅当平台 versionNo 或 contentHash 更新时，再按 resourceUri 读取对应全文。");
+        context.put("tokenPersistence", "Persist the copied actionToken in local meta.md platformSync.actionToken so agents can resume after context compaction and later write back with the same stage token.");
+        context.put("writebackPolicy", "requiresExplicitUserConfirmation=true; Do not call writeback tools until the user explicitly confirms submission, acceptance, upload, or publish.");
+        return context;
+    }
+
+    private void validateActionContextStage(ReqActionToken token)
+    {
+        if (token == null || token.getDemandId() == null)
+        {
+            return;
+        }
+        if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
+        {
+            if (IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "submitted");
+            }
+            else if (IReqActionTokenService.TARGET_REQUIREMENT_GENERATE.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "plan_pending");
+            }
+        }
+        else if (IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType()))
+        {
+            if (IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "repairing");
+            }
+            else if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod()))
+            {
+                validateActionTokenDemandStage(token, "developing");
+            }
+        }
+        else if (IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType()))
+        {
+            validateActionTokenDemandStage(token, "closeout_pending");
+        }
+    }
+
+    private String stageForToken(ReqActionToken token)
+    {
+        if (IReqActionTokenService.ACTION_PROJECT_INIT.equals(token.getActionType()))
+        {
+            return "project_init";
+        }
+        if (IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType()))
+        {
+            return "requirement_closeout";
+        }
+        return token.getTargetMethod();
+    }
+
+    private String tokenUsage(ReqActionToken token)
+    {
+        if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType())
+                || IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
+                || IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType()))
+        {
+            return "reusable_stage_token";
+        }
+        return "one_time_write_token";
+    }
+
+    private List<String> allowedTools(ReqActionToken token)
+    {
+        String stage = stageForToken(token);
+        if (IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS.equals(stage))
+        {
+            return Collections.singletonList("upload_requirement_assessment");
+        }
+        if (IReqActionTokenService.TARGET_REQUIREMENT_GENERATE.equals(stage))
+        {
+            return Collections.singletonList("save_requirement_package");
+        }
+        if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(stage))
+        {
+            return Arrays.asList("save_development_plan", "upload_execution_report", "upload_review_report");
+        }
+        if (IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(stage))
+        {
+            return Arrays.asList("upload_execution_report", "upload_review_report");
+        }
+        if ("requirement_closeout".equals(stage))
+        {
+            return Collections.singletonList("publish_repository_index");
+        }
+        if ("project_init".equals(stage))
+        {
+            return Arrays.asList("get_harness_template", "publish_repository_index", "register_harness_init_result");
+        }
+        return Collections.emptyList();
+    }
+
+    private Map<String, Object> demandSummary(ReqDemand demand)
+    {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("demandId", demand.getDemandId());
+        summary.put("demandNo", demand.getDemandNo());
+        summary.put("title", demand.getTitle());
+        summary.put("status", demand.getStatus());
+        return summary;
+    }
+
+    private Map<String, Object> variantSummary(ReqVariant variant)
+    {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("variantId", variant.getVariantId());
+        summary.put("variantName", variant.getVariantName());
+        summary.put("variantCode", variant.getVariantCode());
+        summary.put("baselineBranch", variant.getBaselineBranch());
+        return summary;
+    }
+
+    private Map<String, Object> repositorySummary(ReqRepository repository)
+    {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("repoId", repository.getRepoId());
+        summary.put("repoName", repository.getRepoName());
+        summary.put("repoType", repository.getRepoType());
+        summary.put("remoteUrl", repository.getRepoUrl());
+        summary.put("defaultBranch", repository.getDefaultBranch());
+        return summary;
+    }
+
+    private List<Map<String, Object>> repositorySummaries(Long projectId)
+    {
+        if (projectId == null)
+        {
+            return Collections.emptyList();
+        }
+        ReqRepository query = new ReqRepository();
+        query.setProjectId(projectId);
+        List<Map<String, Object>> summaries = new ArrayList<>();
+        for (ReqRepository repository : safeList(reqRepositoryMapper.selectReqRepositoryList(query)))
+        {
+            if (repository != null && repository.getRepoId() != null && repository.getRepoUrl() != null
+                    && !repository.getRepoUrl().isEmpty() && !"1".equals(repository.getStatus()))
+            {
+                summaries.add(repositorySummary(repository));
+            }
+        }
+        return summaries;
+    }
+
+    private Map<String, Object> requirementResourceUris(String demandNo)
+    {
+        Map<String, Object> resources = new LinkedHashMap<>();
+        resources.put("detail", "requirement://" + demandNo);
+        resources.put("draftPackage", "requirement://" + demandNo + "/draft-package");
+        resources.put("supplement", "requirement://" + demandNo + "/supplement");
+        resources.put("contextManifest", "requirement://" + demandNo + "/context-manifest");
+        resources.put("packagePattern", "requirement://" + demandNo + "/package/{artifactType}");
+        return resources;
+    }
+
+    private List<Map<String, Object>> packageVersionSummaries(Long demandId, String demandNo)
+    {
+        List<Map<String, Object>> summaries = new ArrayList<>();
+        for (ReqPackageVersion version : safeList(reqPackageService.selectReqPackageVersionListByDemandId(demandId)))
+        {
+            Map<String, Object> summary = new LinkedHashMap<>();
+            summary.put("artifactType", version.getArtifactType());
+            summary.put("versionNo", version.getVersionNo());
+            summary.put("versionNote", version.getVersionNote());
+            summary.put("createTime", version.getCreateTime());
+            summary.put("contentHash", sha256(version.getContent()));
+            summary.put("resourceUri", packageResourceUri(demandNo, version.getArtifactType()));
+            summaries.add(summary);
+        }
+        return summaries;
+    }
+
+    private String packageResourceUri(String demandNo, String artifactType)
+    {
+        if ("requirement_draft".equals(artifactType))
+        {
+            return "requirement://" + demandNo + "/draft-package";
+        }
+        if ("requirement_supplement".equals(artifactType))
+        {
+            return "requirement://" + demandNo + "/supplement";
+        }
+        if ("context_manifest".equals(artifactType))
+        {
+            return "requirement://" + demandNo + "/context-manifest";
+        }
+        return "requirement://" + demandNo + "/package/" + artifactType;
+    }
+
+    private String sha256(String content)
+    {
+        if (content == null)
+        {
+            return null;
+        }
+        try
+        {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(content.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder();
+            for (byte b : bytes)
+            {
+                builder.append(String.format("%02x", b));
+            }
+            return builder.toString();
+        }
+        catch (NoSuchAlgorithmException e)
+        {
+            throw new IllegalStateException("SHA-256不可用", e);
+        }
+    }
+
+    private String suggestedTaskBranch(ReqDemand demand)
+    {
+        return "feature/" + requirementBranchToken(demand.getDemandNo()) + "-" + slug(demand.getTitle(), "demand");
+    }
+
+    private String requirementBranchToken(String demandNo)
+    {
+        String token = slug(demandNo, "requirement").toLowerCase();
+        return token.replaceFirst("^req-0*([0-9]+)$", "req-$1");
+    }
+
+    private String slug(String value, String fallback)
+    {
+        if (value == null || value.isEmpty())
+        {
+            return fallback;
+        }
+        String slug = value.trim()
+                .replaceAll("[^A-Za-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "")
+                .toLowerCase();
+        return slug.isEmpty() ? fallback + "-" + Integer.toHexString(value.hashCode()) : slug;
     }
 
     private Map<String, Object> getHarnessTemplate(Long projectId)
@@ -821,7 +1108,65 @@ public class McpService
         throw new IllegalArgumentException("不支持的MCP工具：" + toolName);
     }
 
-    private Long resolvePackageDemandId(String toolName, Map<String, Object> arguments)
+    private String contentForPackageSave(String toolName, PackageToolContext packageContext, String artifactType, String submittedContent)
+    {
+        if (!isRepairReportUpload(toolName, packageContext))
+        {
+            return submittedContent;
+        }
+        ReqPackageVersion latest = reqPackageService.selectLatest(packageContext.getDemandId(), artifactType);
+        String latestContent = latest == null ? null : latest.getContent();
+        return appendRepairRecord(latestContent, submittedContent, repairRecordTitle(toolName));
+    }
+
+    private boolean isRepairReportUpload(String toolName, PackageToolContext packageContext)
+    {
+        ReqActionToken token = packageContext.getActionToken();
+        return ("upload_execution_report".equals(toolName) || "upload_review_report".equals(toolName))
+                && token != null
+                && IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
+                && IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod());
+    }
+
+    private String appendRepairRecord(String latestContent, String submittedContent, String title)
+    {
+        String previous = trimToNull(latestContent);
+        String submitted = trimToNull(submittedContent);
+        if (previous == null)
+        {
+            return submittedContent;
+        }
+        if (submitted == null)
+        {
+            return previous;
+        }
+        if (submitted.contains(previous))
+        {
+            return submitted;
+        }
+        if (previous.contains(submitted))
+        {
+            return previous;
+        }
+        return previous + "\n\n---\n\n" + title + "\n\n" + submitted;
+    }
+
+    private String repairRecordTitle(String toolName)
+    {
+        return "upload_review_report".equals(toolName) ? "## 返修 Review 记录" : "## 返修执行记录";
+    }
+
+    private String trimToNull(String value)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private PackageToolContext resolvePackageContext(String toolName, Map<String, Object> arguments)
     {
         String actionToken = stringArg(arguments, "actionToken");
         if (actionToken == null || actionToken.isEmpty())
@@ -831,7 +1176,7 @@ public class McpService
             {
                 throw new IllegalArgumentException("需求ID或actionToken不能为空");
             }
-            return demandId;
+            return new PackageToolContext(demandId, null);
         }
         ReqActionToken token = actionTokenService.resolveToken(actionToken);
         if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
@@ -841,16 +1186,16 @@ public class McpService
                 validateActionTokenDemandStage(token, "submitted");
                 if ("upload_requirement_assessment".equals(toolName))
                 {
-                    return token.getDemandId();
+                    return new PackageToolContext(token.getDemandId(), token);
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
             if (IReqActionTokenService.TARGET_REQUIREMENT_GENERATE.equals(token.getTargetMethod()))
             {
-                validateActionTokenDemandStage(token, "plan_pending", "plan_ready");
+                validateActionTokenDemandStage(token, "plan_pending");
                 if ("save_requirement_package".equals(toolName))
                 {
-                    return token.getDemandId();
+                    return new PackageToolContext(token.getDemandId(), token);
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
@@ -860,7 +1205,7 @@ public class McpService
             }
             else if ("save_requirement_package".equals(token.getTargetMethod()))
             {
-                validateActionTokenDemandStage(token, "plan_pending", "plan_ready");
+                validateActionTokenDemandStage(token, "plan_pending");
             }
             else
             {
@@ -868,7 +1213,7 @@ public class McpService
             }
             if (toolName.equals(token.getTargetMethod()))
             {
-                return token.getDemandId();
+                return new PackageToolContext(token.getDemandId(), token);
             }
             throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
         }
@@ -880,7 +1225,7 @@ public class McpService
                 if ("save_development_plan".equals(toolName) || "upload_execution_report".equals(toolName)
                         || "upload_review_report".equals(toolName))
                 {
-                    return token.getDemandId();
+                    return new PackageToolContext(token.getDemandId(), token);
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
@@ -889,14 +1234,14 @@ public class McpService
                 validateActionTokenDemandStage(token, "repairing");
                 if ("upload_execution_report".equals(toolName) || "upload_review_report".equals(toolName))
                 {
-                    return token.getDemandId();
+                    return new PackageToolContext(token.getDemandId(), token);
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
             validateActionTokenDemandStage(token, "developing", "repairing");
             if (toolName.equals(token.getTargetMethod()))
             {
-                return token.getDemandId();
+                return new PackageToolContext(token.getDemandId(), token);
             }
             throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
         }
@@ -904,7 +1249,38 @@ public class McpService
         {
             throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
         }
-        return token.getDemandId();
+        return new PackageToolContext(token.getDemandId(), token);
+    }
+
+    private boolean shouldSubmitRepairReview(String toolName, PackageToolContext packageContext)
+    {
+        ReqActionToken token = packageContext.getActionToken();
+        return "upload_review_report".equals(toolName)
+                && token != null
+                && IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
+                && IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod());
+    }
+
+    private static class PackageToolContext
+    {
+        private final Long demandId;
+        private final ReqActionToken actionToken;
+
+        PackageToolContext(Long demandId, ReqActionToken actionToken)
+        {
+            this.demandId = demandId;
+            this.actionToken = actionToken;
+        }
+
+        Long getDemandId()
+        {
+            return demandId;
+        }
+
+        ReqActionToken getActionToken()
+        {
+            return actionToken;
+        }
     }
 
     private void validateActionTokenDemandStage(ReqActionToken token, String... validStatuses)
@@ -1081,6 +1457,13 @@ public class McpService
         return objectSchema(properties, Collections.singletonList("content"));
     }
 
+    private Map<String, Object> actionContextSchema()
+    {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("actionToken", property("string", "平台复制指令中的动作 token；仅用于读取轻量阶段上下文，不消费一次性 token"));
+        return objectSchema(properties, Collections.singletonList("actionToken"));
+    }
+
     private Map<String, Object> registerHarnessSchema()
     {
         Map<String, Object> properties = new LinkedHashMap<>();
@@ -1181,6 +1564,7 @@ public class McpService
         if ("draft-package".equals(path)) return "requirement_draft";
         if ("supplement".equals(path)) return "requirement_supplement";
         if ("context-manifest".equals(path)) return "context_manifest";
+        if (path != null && path.startsWith("package/")) return path.substring("package/".length());
         return null;
     }
 

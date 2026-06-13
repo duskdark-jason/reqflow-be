@@ -200,6 +200,60 @@ class ReqActionTokenServiceImplTest
     }
 
     @Test
+    void requirementAnalysisStageTokenCanResolveAfterPreviousUse()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_analysis_stage_token";
+        ReqActionToken stored = reusableToken(95L, IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
+                IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS);
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.touchLastUsed(95L)).thenReturn(1);
+
+        ReqActionToken resolved = service.resolveToken(plainToken);
+
+        assertEquals(95L, resolved.getTokenId());
+        verify(mapper).touchLastUsed(95L);
+        verify(mapper, never()).updateLastUsed(95L);
+    }
+
+    @Test
+    void requirementGenerateStageTokenCanResolveAfterPreviousUse()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_generate_stage_token";
+        ReqActionToken stored = reusableToken(96L, IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
+                IReqActionTokenService.TARGET_REQUIREMENT_GENERATE);
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.touchLastUsed(96L)).thenReturn(1);
+
+        ReqActionToken resolved = service.resolveToken(plainToken);
+
+        assertEquals(96L, resolved.getTokenId());
+        verify(mapper).touchLastUsed(96L);
+        verify(mapper, never()).updateLastUsed(96L);
+    }
+
+    @Test
+    void requirementCloseoutStageTokenCanResolveAfterPreviousUse()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_closeout_stage_token";
+        ReqActionToken stored = reusableToken(97L, IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
+                IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.touchLastUsed(97L)).thenReturn(1);
+
+        ReqActionToken resolved = service.resolveToken(plainToken);
+
+        assertEquals(97L, resolved.getTokenId());
+        verify(mapper).touchLastUsed(97L);
+        verify(mapper, never()).updateLastUsed(97L);
+    }
+
+    @Test
     void rejectsTokenWhenLastUsedUpdateDoesNotWin()
     {
         ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
@@ -250,6 +304,16 @@ class ReqActionTokenServiceImplTest
         token.setVariantId(31L);
         token.setTargetMethod("publish_repository_index");
         token.setStatus(status);
+        return token;
+    }
+
+    private ReqActionToken reusableToken(Long tokenId, String actionType, String targetMethod)
+    {
+        ReqActionToken token = token(tokenId, "0");
+        token.setActionType(actionType);
+        token.setTargetMethod(targetMethod);
+        token.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
+        token.setLastUsedTime(new Date(System.currentTimeMillis() - 1000));
         return token;
     }
 }

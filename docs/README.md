@@ -9,6 +9,7 @@
 | `ai-harness/` | agent 执行护栏 | 模型或同事修改代码前必读 |
 | `domains/` | 业务领域当前入口 | 处理某个业务领域需求前阅读 |
 | `process/` | 新需求流程和文档治理 | 开始新需求或整理文档前必读 |
+| `runbooks/` | 部署、运行和环境操作说明 | 部署、重建测试库或排查环境问题前阅读 |
 | `specs/` | 单次需求过程文档 | 查询 active/done 需求 |
 | `templates/` | 可复制模板 | 新增需求、契约或验收文档时复制 |
 | `../scripts/check-docs.sh` | 文档自检脚本 | 文档或 harness 变更后运行 |
@@ -23,6 +24,8 @@
 涉及分支、commit、merge 或 rebase 时，先读 `process/git-workflow.md`。
 
 涉及代码实现细则时，先读 `process/code-guidelines.md`。
+
+涉及部署、数据库初始化或测试库重建时，先读 `runbooks/deploy.md`。
 
 ## 新需求默认流程
 

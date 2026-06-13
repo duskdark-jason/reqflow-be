@@ -108,7 +108,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 
 索引导入优先支持 `actionToken + remoteUrl`：服务端按动作 token 解析目标动作、项目和项目分支，并在同项目下按 `remoteUrl` 定位代码仓库。`actionToken` 必须能解析为 `project_init` 动作且 `targetMethod` 为 `publish_repository_index`；同时兼容旧的 `mcpKey + remoteUrl` 和 `projectId + repoId + branchName`。项目初始化上下文中的 `modules` 不能为空，且每一项必须有稳定 `moduleCode` 和业务 `moduleName`；推荐按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按动作 token、项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。每个项目分支都需要单独初始化索引，不能用主线索引代替客户分支或其他功能分支。重新发布同一仓库同一分支时，调用方必须发送当前完整模块快照，而不是只发送增量。
 
-索引导入写入前会预检 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。缺任一表时返回业务错误 `平台索引表未初始化：<table>`，并提示执行 `docs/db/sql/req_platform_schema.sql` 中对应建表段；不得让调用方只看到数据库原始 `Table ... doesn't exist` 作为最终结论。
+索引导入写入前会预检 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。缺任一表时返回业务错误 `平台索引表未初始化：<table>`，并提示执行 `docs/db/sql/req_platform_init.sql` 中对应建表段；不得让调用方只看到数据库原始 `Table ... doesn't exist` 作为最终结论。
 
 影响面推荐请求可传 `projectId`、`repoId`、`variantId`、`moduleId`、`moduleCode`。当传入 `variantId` 时，服务端必须校验项目分支属于当前项目，并使用该项目分支 `baselineBranch` 过滤影响面；查询只返回目标仓库或每个仓库最新 `imported` 批次的数据。返回 `pages`、`apis`、`tables`、`permissions` 和 `documents` 五类列表，每一项来自 `req_impact_item`，同类资源按 `itemKey/apiPath/permissionKey/tableName/relativePath/itemName` 去重。
 
@@ -127,6 +127,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | `/requirement/demand/{demandId}/supplement` | POST | `req:demand:edit` | 需求创建人在待补充说明或需求设计待确认状态提交补充/调整内容，并回到待生成需求设计 |
 | `/requirement/demand/{demandId}/plan-instruction` | GET | `req:demand:query` | 按当前状态获取需求分析或需求生成 MCP 指令 |
 | `/requirement/demand/{demandId}/develop-instruction` | GET | `req:demand:query` | 按当前状态获取开发执行、返修或合并归档 MCP 指令 |
+| `/requirement/demand/{demandId}/closeout-verification` | GET | `req:demand:query` | 查询合并归档平台验证结果，供前端决定是否展示确认归档完成 |
 
 新增需求时后端始终生成 `demandNo`，格式为 `REQ-001` 风格递增编号，不包含日期；即使请求体传入编号也会被覆盖。创建人 ID 由当前登录用户获取，即使请求体传入 `creatorId` 也会被覆盖。`demandSource` 必填，用于记录需求来源。`developerUserId` 必填，且必须指向启用的 `requirement_developer` 用户；这个指定开发人员同时负责需求设计、执行开发和返修，不再拆分对接开发人与实际开发人。新增后状态设为 `draft`，中文语义为“未提交”。需求从 `draft` 提交到 `submitted` 时，服务端会自动追加 `requirement_draft` 和 `context_manifest` 两类资料包版本，供 MCP 读取基础需求和上下文清单；前端不需要也不应该让需求人员手动生成草稿资料包。
 
@@ -165,15 +166,17 @@ completed -> archived
 rejected -> archived
 ```
 
-其中 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> closeout_pending -> completed` 是主流程；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发，`closeout_pending` 表示需求人验收通过后待指定开发人员合并归档。`submitted` 和 `plan_pending` 可由指定开发人员选择 `supplement_required` 或 `rejected` 作为结论分支：`supplement_required` 表示需要需求创建人补充说明，补充后通过专用补充接口回到 `plan_pending`；`plan_ready -> plan_pending` 表示需求创建人对已生成需求设计提出调整说明并重新进入需求生成阶段；`rejected` 表示当前需求无法实现，可由管理员归档。`review -> repairing -> review` 是验收返修分支；`closeout_pending -> completed` 必须由指定开发人员完成本地任务分支合并、push 和平台知识库归档验证后才能提交；`archived` 用于兼容历史归档场景。不允许其他跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
+其中 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> closeout_pending -> completed` 是主流程；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发，`closeout_pending` 表示需求人验收通过后待指定开发人员合并归档。`submitted` 和 `plan_pending` 可由指定开发人员选择 `supplement_required` 或 `rejected` 作为结论分支：`supplement_required` 表示需要需求创建人补充说明，补充后通过专用补充接口回到 `plan_pending`；`plan_ready -> plan_pending` 表示需求创建人对已生成需求设计提出调整说明并重新进入需求生成阶段；`rejected` 表示当前需求无法实现，可由管理员归档。`review -> repairing -> review` 是验收返修分支，但 `review -> repairing` 必须通过返修问题说明接口提交，普通状态接口不得绕过说明内容；`closeout_pending -> completed` 必须由指定开发人员完成本地任务分支合并、push 和平台知识库归档验证后才能提交；`archived` 用于兼容历史归档场景。不允许其他跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
 
 `/requirement/demand/{demandId}/supplement` 请求体为 `{ "content": "补充说明正文" }`。该接口只允许需求创建人或管理员在 `supplement_required` 或 `plan_ready` 状态调用：`supplement_required` 表示补充基础需求信息，`plan_ready` 表示对已生成需求设计提出调整说明。调用成功后追加 `requirement_supplement` 资料包版本并把需求状态改回 `plan_pending`；开发人员必须重新通过需求生成指令回写新的 `requirement` 版本后，才能把 `plan_pending` 提交为 `plan_ready`。如果状态不是待补充说明或需求设计待确认、内容为空或操作者不是创建人，会返回业务异常。普通 `/requirement/package/{demandId}/{artifactType}` 保存接口仍不开放给需求人员写入补充说明。
 
-`plan-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_plan`，仅指定开发人员或管理员可在 `submitted`、`plan_pending` 或 `plan_ready` 状态生成。`submitted` 只返回需求分析指令，`targetMethod=requirement_analysis`，复制内容只包含 `upload_requirement_assessment`、需求分析 `actionToken`、建议任务分支、`arguments.actionToken` 使用说明，以及“当前流程阶段内有效、流转到下一流程即失效、最长保留 24 小时、过期或已使用后重新生成”的提示；评估报告必须给出“可继续设计、需澄清、需调整、暂不可实现”之一的结论，结论需要需求人补充、调整或暂不可实现时，本轮不得生成 `requirement.md`。`plan_pending` 和 `plan_ready` 只返回需求生成指令，`targetMethod=requirement_generate`，复制内容只包含 `save_requirement_package`、需求生成 `actionToken` 和同一阶段有效期提示；本阶段只生成或调整 `requirement.md`，不得生成 `plan.md`、不得改业务代码、不得写执行或 Review 报告。两个阶段的 actionToken 都不能替代人员 `X-MCP-Key`。
+`/requirement/demand/{demandId}/repair` 请求体为 `{ "content": "返修问题说明正文" }`。该接口只允许需求创建人或管理员在 `review` 待验收状态调用，内容不能为空。调用成功后追加 `requirement_supplement` 资料包版本，`versionNote=需求人返修问题说明`，并把需求状态改为 `repairing`；指定开发人员复制返修任务指令时必须读取 Review 报告和需求人返修问题说明，只处理本轮返修项，不重新生成需求设计或执行计划。普通 `/requirement/demand/{demandId}/status/repairing` 必须返回业务异常，提示先填写返修问题说明。
 
-`develop-instruction` 接口返回 `ReqActionInstruction`。`developing` 和 `repairing` 状态返回 `actionType=requirement_develop`，`closeout_pending` 状态返回 `actionType=requirement_closeout`；仅指定开发人员或管理员可生成。`confirmed` 待执行开发阶段只允许指定开发人员点击“开始开发”流转到 `developing`，不生成执行指令。`developing` 返回开发执行指令，`targetMethod=requirement_develop`，复制内容包含 `reqflow-mcp`、`mcpServer: reqflow`、`mcpTool: reqflow.save_development_plan`、`mcpTool: reqflow.upload_execution_report`、`mcpTool: reqflow.upload_review_report`、`demandId`、`demandNo`、任务分支、开发阶段 `actionToken`、`arguments.actionToken` 使用说明，以及“当前开发阶段内有效、流转到待验收后即失效、最长保留 24 小时、可在本阶段多次回写”的提示；生成 `plan.md` 前必须先分析该需求是否可以拆分给多个 subagent 并行执行，只有模块边界清晰、无共享状态、可独立验证时才拆分。同一个开发阶段 actionToken 可用于执行计划、执行报告和 Review 报告回写。`repairing` 返回返修指令，`targetMethod=requirement_repair`，复制内容只包含 `upload_execution_report`、`upload_review_report`、返修阶段 `actionToken` 和返修阶段有效期提示；本阶段不得重新生成需求设计或执行计划。开发阶段和返修阶段 actionToken 都不能替代人员 `X-MCP-Key`。
+`plan-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_plan`，仅指定开发人员或管理员可在 `submitted` 或 `plan_pending` 状态生成。平台复制内容必须是最小动态上下文，只保留 `reqflow-mcp`、`mcpServer: reqflow`、对应阶段 `actionToken` 和先调用 `get_action_context` 的提醒，不在指令正文列出 `stage`、`targetMethod`、需求编号、分支、具体 `mcpTool` 或完整执行步骤。`submitted` 生成需求分析 actionToken，`plan_pending` 生成需求生成 actionToken，`plan_ready` 为需求设计待确认阶段，不生成需求设计指令。具体阶段、MCP 工具选择、读取资源、本地文件边界和停止条件由全局 `reqflow-mcp` skill 先调用 `get_action_context` 后根据返回 `stage` 识别。
 
-`closeout_pending` 返回合并归档指令，`actionType=requirement_closeout`，`targetMethod=publish_repository_index`，复制内容包含需求基线分支、建议任务分支、本地 squash merge、push、按当前完整快照调用 `reqflow.publish_repository_index` 更新知识库、平台验证和删除本地开发分支的顺序。服务端会按当前项目分支下每个有效仓库生成一个合并归档 actionToken；该 token 只用于对应需求和对应仓库的 `publish_repository_index`，最长 24 小时且只能使用一次。需求从 `closeout_pending` 流转到 `completed` 前，服务端必须逐仓确认本需求对应仓库的合并归档 token 已使用，且该 token 成功产生带本需求归档上下文的 `imported` 索引批次；否则返回 `归档结果未通过平台验证` 类业务异常。
+`develop-instruction` 接口返回 `ReqActionInstruction`。`developing` 和 `repairing` 状态返回 `actionType=requirement_develop`，`closeout_pending` 状态返回 `actionType=requirement_closeout`；仅指定开发人员或管理员可生成。`confirmed` 待执行开发阶段只允许指定开发人员点击“开始开发”流转到 `developing`，不生成执行指令。`developing` 返回开发阶段 actionToken；`repairing` 返回返修阶段 actionToken；`closeout_pending` 返回一个需求级合并归档 actionToken，所有仓库发布索引都复用该 token，复制内容不列出仓库名称、repoId、分支或 `targetMethod`。复制内容不展开 `save_development_plan`、`upload_execution_report`、`upload_review_report`、`publish_repository_index` 的调用顺序，也不重复分支、Review、返修或归档步骤。全局 `reqflow-mcp` skill 必须先调用 `get_action_context`，再维护 `stage -> MCP tool` 映射：`requirement_develop -> save_development_plan, upload_execution_report, upload_review_report`，`requirement_repair -> upload_execution_report, upload_review_report`，`requirement_closeout -> publish_repository_index`。开发阶段、返修阶段和归档阶段 actionToken 都不能替代人员 `X-MCP-Key`。
+
+`closeout_pending` 的详细执行顺序由全局 `reqflow-mcp` skill 承接：先在任务分支完成 active spec 到 done 的归档迁移，再 squash merge 到需求基线分支、push。用户明确确认归档发布后，才按当前完整快照调用 `publish_repository_index` 更新知识库，平台验证通过后再删除本地开发分支。服务端按需求生成一个合并归档 actionToken；该 token 只用于当前需求当前阶段的 `publish_repository_index`，最长 24 小时且阶段内可复用，各仓库通过 `remoteUrl` 定位。`closeout-verification` 返回 `{ "verified": true|false, "message": "..." }`，复用 `closeout_pending -> completed` 的逐仓验证口径，只读查询不更新需求状态；未通过时 `verified=false` 且 `message` 包含未通过原因。需求从 `closeout_pending` 流转到 `completed` 前，服务端必须逐仓确认本需求对应仓库都已产生带本需求归档上下文的 `imported` 索引批次；否则返回 `归档结果未通过平台验证` 类业务异常。
 
 ## 执行包接口
 
@@ -184,13 +187,15 @@ rejected -> archived
 | `/requirement/package/{demandId}/{artifactType}` | POST | `req:package:save` | 保存新版本 |
 | `/requirement/package/generate/{demandId}` | POST | `req:package:save` | 生成草稿执行包 |
 
-执行包保存永远追加 `req_package_version` 新记录，不覆盖历史版本。版本号按 `demand_id + artifact_type` 独立递增。需求设计阶段先追加需求可行性评估版本，再按结论追加需求设计版本。验收返修不新建需求，继续在同一需求下追加需求设计、执行计划、执行报告或 Review 报告版本，用版本链表达返修轮次。
+执行包保存永远追加 `req_package_version` 新记录，不覆盖历史版本。版本号按 `demand_id + artifact_type` 独立递增。需求设计阶段先追加需求可行性评估版本，再按结论追加需求设计版本。验收返修不新建需求，继续在同一需求下追加需求设计、执行计划、执行报告或 Review 报告版本，用版本链表达返修轮次。返修阶段 MCP `upload_execution_report` 和 `upload_review_report` 额外保证最新版仍保留原报告正文：如果上传内容已经包含上一版正文，按上传完整内容保存；如果上传内容只是返修片段，服务端把片段追加到上一版之后再保存新版本。
 
-执行包读取复用需求参与人可见性：需求创建人、指定开发人员和管理员可读。执行包保存、草稿生成和 MCP 资料包回写仅允许指定开发人员或管理员执行；即使用户拥有隐藏 `req:package:save` 权限，也不能回写未指定给自己的需求。服务端内部在提需时自动生成 `requirement_draft` 和 `context_manifest`，在需求人补充说明时生成 `requirement_supplement`，这两个流程写入不代表开放通用资料包写权限。
+执行包读取复用需求参与人可见性：需求创建人、指定开发人员和管理员可读。执行包保存、草稿生成和 MCP 资料包回写仅允许指定开发人员或管理员执行；即使用户拥有隐藏 `req:package:save` 权限，也不能回写未指定给自己的需求。服务端内部在提需时自动生成 `requirement_draft` 和 `context_manifest`，在需求人补充说明、需求设计调整或返修问题说明时生成 `requirement_supplement`，这些流程写入不代表开放通用资料包写权限。
 
-业务页面默认一级标签展示的资料类型为 `requirement_draft`、`requirement_assessment`、`requirement`、`plan`、`execution_report` 和 `review_report`。`requirement_supplement` 仍作为补充/调整版本类型和 MCP 资源保留，但前端应按语义嵌入需求可行性评估或需求设计标签内的折叠历史记录，不作为普通页面默认标签展示；`context_manifest` 仍作为 MCP 上下文资源保留，不作为普通页面默认标签展示。
+业务页面默认一级标签展示的资料类型为 `requirement_draft`、`requirement_assessment`、`requirement`、`plan`、`execution_report` 和 `review_report`。`requirement_supplement` 仍作为补充/调整/返修问题版本类型和 MCP 资源保留，但前端应按语义嵌入需求可行性评估、需求设计或 Review 报告标签内的折叠历史记录，不作为普通页面默认标签展示；`context_manifest` 仍作为 MCP 上下文资源保留，不作为普通页面默认标签展示。
 
-MCP `upload_requirement_assessment` 和 `save_requirement_package` 可显式传 `demandId`，也可传当前阶段指令里的对应 `actionToken` 由服务端解析到绑定需求；MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 可传开发执行或返修指令里的同一个阶段 `actionToken` 由服务端解析到绑定需求；这些调用仍必须通过人员 `X-MCP-Key` 或登录态权限校验。需求分析和需求生成 actionToken 被成功解析后立即写入 `last_used_time`，后续重复使用必须失败；开发阶段 actionToken 在 `developing` 内可重复用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；返修阶段 actionToken 在 `repairing` 内可重复用于 `upload_execution_report` 和 `upload_review_report`。需求流转到下一阶段后旧 actionToken 立即失效，最长保留时间仍为 24 小时。
+MCP `upload_requirement_assessment` 和 `save_requirement_package` 可显式传 `demandId`，也可传当前阶段指令里的对应 `actionToken` 由服务端解析到绑定需求；MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 可传开发执行或返修指令里的同一个阶段 `actionToken` 由服务端解析到绑定需求；这些调用仍必须通过人员 `X-MCP-Key` 或登录态权限校验。需求可行性分析、需求设计、开发、返修和归档 actionToken 都是阶段内可复用 token：成功解析后刷新 `last_used_time`，但不立即作废；需求流转到下一阶段后旧 actionToken 立即失效，最长保留时间仍为 24 小时。返修阶段 `upload_review_report` 会在资料包版本保存后自动触发返修验收提交，因此全局 skill 必须要求用户明确确认提交返修验收后才能调用。
+
+MCP `get_action_context` 是只读轻量上下文工具，入参为 `{ "actionToken": "..." }`，不会消费 actionToken，也不会更新 `last_used_time`。返回内容包含 `stage`、`actionType`、`targetMethod`、`allowedTools`、需求/项目分支/仓库摘要、`resources`、`packageVersions`、`syncPolicy`、`tokenPersistence` 和 `writebackPolicy`；合并归档 token 额外返回 `repositories`。`packageVersions` 只返回 `artifactType`、`versionNo`、`versionNote`、更新时间、`contentHash` 和 `resourceUri`，不得直接返回资料包正文。执行端必须先用该工具识别阶段，再将本地 `meta.md platformSync` 与 `packageVersions` 比对：版本和哈希一致时使用本地文件；本地缺失或不一致时才按 `resourceUri` 读取全文。执行端还必须把 actionToken 写入本地 `meta.md platformSync.actionToken`，用于多轮本地迭代或上下文压缩后的恢复；写平台工具必须等待用户明确确认后再调用。需求资源模板新增 `requirement://{demandNo}/package/{artifactType}`，用于按产物类型读取最新资料包全文。
 
 生成草稿执行包时，`context_manifest` 和需求草稿中的任务分支使用 `fix-功能模块-编号-标题` 语义，并将各片段转换为命令行友好的 ASCII slug。模块片段优先来自人工模块名，其次来自索引模块名，最后使用备注中的新功能名称。
 
@@ -235,41 +240,44 @@ requirement_develop
 requirement_closeout
 ```
 
-`req_action_token.target_method` 对需求流程使用阶段级目标：`requirement_analysis` 只允许 `submitted` 状态调用 `upload_requirement_assessment`；`requirement_generate` 只允许 `plan_pending/plan_ready` 状态调用 `save_requirement_package`；`requirement_develop` 只允许 `developing` 状态调用 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；`requirement_repair` 只允许 `repairing` 状态调用 `upload_execution_report` 和 `upload_review_report`；`publish_repository_index` 可用于项目初始化或 `closeout_pending` 合并归档阶段发布完整知识库快照。
+`req_action_token.target_method` 对需求流程使用阶段级目标：`requirement_analysis` 只允许 `submitted` 状态调用 `upload_requirement_assessment`；`requirement_generate` 只允许 `plan_pending` 状态调用 `save_requirement_package`；`requirement_develop` 只允许 `developing` 状态调用 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；`requirement_repair` 只允许 `repairing` 状态调用 `upload_execution_report` 和 `upload_review_report`；`publish_repository_index` 可用于项目初始化或 `closeout_pending` 合并归档阶段发布完整知识库快照。
 
-动作 token 不是人员认证 Key，不能替代 MCP 请求头 `X-MCP-Key`；人员 Key 负责认证和权限，动作 token 负责让 MCP 服务识别应该调用哪个接口以及绑定到哪个项目、分支或需求上下文。动作 token 必须绑定流程阶段：需求分析 token 随 `submitted -> plan_pending` 失效，需求生成 token 随 `plan_pending/plan_ready -> confirmed` 失效，开发阶段 token 随 `developing -> review` 失效，返修阶段 token 随 `repairing -> review` 失效，合并归档 token 随 `closeout_pending -> completed` 失效；`expire_time` 是最长保留兜底，超过 24 小时也必须重新生成。项目初始化、需求分析、需求生成和合并归档 token 是一次性消费；开发阶段和返修阶段 token 可在有效阶段内多次用于本阶段回写工具。任何列表、日志或前端持久化都不得展示 `token_hash`，也不得把明文 action token 写入本地存储。
+动作 token 不是人员认证 Key，不能替代 MCP 请求头 `X-MCP-Key`；人员 Key 负责认证和权限，动作 token 负责让 MCP 服务识别应该调用哪个接口以及绑定到哪个项目、分支或需求上下文。动作 token 必须绑定流程阶段：需求分析 token 随 `submitted -> plan_pending` 失效，需求生成 token 随 `plan_pending -> plan_ready` 失效，开发阶段 token 随 `developing -> review` 失效，返修阶段 token 随 `repairing -> review` 失效，合并归档 token 随 `closeout_pending -> completed` 失效；`expire_time` 是最长保留兜底，超过 24 小时也必须重新生成。需求分析、需求生成、开发、返修和合并归档 token 都是阶段内可复用 token，可在有效阶段内多次用于本阶段允许的回写工具；项目初始化 token 仍按一次性动作 token 处理。任何列表、日志或前端持久化都不得展示 `token_hash`；明文 actionToken 只能写入对应本地 spec 的 `meta.md platformSync.actionToken`，用于当前阶段恢复和回写，不得写入 skill 文件、安装脚本、操作日志或公开文档。
 
 ## MCP人员Key管理接口
 
 | 路径 | 方法 | 权限 | 说明 |
 |---|---|---|---|
-| `/requirement/mcp/key/list` | GET | `req:mcp:key:list` | 分页查询人员 MCP Key，列表只返回 Key 前缀和绑定人员，不返回明文或哈希 |
+| `/requirement/mcp/key/list` | GET | `req:mcp:key:list` | 分页查询人员 MCP Key，返回 Key 名称、绑定人员、状态、最近使用信息和明文字段；前端列表不展示 `plainKey`、`keyPrefix` 或 `keyHash` |
 | `/requirement/mcp/key/user-options` | GET | `req:mcp:key:list` 或 `req:mcp:key:add` | 查询 MCP Key 可绑定的启用用户，只返回 `userId`、`userName`、`nickName`，不依赖 `system:user:list`；普通用户只返回自己，管理员可查询并指定其他用户 |
 | `/requirement/mcp/key/{keyId}` | GET | `req:mcp:key:query` | 查询单个人员 MCP Key |
-| `/requirement/mcp/key/{keyId}/instruction` | GET | `req:mcp:key:query` | 打开安装指令包；普通用户只能打开自己的 Key 指令，管理员不受限制；历史 Key 不返回明文 |
-| `/requirement/mcp/key` | POST | `req:mcp:key:add` | 为启用用户创建随机唯一 MCP Key；普通用户强制绑定自己，管理员可指定绑定用户；明文只在本次响应返回并渲染到安装命令 |
+| `/requirement/mcp/key/{keyId}/instruction` | GET | `req:mcp:key:query` | 打开安装指令包；普通用户只能打开自己的 Key 指令，管理员不受限制；返回已持久化的 `plainKey` 用于渲染安装命令 |
+| `/requirement/mcp/key/config` | GET | `admin` 角色 | 管理员查询 MCP 请求地址配置，返回 `configKey`、`publicHost` 和服务端拼接后的完整 `mcpAddress` |
+| `/requirement/mcp/key/config` | PUT | `admin` 角色 | 管理员保存 MCP 请求地址配置；`publicHost` 只能填写域名/IP和端口，不得填写协议、路径、查询串或空白字符 |
+| `/requirement/mcp/key` | POST | `req:mcp:key:add` | 为启用用户创建随机唯一 MCP Key；普通用户强制绑定自己，管理员可指定绑定用户；明文随记录保存并用于创建结果和后续安装指令 |
 | `/requirement/mcp/key/{keyIds}` | DELETE | `req:mcp:key:remove` | 删除一个或多个人员 MCP Key |
 
-人员 Key 使用 `req_mcp_user_key` 表保存，服务端只落库 SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。前端和列表接口不得展示 `keyHash`，明文 `plainKey` 只允许在创建响应中出现一次；创建接口的操作日志必须关闭响应保存，避免明文 Key 进入 `sys_oper_log`。
+人员 Key 使用 `req_mcp_user_key` 表保存，服务端落库 `plain_key`、SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。哈希继续用于鉴权查找，`plainKey` 用于后续列表数据、详情和安装指令响应；前端列表不得展示 `plainKey`、`keyPrefix` 或 `keyHash`，也不得写入本地持久化。创建接口的操作日志必须关闭响应保存，避免明文 Key 进入 `sys_oper_log`。历史库中升级前已存在且没有 `plain_key` 的 Key 无法从哈希反推明文，需要重新生成 Key。
 
-`/requirement/mcp/key/config` 已删除，MCP 管理页不再常驻展示 MCP 地址、请求头名、Codex 配置模板、全局 skill 包或 Codex 安装指令包。
+`/requirement/mcp/key/config` 只服务于 MCP 管理页的管理员配置弹窗。普通开发人员不展示配置入口，页面仍不得常驻展示请求头名 `X-MCP-Key`、客户端配置模板、全局 skill 包或安装指令包。
 
-创建 Key 响应返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 是一次性明文，前端安装指令界面必须直接展示明文 Key，并把明文渲染进可复制安装命令；`codexSetupPackage` 是推荐复制给 Codex 的安装指令包，包含 `packageName=reqflow-codex-setup`、`installScope=global`、`mcpServer`、`codexConfigTemplate`、`installScripts`、`installCommands`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`installCommands[]` 至少包含 `macos-linux` 与 `windows-powershell` 两个平台，每项包含 `platform`、`label`、`language` 和 markdown 代码块使用的 `command` 模板；`command` 使用 `${REQFLOW_MCP_KEY}` 作为 Key 占位符，后端模板不得直接包含人员明文 Key 或一次性 `actionToken`，前端只在当前安装弹窗中用创建响应明文替换占位符。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。配置完成后不得自动调用 `publish_repository_index` 或其他工具。
+创建 Key 和打开指令响应均返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 由前端用于把明文渲染进可复制安装命令，页面下次打开使用指令时也必须从顶层 `plainKey` 或 `key.plainKey` 读取真实明文并替换占位符，但页面不得单独展示明文 Key 字段；`codexSetupPackage` 是多客户端安装指令包，`packageName=reqflow-mcp-multi-client-setup`，`installScope=global`，并包含 `supportedClients`、`mcpServer`、`codexConfigTemplate`、`installScripts`、`installCommands`、`clientInstructions`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`supportedClients` 只包含 `codex`、`claude-code`、`trae`、`qoder`、`codebuddy`、`opencode`。`installCommands[]` 是前端主展示入口，必须只给出一组统一安装指令；用户执行后由脚本交互选择 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 或全部工具，自动化场景仍可通过 `--client all|codex|claude-code|trae|qoder|codebuddy|opencode` 或 `-Client` 跳过交互。脚本输出必须区分 `Reqflow automatic MCP configuration completed` 和 `Manual MCP import required`，不能把仅生成 JSON 片段的客户端描述为已完成 MCP 安装。`clientInstructions[]` 仅作为高级配置/调试信息的一部分保留，每项包含 `client`、`label`、`transport`、`mcpConfigPath`、`mcpConfigSnippet`、`commands[]`、`skillInstall` 和 `notes`；前端普通弹窗不得按客户端拆开展示。`skillInstall.commands[]` 是单独安装全局 skill 的备用入口，继续使用 `npx skills add`，分别定向 `-a codex`、`-a claude-code`、`-a trae`、`-a qoder`、`-a codebuddy`、`-a opencode`。MCP 命令或配置中使用 `${REQFLOW_MCP_KEY}` 作为 Key 占位符，后端模板不得直接包含人员明文 Key 或一次性 `actionToken`，前端只在安装命令渲染时用响应明文替换占位符。OpenCode 的 MCP 配置使用 `opencode.json` 的 `mcp.reqflow`，`type=remote`，并通过 `headers` 携带 `X-MCP-Key`；已有 OpenCode JSON 配置必须优先自动合并，无法解析时才输出手工合并片段。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。配置完成后不得自动调用 `publish_repository_index` 或其他工具。
 
 安装脚本端点：
 
 | 路径 | 方法 | 权限 | 说明 |
 |---|---|---|---|
-| `/requirement/codex/install.sh` | GET | 匿名可读 | 返回 macOS/Linux 安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `--key` 读取人员 Key，并写入 Codex MCP 配置和全局 `reqflow-mcp` skill |
-| `/requirement/codex/install.ps1` | GET | 匿名可读 | 返回 Windows PowerShell 安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `-McpKey` 读取人员 Key，并写入 Codex MCP 配置和全局 `reqflow-mcp` skill |
+| `/requirement/codex/install.sh` | GET | 匿名可读 | 返回 macOS/Linux 通用安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `--key` 读取人员 Key；不传 `--client` 时在执行后交互选择工具，传 `--client all|codex|claude-code|trae|qoder|codebuddy|opencode` 时执行全部或指定客户端安装流程；Codex、可用 CLI 的 Claude Code/CodeBuddy、可解析 JSON 的 CodeBuddy/OpenCode 会写入或合并配置，Trae/Qoder 以及无法自动合并的场景必须输出 `Manual MCP import required`；脚本调用 `npx skills add -g -a <client> --copy -y` 安装全局 `reqflow-mcp` skill |
+| `/requirement/codex/install.ps1` | GET | 匿名可读 | 返回 Windows PowerShell 通用安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `-McpKey` 读取人员 Key；不传 `-Client` 时在执行后交互选择工具，传 `-Client all|codex|claude-code|trae|qoder|codebuddy|opencode` 时执行全部或指定客户端安装流程；Codex、可用 CLI 的 Claude Code/CodeBuddy、可解析 JSON 的 CodeBuddy/OpenCode 会写入或合并配置，Trae/Qoder 以及无法自动合并的场景必须输出 `Manual MCP import required`；脚本调用 `npx skills add -g -a <client> --copy -y` 安装全局 `reqflow-mcp` skill |
+| `/requirement/codex/skill/SKILL.md` | GET | 匿名可读 | 返回全局 `reqflow-mcp` Agent Skill 内容，供 `npx skills add` 安装到 Codex、Claude Code、Trae、Qoder、CodeBuddy 和 OpenCode |
 
-安装脚本不得内置人员明文 Key，不得自动调用 reqflow MCP tool；脚本执行后只提示用户重启或刷新 Codex。
+安装脚本和 skill 内容端点不得内置人员明文 Key，不得自动调用 reqflow MCP tool；脚本执行后只提示用户重启或刷新目标客户端。Codex 脚本可直接写 `~/.codex/config.toml`，Claude Code 和 CodeBuddy 优先调用各自 CLI 写入配置；OpenCode 必须写入或合并 `~/.config/opencode/opencode.json`（存在 `opencode.jsonc` 且无法自动解析时输出片段），CodeBuddy CLI 不可用时按官方优先级写入或合并 `~/.codebuddy/.mcp.json`、`~/.codebuddy/mcp.json` 或 `~/.codebuddy.json`；Trae、Qoder 按官方设置页 JSON 导入路径输出 `mcpServers` 片段并列入 `Manual MCP import required`。
 
-`codexSetupPackage` 内的 MCP 地址优先读取系统参数 `reqflow.mcp.public-host`。该参数由系统管理员登录后台系统参数维护，仅填写 `IP:端口` 或域名加端口，例如 `10.0.0.12:8080`，不得在项目 yml 中配置，也不得填写协议和路径；服务端按当前请求或代理头推导协议，自动拼接后端 context-path 和 `/requirement/mcp`。发布默认后端 context-path 为 `/reqflow-api`，因此 MCP endpoint 为 `/reqflow-api/requirement/mcp`；前端项目名 `/reqflow/` 只影响静态页面入口，不参与 MCP 地址生成。该参数为空时，服务端按 `X-Forwarded-Proto`、`X-Forwarded-Host`、`Host` 和 `context-path` 自动推导地址。
+`codexSetupPackage` 内的 MCP 地址优先读取系统参数 `reqflow.mcp.public-host`。该参数由管理员在 MCP 管理页弹窗维护，也可由系统参数表预置；仅填写 `IP:端口` 或域名加端口，例如 `10.0.0.12:8080`，不得在项目 yml 中配置，也不得填写协议和路径；服务端按当前请求或代理头推导协议，自动拼接后端 context-path 和 `/requirement/mcp`。发布默认后端 context-path 为 `/reqflow-api`，因此 MCP endpoint 为 `/reqflow-api/requirement/mcp`；前端项目名 `/reqflow/` 只影响静态页面入口，不参与 MCP 地址生成。该参数为空时，服务端按 `X-Forwarded-Proto`、`X-Forwarded-Host`、`Host` 和 `context-path` 自动推导地址。
 
-平台角色授权脚本为 `docs/db/sql/req_platform_release_settings.sql`。管理员角色使用 `role_key='admin'`，沿用 RuoYi 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理和使用统计菜单权限，并额外分配隐藏 `req:package:save`，用于通过 MCP 回写需求可行性评估、需求设计、执行计划、执行报告和 Review 报告。
+平台角色授权脚本为 `docs/db/sql/req_platform_init.sql`。管理员角色使用 `role_key='admin'`，沿用 RuoYi 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理和使用统计菜单权限，并额外分配隐藏 `req:package:save`，用于通过 MCP 回写需求可行性评估、需求设计、执行计划、执行报告和 Review 报告。
 
-需求删除按钮权限 `req:demand:remove` 只随菜单脚本注册给管理员使用，不能加入需求人员或开发人员角色集合。状态流转接口虽然共用 `req:demand:edit`，服务层还必须按角色和参与人校验具体动作：需求创建人只能执行提需、补充说明、需求设计确认、返修和验收；指定开发人员只能执行需求分析结论、需求设计结论、开始开发、提交验收和返修验收；管理员角色可执行全部合法状态动作。
+需求删除按钮权限 `req:demand:remove` 只随菜单脚本注册给管理员使用，不能加入需求人员或开发人员角色集合。状态流转接口虽然共用 `req:demand:edit`，服务层还必须按角色和参与人校验具体动作：需求创建人只能执行提需、补充说明、需求设计确认、带问题说明的返修和验收；指定开发人员只能执行需求分析结论、需求设计结论、开始开发、提交验收和返修验收；管理员角色可执行全部合法状态动作。
 
 MCP 管理菜单权限独立于需求提交权限。需求人员角色默认不分配 `req:mcp:key:*`，管理员或开发人员可通过该菜单为已启用且未删除用户创建 Key。Key 鉴权后使用绑定用户的当前菜单权限集合；绑定用户停用或删除后，即使 Key 本身仍为启用状态也必须拒绝鉴权。即使 Key 有效，调用 MCP 工具仍受 `req:package:save`、`req:index:import`、`req:project:query` 等权限限制。
 
@@ -347,6 +355,6 @@ MCP 安全边界：
 - 不允许执行 Git、shell、clone、branch、文件系统写入或大模型调用。
 - `get_harness_template` 必须校验 `req:project:query`，返回项目、仓库、项目分支、`reqflowMcpSkill`、`workspaceFiles`、workspace `AGENTS.md` 内容和每个仓库的 harness 初始化指令及文件清单；该工具只读平台配置，不写仓库文件、不执行 Git 或 shell。
 - `register_harness_init_result` 只更新 `req_repository` 的 harness 字段，必须校验 `req:package:save`。
-- `publish_repository_index` 无 actionToken 时必须校验 `req:index:import`；携带项目初始化或需求合并归档 actionToken 时，可跳过宽泛索引导入权限，由索引服务校验 token 绑定项目、分支、仓库、需求状态和有效期。合并归档 token 只能发布到自身绑定仓库，发布成功后索引批次必须记录本需求归档上下文，供 `closeout_pending -> completed` 逐仓校验。该工具优先接收 `actionToken + remoteUrl`，兼容旧 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
-- 报告上传、计划保存和执行资料类工具必须校验 `req:package:save`，并且只追加 `req_package_version`。`upload_requirement_assessment` 支持需求分析 actionToken 定位需求；`save_requirement_package` 支持需求生成 actionToken 定位需求；`save_development_plan`、`upload_execution_report` 和 `upload_review_report` 支持开发阶段 actionToken 定位需求；返修阶段只支持 `upload_execution_report` 和 `upload_review_report` 使用同一个返修阶段 actionToken 定位需求；actionToken 不能替代人员鉴权。
+- `publish_repository_index` 无 actionToken 时必须校验 `req:index:import`；携带项目初始化或需求合并归档 actionToken 时，可跳过宽泛索引导入权限，由索引服务校验 token 绑定项目、分支、需求状态和有效期，并用 `remoteUrl` 在同项目下定位仓库。合并归档 token 是需求级阶段 token，发布成功后索引批次必须记录本需求归档上下文，供 `closeout_pending -> completed` 逐仓校验。该工具优先接收 `actionToken + remoteUrl`，兼容旧 `mcpKey + remoteUrl`，只写入索引批次、模块知识、影响面条目和活动日志；上传内容不得包含个人本机绝对路径。
+- 报告上传、计划保存和执行资料类工具必须校验 `req:package:save`，并且只追加 `req_package_version`。`upload_requirement_assessment` 支持需求分析 actionToken 定位需求；`save_requirement_package` 支持需求生成 actionToken 定位需求；`save_development_plan`、`upload_execution_report` 和 `upload_review_report` 支持开发阶段 actionToken 定位需求；返修阶段只支持 `upload_execution_report` 和 `upload_review_report` 使用同一个返修阶段 actionToken 定位需求，片段上传时服务端基于上一版报告追加返修记录，完整报告上传时保存完整报告。所有写平台工具都应由全局 skill 在用户明确确认后调用；actionToken 不能替代人员鉴权。
 - `artifactType` 必须属于本文列出的支持类型。

@@ -2,7 +2,7 @@
 
 你从 workspace 根目录启动，是 Workspace Execution Agent。先分流，再进入受影响子仓库按计划执行；不要自行扩大需求。
 
-如果用户提供需求平台开发 Key，先通过需求平台 MCP 读取最终需求设计、任务分支、目标仓库、开发基线分支和验收要求，并按 `docs/process/platform-key-workflow.md` 的开发模式执行。必须校验当前 workspace 仓库远端与平台关联远端一致，并切换到需求设计阶段已经创建的任务分支；开发阶段不得重新生成不同任务分支。`developing` 阶段使用开发阶段 actionToken，先基于最终 `requirement.md` 判断是否适合拆分为多个 subagent 并行执行；只有职责边界清晰、无共享状态且可独立验证时才拆分，否则保持单执行路径。随后生成或更新 `plan.md`，再落地开发，并依次回写执行计划、执行报告和 Review 报告。`repairing` 阶段使用返修阶段 actionToken，只处理返修项或需求人返修说明并补充 `execution-report.md` 和 `review-report.md`，不得重新生成需求设计或执行计划。`closeout_pending` 阶段使用合并归档指令，在每个目标仓库 squash merge 任务分支到需求基线分支、push、调用 `publish_repository_index` 更新平台知识库并等待平台验证后，才能删除本地开发分支并确认完成。
+如果用户提供需求平台开发 Key，先通过需求平台 MCP 读取最终需求设计、任务分支、目标仓库、开发基线分支和验收要求，并按 `docs/process/platform-key-workflow.md` 的开发模式执行。必须校验当前 workspace 仓库远端与平台关联远端一致，并切换到需求设计阶段已经创建的任务分支；开发阶段不得重新生成不同任务分支。`developing` 阶段使用开发阶段 actionToken，先把阶段 actionToken、stage、targetMethod、demandNo、contentHash 和 lastContextAt 写入本地 `meta.md` 的 `platformSync`，再基于最终 `requirement.md` 判断是否适合拆分为多个 subagent 并行执行；只有职责边界清晰、无共享状态且可独立验证时才拆分，否则保持单执行路径。随后生成或更新 `plan.md`，再落地开发，本地完成后等待开发人员确认；只有用户明确确认提交验收或回写平台时，才依次回写执行计划、执行报告和 Review 报告。`repairing` 阶段使用返修阶段 actionToken，只处理返修项或需求人返修说明并补充 `execution-report.md` 和 `review-report.md`，不得重新生成需求设计或执行计划；用户明确确认提交返修验收后才回写平台。`closeout_pending` 阶段使用合并归档指令，先在每个目标仓库 squash merge 任务分支到需求基线分支并 push，用户明确确认归档发布后，再调用 `publish_repository_index` 更新平台知识库并等待平台验证；平台验证通过后，才能删除本地开发分支并确认完成。
 
 如果用户提供项目接入初始化 Key，只执行 harness 初始化下发：先切换默认基线分支并 `git pull --ff-only`，写入 workspace `AGENTS.md`、子仓库 `AGENTS.md`、`docs/` 和 `scripts/`，运行 init 校验，校验通过后提交并推送初始化生成或升级的文件，再回写结果；不得改业务代码。
 
@@ -25,7 +25,7 @@
 - 每个子仓库都要更新自己的 `meta.md` 和 `execution-report.md`。
 - 涉及复杂业务分支、状态流转、权限边界、数据口径、MCP/外部系统、模板替换或兼容逻辑时，必须在代码附近写中文注释；无需新增注释时必须在 `execution-report.md` 的“代码注释处理”中说明原因。
 - 实现和验证完成后，自动把 `meta.md` 切到 `review`、填写 `Review 授权：已授权`，交给 Workspace Review Agent；不要等待用户再次授权 Review，除非用户明确要求暂停。
-- 如果 Review Agent 产生 `RF-*`，自动切回执行阶段修复，按相同 RF ID 回填 `execution-report.md` 的 `Review 返修记录`，通过 MCP `upload_execution_report` 使用当前阶段 actionToken 回写新版本，再交回 Review Agent 复审，直到最终 Review 通过。
+- 如果 Review Agent 产生 `RF-*`，自动切回执行阶段修复，按相同 RF ID 回填 `execution-report.md` 的 `Review 返修记录`，从本地 `meta.md` 的 `platformSync.actionToken` 恢复当前阶段 token，等用户明确确认提交返修验收或回写平台后，再通过 MCP `upload_execution_report` 回写新版本并交回 Review Agent 复审，直到最终 Review 通过。
 - 需求平台返修阶段必须持续更新同一个 `execution-report.md` 和 `review-report.md`；不要另建返修文件。需求人补充返修说明时，复制新的返修任务指令，在同一任务分支补充执行报告、验证证据和 Review 复审记录。
 - 涉及菜单、页面、接口、权限、核心流程或数据口径时，必须更新 `docs/ai-harness/modules/*.md`；模块文档必须对齐前端菜单目录、子菜单或隐藏页签，并记录功能接口、权限标识和涉及文件。
 - 后端执行报告覆盖 `AC-BE-*`；前端执行报告覆盖 `AC-FE-*`。
@@ -39,6 +39,6 @@
 - 列出每个仓库模块知识库动作、更新的模块文档路径或无需更新原因。
 - 列出每个仓库代码注释处理情况。
 - 列出 companion 仓库是否同步。
-- MCP 接入模式下说明是否已通过 MCP 回写执行报告新版本；本地 Harness 模式下写明“未接入 MCP，本地文件闭环”，不得伪造回写。
+- MCP 接入模式下说明是否已通过 MCP 回写执行报告新版本；如果尚未获得用户明确确认，写明“已完成本地迭代，等待用户确认回写平台”。本地 Harness 模式下写明“未接入 MCP，本地文件闭环”，不得伪造回写。
 - 不写 `review-report.md`，不把自己的实现标记为 Review 完成；只负责触发/交接自动 Review 循环。
 - 不 push、不 merge；是否 commit 以用户或仓库 Git 工作流为准。

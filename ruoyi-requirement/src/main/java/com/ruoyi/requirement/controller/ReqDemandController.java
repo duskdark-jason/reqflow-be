@@ -131,6 +131,15 @@ public class ReqDemandController extends BaseController
                 request == null ? null : request.getContent(), getUsername()));
     }
 
+    @PreAuthorize("@ss.hasPermi('req:demand:edit')")
+    @Log(title = "需求返修问题说明", businessType = BusinessType.UPDATE)
+    @PostMapping("/{demandId}/repair")
+    public AjaxResult submitRepair(@PathVariable Long demandId, @RequestBody ReqDemandSupplementRequest request)
+    {
+        return toAjax(reqDemandService.submitDemandRepair(demandId,
+                request == null ? null : request.getContent(), getUsername()));
+    }
+
     @PreAuthorize("@ss.hasPermi('req:demand:query')")
     @GetMapping("/{demandId}/plan-instruction")
     public AjaxResult planInstruction(@PathVariable Long demandId)
@@ -145,6 +154,13 @@ public class ReqDemandController extends BaseController
     {
         ReqActionInstruction instruction = reqDemandService.createRequirementDevelopInstruction(demandId, getUsername());
         return success(instruction);
+    }
+
+    @PreAuthorize("@ss.hasPermi('req:demand:query')")
+    @GetMapping("/{demandId}/closeout-verification")
+    public AjaxResult closeoutVerification(@PathVariable Long demandId)
+    {
+        return success(reqDemandService.verifyDemandCloseout(demandId));
     }
 
     private void validateDemandUpload(MultipartFile file)

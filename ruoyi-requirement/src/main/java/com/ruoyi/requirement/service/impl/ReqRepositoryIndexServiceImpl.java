@@ -538,12 +538,7 @@ public class ReqRepositoryIndexServiceImpl implements IReqRepositoryIndexService
         {
             return;
         }
-        Long expectedRepoId = ReqCloseoutContext.repoIdFromTokenRemark(token.getRemark());
-        if (expectedRepoId == null)
-        {
-            throw new ServiceException("归档动作Token未绑定目标仓库");
-        }
-        if (repository == null || repository.getRepoId() == null || !expectedRepoId.equals(repository.getRepoId()))
+        if (repository == null || repository.getRepoId() == null)
         {
             throw new ServiceException("归档动作Token与目标仓库不一致");
         }

@@ -17,7 +17,7 @@
 | 分支知识库 | 项目分支模块树、索引批次、影响面推荐 | `docs/ai-harness/modules/requirement-platform.md` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper` |
 | 需求列表 | 需求新增、编辑、查询、状态流转、需求指令生成 | `docs/ai-harness/modules/requirement-platform.md` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqDemandStatusTransition` |
 | 需求执行包 | 需求可行性评估、需求设计、执行计划、执行报告和 Review 报告 | `docs/ai-harness/contracts/requirement-platform-api.md` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
-| MCP 管理 | 人员 MCP Key、安装脚本、MCP lifecycle 和 tools/list | `docs/ai-harness/modules/requirement-platform.md` | `ReqMcpKeyController`、`ReqCodexInstallController`、`McpService` |
+| MCP 管理 | 人员 MCP Key、多客户端安装包、全局 skill 安装、MCP lifecycle 和 tools/list | `docs/ai-harness/modules/requirement-platform.md` | `ReqMcpKeyController`、`ReqCodexInstallController`、`McpService` |
 | Reqflow MCP | resources、tools、actionToken、JSON-RPC 错误语义 | `docs/ai-harness/contracts/requirement-platform-api.md` | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` |
 | 项目接入初始化 | 下发 harness 模板、发布仓库索引、登记初始化结果 | `docs/process/platform-key-workflow.md`、`docs/ai-harness/modules/requirement-platform.md` | `McpService#getHarnessTemplate`、`publish_repository_index` |
 | harness 模板 | 后端保存并下发的 AGENTS、docs、scripts 模板 | `docs/ai-harness/modules/requirement-platform.md` | `ruoyi-requirement/src/main/resources/harness-template/` |
@@ -25,8 +25,9 @@
 | MCP 接入模式 | 已接入需求平台后的需求设计、开发、回写和合并归档 | `docs/process/platform-key-workflow.md` | `McpService`、`ReqflowCodexGlobalSkillTemplate` |
 | search-map | 面向模型的关键词导航和拆分触发 | `docs/ai-harness/search-map.md` | `scripts/check-harness.sh`、`harness-template/docs/ai-harness/search-map.md` |
 | 检查脚本 | 文档占位符、harness 初始化、Review、完成态门禁 | `docs/process/agent-workflow.md` | `scripts/check-docs.sh`、`scripts/check-harness.sh` |
-| 数据库表结构 | `req_*` 表、菜单权限、系统参数、索引表和迁移脚本 | `docs/db/README.md` | `docs/db/sql/req_platform_schema.sql`、`docs/db/table-dictionary.md` |
-| 菜单权限 | 需求管理菜单、按钮权限、角色授权和后端 `@PreAuthorize` | `docs/ai-harness/modules/requirement-platform.md` | `docs/db/sql/req_platform_menu.sql`、Controller 权限注解 |
+| 数据库表结构 | `req_*` 表、菜单权限、系统参数、索引表和初始化脚本 | `docs/db/README.md` | `docs/db/sql/req_platform_init.sql`、`docs/db/table-dictionary.md` |
+| 部署 | SQL 执行顺序、后端打包、前端静态路径和发布后检查 | `docs/runbooks/deploy.md` | `docs/db/sql/*.sql`、`ruoyi-admin/src/main/resources/application*.yml` |
+| 菜单权限 | 需求管理菜单、按钮权限、角色授权和后端 `@PreAuthorize` | `docs/ai-harness/modules/requirement-platform.md` | `docs/db/sql/req_platform_init.sql`、Controller 权限注解 |
 
 ## 维护触发
 

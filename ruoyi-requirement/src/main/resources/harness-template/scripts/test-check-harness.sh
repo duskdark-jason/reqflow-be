@@ -365,6 +365,19 @@ printf '%s\n' '# meta' '' '- 状态：complete' '- 当前角色：Execution Agen
 sh "$CHECK_SCRIPT" "$root" complete --spec docs/specs/active/REQ-001-演示需求 >"$OUT_FILE" 2>&1
 
 make_root "$root"
+mkdir -p "$root/docs/specs/done"
+mv "$root/docs/specs/active/REQ-001-演示需求" "$root/docs/specs/done/REQ-001-演示需求"
+if sh "$CHECK_SCRIPT" "$root" complete --spec docs/specs/done/REQ-001-演示需求 >"$OUT_FILE" 2>&1; then
+  echo "expected target spec under done directory to fail"
+  exit 1
+fi
+if ! grep -q "docs/specs/active" "$OUT_FILE"; then
+  echo "expected failure output to mention: docs/specs/active"
+  cat "$OUT_FILE"
+  exit 1
+fi
+
+make_root "$root"
 mv "$root/docs/specs/active/REQ-001-演示需求" "$root/docs/specs/active/2026-06-09-REQ-001-演示需求"
 expect_fail "$root" complete "dated spec directory name" "不得包含日期"
 

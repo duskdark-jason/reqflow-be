@@ -4,20 +4,22 @@
 
 未提供需求平台 Key、未接入 MCP 或当前 Codex 会话没有可用 MCP 工具时，不进入本文件的模式一到三，改按 `local-harness-workflow.md` 执行。本地 Harness 模式的 spec、Review、返修和完成门禁与 MCP 接入模式一致，但不得伪造平台读取或回写结果。
 
+平台复制给执行端的阶段指令只提供最小动态上下文：`reqflow-mcp`、`mcpServer: reqflow` 和 actionToken。执行端必须先调用 `get_action_context` 读取轻量阶段上下文，再根据返回的 `stage`、`allowedTools`、`resources`、`packageVersions` 和 `syncPolicy` 执行。具体应调用哪些 MCP tools、读写哪些本地文件、哪些动作必须停止或禁止，由全局 `reqflow-mcp` skill 根据 `stage` 识别并执行，平台指令正文不重复完整工具清单、需求详情和流程手册。
+
 ## 模式一：需求平台需求设计模式
 
 适用场景：编排人员或指定开发人员拿到需求设计 Key，在 Codex 中通过需求平台 MCP 获取需求初稿、关联项目、目标远端仓库、目标基线分支、建议任务分支、影响模块、历史需求设计版本和需求人补充调整指令，并推演详细需求设计。
 
 硬性规则：
 
-- 必须通过需求平台 MCP 读取 Key 对应的需求、项目、仓库远端、目标基线分支、建议任务分支、影响模块和历史需求设计版本；不得只依赖对话描述。
+- 必须先通过需求平台 MCP `get_action_context` 读取 actionToken 对应的轻量上下文，再按返回的资源 URI 读取缺失或已变化的需求、项目、仓库远端、目标基线分支、建议任务分支、影响模块和历史需求设计版本；不得只依赖对话描述。
 - 必须检查当前 workspace 内仓库的 Git 远端是否与需求平台返回的目标仓库一致；不一致时先自动切换到匹配的本地仓库或 workspace。
 - 自动切换失败时必须停止，并说明需求平台期望的仓库、当前检测到的仓库、尝试过的切换路径和失败原因。
 - 必须先切换到目标基线分支并本地拉取最新代码；推荐命令为 `git switch <baseline-branch>` 和 `git pull --ff-only`。拉取失败、工作区存在未说明改动或远端不一致时必须停止说明。
 - 必须在需求设计阶段基于最新基线创建或切换到需求平台建议的 ASCII 任务分支；任务分支创建时机在需求设计阶段，不得推迟到开发阶段。
-- 需求分析阶段必须先形成需求可行性评估和风险判断，结论类型至少区分“可继续设计、需澄清、需调整、暂不可实现”，并通过需求平台 MCP `upload_requirement_assessment` 使用需求分析 actionToken 回写评估报告；该阶段不得调用 `save_requirement_package`，不得生成最终 `requirement.md`、`plan.md`、执行报告或 Review 报告。
+- 需求分析阶段必须先形成本地需求可行性评估和风险判断草稿，结论类型至少区分“可继续设计、需澄清、需调整、暂不可实现”；用户明确确认提交平台后，才通过需求平台 MCP `upload_requirement_assessment` 使用需求分析 actionToken 回写评估报告。该阶段不得调用 `save_requirement_package`，不得生成最终 `requirement.md`、`plan.md`、执行报告或 Review 报告。
 - 需求分析结论需要需求人补充、调整或当前不可实现时，应把结论作为反馈推送给需求人，本轮停止。结论允许继续后，需求平台流转到需求生成阶段，开发人员复制新的需求生成提示词。
-- 需求生成阶段只生成或调整需求设计，只允许写入 `docs/specs/active/REQ-001-中文需求标题/meta.md` 和 `requirement.md`，并通过需求平台 MCP `save_requirement_package` 使用需求生成 actionToken 回写需求设计；该阶段不得调用 `upload_requirement_assessment`，不得生成 `plan.md`、不得改业务代码、不得写 `execution-report.md` 或 `review-report.md`。
+- 需求生成阶段只在本地生成或调整需求设计，只允许写入 `docs/specs/active/REQ-001-中文需求标题/meta.md` 和 `requirement.md`；允许用户和 agent 多轮本地迭代。用户明确确认提交平台后，才通过需求平台 MCP `save_requirement_package` 使用需求生成 actionToken 回写需求设计；该阶段不得调用 `upload_requirement_assessment`，不得生成 `plan.md`、不得改业务代码、不得写 `execution-report.md` 或 `review-report.md`。
 - 需求人补充调整指令后，继续在同一任务分支更新最终 `requirement.md` 并再次回写，需求平台按 `req_package_version` 记录需求设计迭代版本；如需重新评估风险，应由平台重新进入需求分析阶段并使用新的分析 token。
 - 本地任务分支保留最终版 `requirement.md` 作为后续开发输入。MCP 回写不等同于 Git push；是否提交或推送任务分支按平台指令、仓库 Git 工作流或用户授权执行。
 - 需求设计阶段不得生成执行计划、不得进入开发或 Review。
@@ -28,16 +30,16 @@
 
 硬性规则：
 
-- 必须通过需求平台 MCP 读取 Key 对应的最终需求设计、任务分支、目标仓库、开发基线分支和验收要求。
+- 必须先通过需求平台 MCP `get_action_context` 读取 actionToken 对应的轻量上下文，再按返回的资源 URI 读取缺失或已变化的最终需求设计、任务分支、目标仓库、开发基线分支和验收要求。
 - 必须检查当前 workspace 内仓库的 Git 远端是否与需求平台关联的系统一致；不一致时停止，除非能自动切换到明确匹配的本地仓库。
 - 必须检查当前分支是否为需求平台需求设计阶段创建的任务分支；不一致时优先自动切换到同名任务分支，切换失败必须停止并说明当前分支、期望任务分支和处理建议。
 - 开发阶段不得重新生成不同任务分支；如本地任务分支缺失，只能按需求平台记录的同名任务分支恢复，不能自行创造新分支名。
 - 进入开发阶段后，将最终需求设计落地或校准到 `docs/specs/active/REQ-001-中文需求标题/requirement.md`，再由 Execution Agent 基于最终需求设计先判断是否适合拆分为多个 subagent 并行执行；只有职责边界清晰、无共享状态且可独立验证时才拆分，否则保持单执行路径。随后生成或更新 `plan.md`，然后按计划执行开发。
 - 落地 `meta.md` 时必须记录需求平台返回的影响模块，并声明模块知识库动作。涉及菜单、页面、接口、权限、核心流程或数据口径时，必须更新 `docs/ai-harness/modules/*.md`。
-- 开发阶段使用同一个开发阶段 actionToken 完成 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 回写；该 token 只在 `developing` 流程阶段有效，转入待验收后失效。
-- 开发完成后进入自动 Review 循环：Execution Agent 持续追加或更新 `execution-report.md` 并通过 MCP `upload_execution_report` 回写新版本；Review Agent 只读审查、追加或更新 `review-report.md` 并通过 MCP `upload_review_report` 回写新版本。发现 `RF-*` 后自动切回执行阶段修复并回填 `execution-report.md`，再自动复审，直到最终 Review 结论为 `通过`。
-- 返修阶段沿用同一任务分支和同一 spec 目录；需求人补充返修说明后，开发人员复制新的返修任务提示词，使用同一个返修阶段 actionToken 持续补充 `execution-report.md` 和 `review-report.md` 并回写平台。返修阶段不得重新生成 `requirement.md` 或 `plan.md`，需求平台按版本保留每次执行和 Review 资料。
-- 需求人验收通过后，需求平台进入待合并归档阶段并给指定开发人员下发合并归档指令。开发人员必须在每个目标仓库把本地任务分支 squash merge 到需求基线分支，push 基线分支，再通过 `publish_repository_index` 使用合并归档 actionToken 发布当前完整知识库快照；平台验证所有有效仓库归档索引通过后，才允许确认完成并删除本地开发分支。
+- 开发阶段使用同一个开发阶段 actionToken 定位 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，但复制开发指令后默认只做本地计划、开发、验证和报告草稿。用户明确确认提交验收或回写平台后，才调用这些写平台工具；该 token 只在 `developing` 流程阶段有效，转入待验收后失效。
+- 开发完成后可进入本地自动 Review 循环：Execution Agent 持续追加或更新本地 `execution-report.md`；Review Agent 只读审查、追加或更新本地 `review-report.md`。发现 `RF-*` 后自动切回执行阶段修复并回填 `execution-report.md`，再自动复审，直到最终 Review 结论为 `通过`。平台回写必须等待用户明确确认，不得因本地 Review 通过而自动上传。
+- 返修阶段沿用同一任务分支和同一 spec 目录；需求人补充返修说明后，开发人员复制新的返修任务提示词，使用同一个返修阶段 actionToken 持续补充本地 `execution-report.md` 和 `review-report.md`。用户明确确认提交返修验收后，才回写平台。返修阶段上传完整本地报告时按完整报告保存新版本；只上传返修片段时，MCP 服务端必须基于上一版报告追加返修记录后保存新版本，不得让片段覆盖最新版全文。返修阶段 `upload_review_report` 成功后平台会自动尝试回到待验收状态；返修阶段不得重新生成 `requirement.md` 或 `plan.md`，需求平台按版本保留每次执行和 Review 资料。
+- 需求人验收通过后，需求平台进入待合并归档阶段并给指定开发人员下发合并归档指令。开发人员必须先在每个目标仓库的本地任务分支上运行完成态门禁，把匹配需求的 `docs/specs/active/REQ-*` 目录 `git mv` 到 `docs/specs/done/`；没有对应 active spec 时必须在归档提交中写明原因。随后把本地任务分支 squash merge 到需求基线分支并 push 基线分支。用户明确确认归档发布后，才通过 `publish_repository_index` 使用同一个合并归档 actionToken 发布各仓库当前完整知识库快照；平台验证所有有效仓库归档索引通过后，才允许确认完成并删除本地开发分支。
 
 ## 模式三：项目接入初始化模式
 
@@ -69,6 +71,15 @@
 - 未提供有效 Key、MCP 不可用、Key 无法解析，或平台返回的远端/分支与当前工作区冲突时，必须停止平台驱动流程并说明原因。
 - 用户允许本地推进时，统一按 `local-harness-workflow.md` 使用 `本地 Harness 模式`，把文档落到本地 `docs/specs`，不得伪造需求平台回写结果。
 - 平台恢复后，可以人工或通过 MCP 把本地 spec 补登记到需求平台，但必须保持需求 Key、仓库、分支和 commit 关联一致。
+
+## 平台同步与增量读取
+
+- 执行端拿到 `actionToken` 后必须先调用 `get_action_context`。该工具只返回阶段、允许工具、仓库/需求摘要、资源 URI、资料包版本号和内容哈希，不直接返回大段资料包正文。
+- 执行端必须把当前阶段的 actionToken、stage、targetMethod、demandNo、contentHash 和 `lastContextAt` 写入本地 `meta.md platformSync`；后续多轮对话或上下文压缩后，agent 必须先读 `meta.md` 恢复同一个阶段 token，再决定是否回写平台。
+- 本地存在 `meta.md` 的 `platformSync` 时，必须用 `packageVersions[].artifactType/versionNo/contentHash` 和本地记录比对；一致时优先使用本地文件，不再拉取平台全文。
+- 只有本地缺失或版本、哈希不一致时，才按 `resources` 或 `packageVersions[].resourceUri` 拉取对应平台资源。
+- 只需要最新变化时，优先读取最新补充说明、返修问题、执行报告增量或 Review 报告增量，避免把本地已有的完整上下文重复塞入当前对话。
+- 写平台工具必须等待用户明确指令，例如“提交到平台”“回写平台”“提交验收”“发布归档索引”。成功回写需求设计、执行计划、执行报告、Review 报告或归档索引后，必须同步更新本地 `meta.md platformSync`，让后续阶段能继续增量读取并追踪已回写版本。
 
 ## meta.md 记录要求
 

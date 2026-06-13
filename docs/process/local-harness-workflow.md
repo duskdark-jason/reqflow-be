@@ -51,6 +51,22 @@ sh scripts/check-docs.sh
 sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-001-中文需求标题
 ```
 
+`--spec` 只用于检查 `docs/specs/active/` 下的执行中需求。完成态门禁通过后，再按需把目录移入 `docs/specs/done/`；不要在 `done/` 中边执行边修改。
+
+## 归档和办结收尾
+
+收到归档、办结或结束任务指令时，本地 Harness 也必须把已完成需求从 `active/` 迁移到 `done/`。迁移顺序固定为：
+
+```bash
+SPEC_DIR=docs/specs/active/REQ-001-中文需求标题
+sh scripts/check-docs.sh
+sh scripts/check-harness.sh complete --spec "$SPEC_DIR"
+mkdir -p docs/specs/done
+git mv "$SPEC_DIR" docs/specs/done/
+```
+
+迁移前必须先在 `active/` 目录通过完成态门禁；迁移后不要继续修改 `done/` 中的执行文件。如果当前仓库没有对应 active spec，完成说明必须写明原因，不能伪造迁移。
+
 Harness 初始化或纯文档接入只运行：
 
 ```bash

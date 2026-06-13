@@ -20,6 +20,7 @@ import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.dto.ReqActionInstruction;
+import com.ruoyi.requirement.dto.ReqCloseoutVerificationResult;
 import com.ruoyi.requirement.dto.ReqMcpUserOption;
 import com.ruoyi.requirement.mapper.ReqActionTokenMapper;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
@@ -35,17 +36,6 @@ import com.ruoyi.requirement.service.ReqActivityLogService;
 public class ReqDemandServiceImpl implements IReqDemandService
 {
     private static final String BRANCH_NOT_INITIALIZED_MESSAGE = "项目分支尚未初始化完成，请先完成分支初始化后再提交需求";
-
-    private static final String ACTION_TOKEN_USAGE_RULE = "有效期：当前流程阶段内有效，流转到下一流程即失效；最长保留24小时，过期或已使用后需重新生成。";
-
-    private static final String DEVELOPMENT_STAGE_TOKEN_USAGE_RULE =
-            "有效期：当前开发阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行计划、执行报告和 Review 报告回写。";
-
-    private static final String REPAIR_STAGE_TOKEN_USAGE_RULE =
-            "有效期：当前返修阶段内有效，流转到待验收后即失效；最长保留24小时，可在本阶段多次用于执行报告和 Review 报告回写。";
-
-    private static final String CLOSEOUT_TOKEN_USAGE_RULE =
-            "有效期：当前合并归档阶段内有效，最长保留24小时；每个仓库一枚一次性 actionToken，过期或已使用后需重新生成。";
 
     private static final String ROLE_REQUIREMENT_USER = "requirement_user";
 
@@ -197,6 +187,10 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("需求状态流转不允许");
         }
+        if ("review".equals(current.getStatus()) && "repairing".equals(status))
+        {
+            throw new ServiceException("请先填写返修问题说明");
+        }
         validateStatusActionRole(current.getStatus(), status);
         validateStatusActionParticipant(current, status);
         if ("submitted".equals(status))
@@ -206,6 +200,10 @@ public class ReqDemandServiceImpl implements IReqDemandService
         if ("plan_pending".equals(current.getStatus()) && "plan_ready".equals(status))
         {
             validateRequirementDesignGeneratedAfterLatestSupplement(current.getDemandId());
+        }
+        if ("repairing".equals(current.getStatus()) && "review".equals(status))
+        {
+            validateRepairArtifactsGeneratedAfterLatestRepairRequest(current.getDemandId());
         }
         if ("closeout_pending".equals(current.getStatus()) && "completed".equals(status))
         {
@@ -298,6 +296,37 @@ public class ReqDemandServiceImpl implements IReqDemandService
     }
 
     @Override
+    @Transactional
+    public int submitDemandRepair(Long demandId, String content, String updateBy)
+    {
+        if (StringUtils.isBlank(content))
+        {
+            throw new ServiceException("返修问题说明不能为空");
+        }
+        ReqDemand current = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        if (current == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        if (!"review".equals(current.getStatus()))
+        {
+            throw new ServiceException("当前状态不能提交返修");
+        }
+        validateStatusActionRole(current.getStatus(), "repairing");
+        validateStatusActionParticipant(current, "repairing");
+
+        savePackageVersion(demandId, "requirement_supplement", content.trim(), "需求人返修问题说明", updateBy);
+        int rows = reqDemandMapper.updateReqDemandStatus(demandId, "repairing", updateBy);
+        if (rows < 1)
+        {
+            throw new ServiceException("返修提交失败");
+        }
+        activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                "demand_repairing", "web", "提交返修问题说明：" + current.getDemandNo(), null);
+        return rows;
+    }
+
+    @Override
     public void validateDemandReadable(Long demandId)
     {
         validateDemandReadable(reqDemandMapper.selectReqDemandByDemandId(demandId));
@@ -331,8 +360,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("需求不存在");
         }
         validateDeveloperInstructionAccess(demand);
-        if (!"submitted".equals(demand.getStatus()) && !"plan_pending".equals(demand.getStatus())
-                && !"plan_ready".equals(demand.getStatus()))
+        if (!"submitted".equals(demand.getStatus()) && !"plan_pending".equals(demand.getStatus()))
         {
             throw new ServiceException("当前状态不能生成需求设计指令");
         }
@@ -414,6 +442,30 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return developInstruction;
     }
 
+    @Override
+    public ReqCloseoutVerificationResult verifyDemandCloseout(Long demandId)
+    {
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        if (demand == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        validateDeveloperInstructionAccess(demand);
+        if (!"closeout_pending".equals(demand.getStatus()))
+        {
+            return new ReqCloseoutVerificationResult(false, "当前状态无需归档验证");
+        }
+        try
+        {
+            validateCloseoutVerified(demand);
+            return new ReqCloseoutVerificationResult(true, "归档结果已通过平台验证");
+        }
+        catch (ServiceException e)
+        {
+            return new ReqCloseoutVerificationResult(false, e.getMessage());
+        }
+    }
+
     private String nextDemandNo()
     {
         Long currentCount = reqDemandMapper.selectDemandCount();
@@ -424,89 +476,34 @@ public class ReqDemandServiceImpl implements IReqDemandService
     private String requirementAnalysisInstructionContent(String prompt, String analysisActionToken, ReqDemand demand,
             String taskBranch)
     {
-        return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求分析。"
-                + "\nmcpServer: reqflow"
-                + "\ntoolName: upload_requirement_assessment"
-                + "\nmcpTool: reqflow.upload_requirement_assessment"
-                + "\ntargetMethod: upload_requirement_assessment"
-                + "\ndemandId: " + demand.getDemandId()
-                + "\ndemandNo: " + demand.getDemandNo()
-                + "\n建议任务分支: " + taskBranch
-                + "\n需求分析 actionToken: " + analysisActionToken
-                + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：先读取需求详情中的基础需求、业务背景、预期结果、验收标准、附件和历史需求设计版本。"
-                + "\n分支要求：校验当前 workspace 仓库远端与平台项目一致，切换目标基线分支并 git pull --ff-only 后，创建或切换到上面的建议任务分支。"
-                + "\n评估要求：先形成需求可行性评估报告，必须给出评估结论、主要风险、阻断点、需要需求人补充或调整的内容、是否允许继续生成需求设计；结论类型从“可继续设计、需澄清、需调整、暂不可实现”中选择。"
-                + "\n回写要求：调用 upload_requirement_assessment，arguments.actionToken 填需求分析 actionToken，content 填评估报告；如果结论是需澄清、需调整或暂不可实现，本轮停止生成 requirement.md，并把该结论作为反馈推送给需求人。"
-                + "\n本地文件：本阶段只允许生成或更新评估结论，不生成 plan.md、不改业务代码、不写执行或 Review 报告。"
-                + "\n注意：需求分析 actionToken 是 upload_requirement_assessment 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+        return actionTokenInstructionContent(prompt, analysisActionToken);
     }
 
     private String requirementGenerateInstructionContent(String prompt, String generateActionToken, ReqDemand demand,
             String taskBranch)
     {
-        return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求生成。"
-                + "\nmcpServer: reqflow"
-                + "\ntoolName: save_requirement_package"
-                + "\nmcpTool: reqflow.save_requirement_package"
-                + "\ntargetMethod: save_requirement_package"
-                + "\ndemandId: " + demand.getDemandId()
-                + "\ndemandNo: " + demand.getDemandNo()
-                + "\n任务分支: " + taskBranch
-                + "\n需求生成 actionToken: " + generateActionToken
-                + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：读取需求详情、需求分析评估结论、需求人补充说明和历史需求设计版本，只生成或调整 `requirement.md`。"
-                + "\n分支要求：必须沿用需求分析阶段创建的任务分支，不得重新生成不同任务分支。"
-                + "\n回写要求：调用 save_requirement_package，arguments.actionToken 填需求生成 actionToken，content 填详细需求设计；本阶段不生成 plan.md、不改业务代码、不写执行或 Review 报告。"
-                + "\n注意：需求生成 actionToken 是 save_requirement_package 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+        return actionTokenInstructionContent(prompt, generateActionToken);
     }
 
     private String requirementDevelopInstructionContent(String prompt, String developActionToken, ReqDemand demand,
             String taskBranch)
     {
-        return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求开发。"
-                + "\nmcpServer: reqflow"
-                + "\ntoolName: save_development_plan"
-                + "\nmcpTool: reqflow.save_development_plan"
-                + "\ntoolName: upload_execution_report"
-                + "\nmcpTool: reqflow.upload_execution_report"
-                + "\ntoolName: upload_review_report"
-                + "\nmcpTool: reqflow.upload_review_report"
-                + "\ntargetMethods: save_development_plan, upload_execution_report, upload_review_report"
-                + "\ndemandId: " + demand.getDemandId()
-                + "\ndemandNo: " + demand.getDemandNo()
-                + "\n任务分支: " + taskBranch
-                + "\n开发阶段 actionToken: " + developActionToken
-                + "\n" + DEVELOPMENT_STAGE_TOKEN_USAGE_RULE
-                + "\n分支要求：必须沿用需求设计阶段创建的任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
-                + "\n要求：先读取需求详情、最终需求设计和本地 requirement.md；生成执行计划前，先分析需求是否可以拆分为多个 subagent 并行执行，只有任务边界清晰、互不共享状态、可独立验证时才拆分；再生成或更新 plan.md，按目标仓库规范完成实现、验证、自动 Review 和提交。"
-                + "\n回写要求：本阶段三个 MCP 工具都使用同一个开发阶段 actionToken：先调用 save_development_plan 回写执行计划，开发验证完成后调用 upload_execution_report 回写执行报告，自动 Review 完成后调用 upload_review_report 回写 Review 报告。"
-                + "\n注意：开发阶段 actionToken 是上述三个工具的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+        return actionTokenInstructionContent(prompt, developActionToken);
     }
 
     private String requirementRepairInstructionContent(String prompt, String repairActionToken, ReqDemand demand,
             String taskBranch)
     {
+        return actionTokenInstructionContent(prompt, repairActionToken);
+    }
+
+    private String actionTokenInstructionContent(String prompt, String actionToken)
+    {
         return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求返修。"
+                + "\n请按全局 skill `reqflow-mcp` 执行。"
                 + "\nmcpServer: reqflow"
-                + "\ntoolName: upload_execution_report"
-                + "\nmcpTool: reqflow.upload_execution_report"
-                + "\ntoolName: upload_review_report"
-                + "\nmcpTool: reqflow.upload_review_report"
-                + "\ntargetMethods: upload_execution_report, upload_review_report"
-                + "\ndemandId: " + demand.getDemandId()
-                + "\ndemandNo: " + demand.getDemandNo()
-                + "\n任务分支: " + taskBranch
-                + "\n返修阶段 actionToken: " + repairActionToken
-                + "\n" + REPAIR_STAGE_TOKEN_USAGE_RULE
-                + "\n分支要求：必须沿用原任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
-                + "\n要求：只处理本次 Review 返修项或需求人返修要求，完成修复、验证和自动复审，不重新生成需求设计或执行计划。"
-                + "\n回写要求：本阶段两个 MCP 工具都使用同一个返修阶段 actionToken：修复验证完成后调用 upload_execution_report 回写返修执行报告，自动复审完成后调用 upload_review_report 回写 Review 报告。"
-                + "\n注意：返修阶段 actionToken 是上述两个工具的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\nactionToken: " + actionToken
+                + "\n先调用 get_action_context 获取阶段上下文。";
     }
 
     private ReqActionInstruction createRequirementCloseoutInstruction(ReqDemand demand, String operator)
@@ -523,61 +520,17 @@ public class ReqDemandServiceImpl implements IReqDemandService
         }
 
         String prompt = "请在需求验收通过后完成合并归档：将本地开发分支压缩合并到需求分支并推送，同时发布需求平台知识库索引。";
-        List<ReqActionInstruction> repositoryInstructions = repositories.stream()
-                .map(repository -> actionTokenService.createInstruction(
-                        IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
-                        demand.getProjectId(),
-                        demand.getVariantId(),
-                        demand.getDemandId(),
-                        IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
-                        prompt + "目标仓库：" + repository.getRepoName(),
-                        "生成合并归档指令",
-                        operator,
-                        ReqCloseoutContext.tokenRemark(repository.getRepoId())))
-                .collect(Collectors.toList());
-        ReqActionInstruction firstInstruction = repositoryInstructions.get(0);
-        firstInstruction.setContent(requirementCloseoutInstructionContent(prompt, demand, variant, repositories,
-                repositoryInstructions, suggestedTaskBranch(demand)));
-        return firstInstruction;
-    }
-
-    private String requirementCloseoutInstructionContent(String prompt, ReqDemand demand, ReqVariant variant,
-            List<ReqRepository> repositories, List<ReqActionInstruction> repositoryInstructions, String taskBranch)
-    {
-        StringBuilder content = new StringBuilder();
-        content.append(prompt)
-                .append("\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求归档收尾。")
-                .append("\nmcpServer: reqflow")
-                .append("\ntoolName: publish_repository_index")
-                .append("\nmcpTool: reqflow.publish_repository_index")
-                .append("\ntargetMethod: publish_repository_index")
-                .append("\ndemandId: ").append(demand.getDemandId())
-                .append("\ndemandNo: ").append(demand.getDemandNo())
-                .append("\n需求分支: ").append(variant.getBaselineBranch())
-                .append("\n本地开发分支: ").append(taskBranch)
-                .append("\n").append(CLOSEOUT_TOKEN_USAGE_RULE)
-                .append("\n平台验证：每个目标仓库必须使用本指令中对应的一次性 actionToken 调用 publish_repository_index；平台验证 actionToken 已使用且项目分支知识库覆盖全部有效仓库后，才允许结束任务。")
-                .append("\n执行要求：")
-                .append("\n1. 逐个目标仓库校验 Git 远端与平台登记一致，确认本地开发分支为 ").append(taskBranch).append("。")
-                .append("\n2. 切换需求分支并拉取最新代码：git switch ").append(variant.getBaselineBranch()).append(" && git pull --ff-only。")
-                .append("\n3. 将本地开发分支压缩合并到需求分支：git merge --squash ").append(taskBranch).append("，完成必要冲突处理、校验和提交。")
-                .append("\n4. 推送需求分支：git push。")
-                .append("\n5. 发布当前仓库完整知识库快照，modules 不能为空；actionToken 必须写入 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。")
-                .append("\n6. 知识库发布成功后删除本地开发分支：git branch -d ").append(taskBranch).append("；不要删除远端开发分支，除非另有明确授权。")
-                .append("\n7. 回到需求平台点击“确认归档完成”，由平台验证归档结果后再结束任务。")
-                .append("\n\n目标仓库与一次性归档 actionToken：");
-        for (int i = 0; i < repositories.size(); i++)
-        {
-            ReqRepository repository = repositories.get(i);
-            ReqActionInstruction instruction = repositoryInstructions.get(i);
-            content.append("\n- 仓库：").append(firstNotEmpty(repository.getRepoName(), repository.getRepoUrl()))
-                    .append("\n  remoteUrl: ").append(text(repository.getRepoUrl()))
-                    .append("\n  repoId: ").append(repository.getRepoId())
-                    .append("\n  repoType: ").append(text(repository.getRepoType()))
-                    .append("\n  归档 actionToken: ").append(instruction.getToken())
-                    .append("\n  调用要求：mcpTool: reqflow.publish_repository_index，arguments.actionToken 填上面的归档 actionToken。");
-        }
-        return content.toString();
+        ReqActionInstruction instruction = actionTokenService.createInstruction(
+                IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
+                demand.getProjectId(),
+                demand.getVariantId(),
+                demand.getDemandId(),
+                IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
+                prompt,
+                "生成合并归档指令",
+                operator);
+        instruction.setContent(actionTokenInstructionContent(prompt, instruction.getToken()));
+        return instruction;
     }
 
     private String suggestedTaskBranch(ReqDemand demand)
@@ -766,6 +719,25 @@ public class ReqDemandServiceImpl implements IReqDemandService
         }
     }
 
+    private void validateRepairArtifactsGeneratedAfterLatestRepairRequest(Long demandId)
+    {
+        ReqPackageVersion repairRequest = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId,
+                "requirement_supplement");
+        ReqPackageVersion executionReport = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId,
+                "execution_report");
+        ReqPackageVersion reviewReport = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId,
+                "review_report");
+        if (executionReport == null || reviewReport == null)
+        {
+            throw new ServiceException("请先复制返修任务指令并回写返修执行报告和 Review 报告后再提交返修验收");
+        }
+        if (repairRequest != null && (!isPackageVersionNotEarlier(executionReport, repairRequest)
+                || !isPackageVersionNotEarlier(reviewReport, repairRequest)))
+        {
+            throw new ServiceException("请先复制返修任务指令并回写返修执行报告和 Review 报告后再提交返修验收");
+        }
+    }
+
     private void validateCloseoutVerified(ReqDemand demand)
     {
         ReqVariant variant = variantMapper.selectReqVariantByVariantId(demand.getVariantId());
@@ -787,8 +759,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 .map(ReqRepositoryIndexBatch::getRepoId)
                 .filter(id -> id != null)
                 .collect(Collectors.toSet());
-        if (!closeoutIndexedRepositoryIds.containsAll(repositoryIds) || !hasUsedCloseoutTokensForAllRepositories(demand,
-                repositoryIds))
+        if (!closeoutIndexedRepositoryIds.containsAll(repositoryIds))
         {
             throw new ServiceException("归档结果未通过平台验证：请先按合并归档指令完成全部仓库 push 和知识库发布");
         }
@@ -820,25 +791,6 @@ public class ReqDemandServiceImpl implements IReqDemandService
             }
         }
         return batches;
-    }
-
-    private boolean hasUsedCloseoutTokensForAllRepositories(ReqDemand demand, Set<Long> repositoryIds)
-    {
-        for (Long repositoryId : repositoryIds)
-        {
-            int usedTokenCount = actionTokenMapper.countUsedActionTokenByRemark(
-                    IReqActionTokenService.ACTION_REQUIREMENT_CLOSEOUT,
-                    IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX,
-                    demand.getProjectId(),
-                    demand.getVariantId(),
-                    demand.getDemandId(),
-                    ReqCloseoutContext.tokenRemark(repositoryId));
-            if (usedTokenCount < 1)
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
     private boolean isPackageVersionNotEarlier(ReqPackageVersion candidate, ReqPackageVersion baseline)
