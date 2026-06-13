@@ -7,10 +7,10 @@
 ## 目标
 
 - 扩展 `codexSetupPackage` 为多客户端安装包，支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode。
-- 每个客户端都提供 MCP 配置片段；能提供 CLI 的客户端提供 MCP CLI 命令。
-- 全局 `reqflow-mcp` skill 优先提供 `npx skills add` 安装命令，按目标客户端使用 `-a` 参数。
+- 每个客户端都提供通用安装脚本命令和 MCP 配置片段；通用脚本通过 `--client` 或 `-Client` 选择目标客户端。
+- 通用安装脚本内置 `npx skills add` 全局 skill 安装；同时保留单独的 `npx skills add` skill 安装命令作为备用入口。
 - 保持明文人员 Key 只在创建结果中出现，安装包模板不写入真实 Key。
-- 前端结果弹窗按客户端分组展示 MCP 命令、MCP 配置片段和全局 skill 安装命令。
+- 前端结果弹窗按客户端分组展示通用安装脚本、MCP 配置片段和全局 skill 单独安装命令。
 - 同步后端与前端 harness 文档，记录多客户端安装包结构和维护规则。
 
 ## 可行性评估
@@ -26,7 +26,7 @@
 
 - 后端安装包模板新增 `supportedClients` 和 `clientInstructions`。
 - 新增 `/requirement/codex/skill/SKILL.md` 匿名只读端点，供 `npx skills add` 下载 skill 内容。
-- Codex 便捷脚本继续保留，并调整默认 skill 路径为通用 Agent Skills 用户目录。
+- `/requirement/codex/install.sh` 和 `/requirement/codex/install.ps1` 旧路径继续保留，并升级为支持六类客户端的通用安装脚本。
 - 前端 MCP Key 结果弹窗改为客户端分组展示。
 - 后端与前端 harness 文档同步。
 - 后端模板、服务和控制器单测覆盖多客户端结构。
@@ -51,18 +51,19 @@
 
 - `codexSetupPackage.packageName=reqflow-mcp-multi-client-setup`。
 - `codexSetupPackage.supportedClients=[codex, claude-code, trae, qoder, codebuddy, opencode]`。
-- `clientInstructions[]` 一行代表一个客户端安装方案，包含 MCP 配置、命令、全局 skill 安装和说明。
-- `clientInstructions[].skillInstall.commands[]` 使用 `npx skills add` 安装到目标 agent。
+- `clientInstructions[]` 一行代表一个客户端安装方案，包含通用安装脚本、MCP 配置、全局 skill 单独安装和说明。
+- `clientInstructions[].commands[]` 使用 `install.sh --client <client>` 或 `install.ps1 -Client <client>` 安装目标客户端 MCP 配置和全局 skill。
+- `clientInstructions[].skillInstall.commands[]` 使用 `npx skills add` 单独安装到目标 agent。
 - `CodeBuddy` 作为唯一对应客户端输出，不增加其他客户端别名。
 - 所有 MCP 配置和命令使用 `${REQFLOW_MCP_KEY}` 占位，不包含真实明文 Key。
 
 ## 验收标准
 
 - AC-001：后端安装包支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 六个目标客户端。
-- AC-002：后端安装包为目标客户端提供对应 MCP 配置或命令，包含 OpenCode `opencode.json` 的 `mcp.reqflow.type=remote` 配置。
-- AC-003：全局 `reqflow-mcp` skill 提供 `npx skills add` 安装命令，覆盖 `-a codex`、`-a claude-code`、`-a trae`、`-a qoder`、`-a codebuddy`、`-a opencode`。
+- AC-002：后端安装包为每个目标客户端提供通用安装脚本命令，并包含 OpenCode `opencode.json` 的 `mcp.reqflow.type=remote` 配置片段。
+- AC-003：通用安装脚本支持 `codex`、`claude-code`、`trae`、`qoder`、`codebuddy`、`opencode`，并通过 `npx skills add -g -a <client> --copy -y` 安装全局 `reqflow-mcp` skill；单独 skill 安装命令也覆盖六类客户端。
 - AC-004：安装包、脚本和 skill 端点不包含人员明文 Key 或一次性 actionToken。
-- AC-005：前端结果弹窗按客户端分组展示 MCP 命令、配置片段和全局 skill 安装命令，并只在复制 MCP 命令/配置时要求明文 Key。
+- AC-005：前端结果弹窗按客户端分组展示通用安装脚本、配置片段和全局 skill 单独安装命令，并只在复制通用安装脚本/配置时要求明文 Key。
 - AC-006：后端和前端 harness 文档记录多客户端安装包结构、CodeBuddy 和 OpenCode 配置要求。
 
 ## Companion 关联

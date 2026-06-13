@@ -29,11 +29,20 @@ class ReqflowCodexSetupPackageTemplateTest
 
         String packageText = String.valueOf(setupPackage);
         assertTrue(packageText.contains("[mcp_servers.reqflow]"), packageText);
-        assertTrue(packageText.contains("claude mcp add --transport http"), packageText);
         assertTrue(packageText.contains("\"type\": \"streamable-http\""), packageText);
-        assertTrue(packageText.contains("codebuddy mcp add-json"), packageText);
-        assertTrue(packageText.contains("opencode mcp add"), packageText);
         assertTrue(packageText.contains("\"type\": \"remote\""), packageText);
+        assertTrue(packageText.contains("--client codex"), packageText);
+        assertTrue(packageText.contains("--client claude-code"), packageText);
+        assertTrue(packageText.contains("--client trae"), packageText);
+        assertTrue(packageText.contains("--client qoder"), packageText);
+        assertTrue(packageText.contains("--client codebuddy"), packageText);
+        assertTrue(packageText.contains("--client opencode"), packageText);
+        assertTrue(packageText.contains("-Client \"codex\""), packageText);
+        assertTrue(packageText.contains("-Client \"claude-code\""), packageText);
+        assertTrue(packageText.contains("-Client \"trae\""), packageText);
+        assertTrue(packageText.contains("-Client \"qoder\""), packageText);
+        assertTrue(packageText.contains("-Client \"codebuddy\""), packageText);
+        assertTrue(packageText.contains("-Client \"opencode\""), packageText);
         assertTrue(packageText.contains("npx skills add"), packageText);
         assertTrue(packageText.contains("-a codex"), packageText);
         assertTrue(packageText.contains("-a claude-code"), packageText);

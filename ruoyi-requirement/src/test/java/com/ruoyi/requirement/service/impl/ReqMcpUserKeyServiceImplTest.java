@@ -314,6 +314,12 @@ class ReqMcpUserKeyServiceImplTest
         assertEquals(List.of("codex", "claude-code", "trae", "qoder", "codebuddy", "opencode"), clients);
 
         String packageText = String.valueOf(setupPackage);
+        assertTrue(packageText.contains("--client codex"), packageText);
+        assertTrue(packageText.contains("--client claude-code"), packageText);
+        assertTrue(packageText.contains("--client trae"), packageText);
+        assertTrue(packageText.contains("--client qoder"), packageText);
+        assertTrue(packageText.contains("--client codebuddy"), packageText);
+        assertTrue(packageText.contains("--client opencode"), packageText);
         assertTrue(packageText.contains("npx skills add"), packageText);
         assertTrue(packageText.contains("-a codex"), packageText);
         assertTrue(packageText.contains("-a claude-code"), packageText);

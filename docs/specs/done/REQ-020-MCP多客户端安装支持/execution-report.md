@@ -12,12 +12,12 @@
 
 | 路径 | 修改说明 |
 |---|---|
-| `ReqflowCodexSetupPackageTemplate.java` | 输出 `reqflow-mcp-multi-client-setup`，新增 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 的 `clientInstructions`。 |
+| `ReqflowCodexSetupPackageTemplate.java` | 输出 `reqflow-mcp-multi-client-setup`，为 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 的 `clientInstructions.commands[]` 提供通用安装脚本命令。 |
 | `ReqCodexInstallController.java` | 新增 `/requirement/codex/skill/SKILL.md` 匿名只读端点。 |
-| `ReqflowCodexInstallScriptTemplate.java` | Codex 便捷安装脚本默认写入通用 Agent Skills 用户目录。 |
+| `ReqflowCodexInstallScriptTemplate.java` | 将 `/requirement/codex/install.sh` 和 `install.ps1` 升级为通用安装脚本，支持 `--client`/`-Client` 选择六类客户端并调用 `npx skills add` 安装全局 skill。 |
 | `ReqflowCodexGlobalSkillTemplate.java` | 全局 skill 包说明改为通用 Agent Skill，并记录 `npx skills add` 覆盖客户端。 |
 | `ReqflowCodexSetupPackageTemplateTest.java`、`ReqMcpUserKeyServiceImplTest.java`、`ReqCodexInstallControllerTest.java` | 增加多客户端、OpenCode、`npx skills add` 和无明文泄漏断言。 |
-| `../reqflow-ui/src/views/requirement/mcpKey/index.vue` | 结果弹窗按客户端分组展示 MCP 命令、配置片段和全局 skill 安装命令。 |
+| `../reqflow-ui/src/views/requirement/mcpKey/index.vue` | 结果弹窗按客户端分组展示通用安装脚本、配置片段和全局 skill 单独安装命令。 |
 | `docs/ai-harness/**`、`../reqflow-ui/docs/ai-harness/**` | 同步多客户端安装包结构、OpenCode 配置和 CodeBuddy 口径。 |
 
 ## 模块知识库沉淀
@@ -47,6 +47,7 @@
 | 层级 | 验收 ID | 命令或方式 | 结果 |
 |---|---|---|---|
 | L2 | AC-001、AC-002、AC-003、AC-004 | `mvn -pl ruoyi-requirement -am -Dtest=ReqflowCodexSetupPackageTemplateTest,ReqMcpUserKeyServiceImplTest,ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，15 个测试通过 |
+| L2 | AC-003、AC-004 | 生成 `install.sh` 后执行 `bash -n` 和六类 `--client` 假 `npx` 冒烟 | 通过，6 次 `npx skills add` 调用，Codex/OpenCode 配置写入校验通过 |
 | L1 | AC-005 | 前端 `npm run build:prod` | 通过，存在历史体积告警 |
 | L0 | AC-006 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/done/REQ-020-MCP多客户端安装支持` | 通过 |
 | L3 | AC-001 到 AC-006 | 不适用 | 未启动服务，未执行真实客户端安装 |
@@ -67,6 +68,7 @@
 
 - 用户补充客户端名称以 CodeBuddy 为准，已保留 CodeBuddy 作为唯一对应客户端。
 - 用户追加 OpenCode，已补充 OpenCode MCP 配置和 `npx skills add -a opencode`。
+- 用户要求做成通用脚本安装，已把原 Codex 便捷脚本升级为六客户端通用安装脚本；路径保留 `/requirement/codex/install.*` 兼容旧入口。
 
 ## Review 返修记录
 

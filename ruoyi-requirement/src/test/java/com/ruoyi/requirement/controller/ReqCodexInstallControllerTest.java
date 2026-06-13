@@ -8,15 +8,24 @@ import org.junit.jupiter.api.Test;
 class ReqCodexInstallControllerTest
 {
     @Test
-    void shellInstallScriptWritesMcpConfigAndGlobalSkill()
+    void shellInstallScriptInstallsSelectedClientMcpAndGlobalSkill()
     {
         String script = new ReqCodexInstallController().installShellScript();
 
         assertTrue(script.startsWith("#!/usr/bin/env bash"));
+        assertTrue(script.contains("--client"));
+        assertTrue(script.contains("SUPPORTED_CLIENTS"));
         assertTrue(script.contains("REQFLOW_MCP_KEY"));
         assertTrue(script.contains("[mcp_servers.reqflow]"));
         assertTrue(script.contains("X-MCP-Key"));
+        assertTrue(script.contains("install_codex_mcp"));
+        assertTrue(script.contains("install_claude_code_mcp"));
+        assertTrue(script.contains("install_trae_mcp"));
+        assertTrue(script.contains("install_qoder_mcp"));
+        assertTrue(script.contains("install_codebuddy_mcp"));
+        assertTrue(script.contains("install_opencode_mcp"));
         assertTrue(script.contains("reqflow-mcp/SKILL.md"));
+        assertTrue(script.contains("npx skills add \"$SKILL_DIR\" -g -a \"$CLIENT\" --copy -y"));
         assertTrue(script.contains("name: \"reqflow-mcp\""));
         assertTrue(script.contains("description: \"Use when"));
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));
@@ -24,15 +33,23 @@ class ReqCodexInstallControllerTest
     }
 
     @Test
-    void powershellInstallScriptWritesMcpConfigAndGlobalSkill()
+    void powershellInstallScriptInstallsSelectedClientMcpAndGlobalSkill()
     {
         String script = new ReqCodexInstallController().installPowerShellScript();
 
         assertTrue(script.contains("param("));
+        assertTrue(script.contains("[ValidateSet(\"codex\", \"claude-code\", \"trae\", \"qoder\", \"codebuddy\", \"opencode\")]"));
         assertTrue(script.contains("REQFLOW_MCP_KEY"));
         assertTrue(script.contains("[mcp_servers.reqflow]"));
         assertTrue(script.contains("X-MCP-Key"));
+        assertTrue(script.contains("Install-CodexMcp"));
+        assertTrue(script.contains("Install-ClaudeCodeMcp"));
+        assertTrue(script.contains("Install-TraeMcp"));
+        assertTrue(script.contains("Install-QoderMcp"));
+        assertTrue(script.contains("Install-CodeBuddyMcp"));
+        assertTrue(script.contains("Install-OpenCodeMcp"));
         assertTrue(script.contains("reqflow-mcp/SKILL.md"));
+        assertTrue(script.contains("npx skills add $SkillDir -g -a $Client --copy -y"));
         assertTrue(script.contains("name: \"reqflow-mcp\""));
         assertTrue(script.contains("description: \"Use when"));
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));
