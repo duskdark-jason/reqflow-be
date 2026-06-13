@@ -6,7 +6,7 @@
 2. 后端实现：为 `ReqMcpUserKey`、Mapper、Service 和 SQL 基线新增 `plain_key` 字段，保留哈希鉴权。覆盖 AC-001、AC-002。
 3. 安装脚本：顶层统一命令去掉默认 `all` 参数，Shell 和 PowerShell 脚本在未传 client 时提示选择工具，保留自动化参数。覆盖 AC-003、AC-004。
 4. 后端配置接口：新增管理员专用 MCP 请求地址配置 DTO、GET/PUT 接口和验证，拒绝完整 URL 或路径输入。覆盖 AC-010。
-5. 前端 companion：移除 MCP 管理页明文 Key 和 Key 前缀展示，只用 `plainKey` 渲染统一安装命令；补充管理员 MCP 请求地址配置栏。覆盖 AC-005、AC-011。
+5. 前端 companion：移除 MCP 管理页明文 Key 和 Key 前缀展示，只用 `plainKey` 渲染统一安装命令；补充管理员 MCP 请求地址配置弹窗。覆盖 AC-005、AC-011。
 6. 文档同步：更新 API 契约、模块知识库、数据库字典、关系说明和前端契约。覆盖 AC-006、AC-010、AC-011。
 7. Harness 门禁修正：补充 `--spec` 只能指向 `docs/specs/active/` 的脚本约束、流程说明和测试。覆盖 AC-007。
 8. Harness 模板同步：同步项目接入初始化下发模板中的流程说明、检查脚本和自测，并用 `get_harness_template` 单测锁定模板内容。覆盖 AC-008。
