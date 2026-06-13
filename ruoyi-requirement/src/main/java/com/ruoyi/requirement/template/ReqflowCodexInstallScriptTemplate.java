@@ -15,7 +15,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 #!/usr/bin/env bash
                 set -euo pipefail
 
-                SUPPORTED_CLIENTS="codex claude-code trae qoder codebuddy opencode"
+                SUPPORTED_CLIENTS="all codex claude-code trae qoder codebuddy opencode"
                 CLIENT="codex"
                 MCP_URL=""
                 MCP_KEY_HEADER="X-MCP-Key"
@@ -24,9 +24,9 @@ public final class ReqflowCodexInstallScriptTemplate
                   cat <<'EOF'
                 Usage: install.sh --url <reqflow-mcp-url> [--key <mcp-key>] [--client <client>]
 
-                Clients: codex, claude-code, trae, qoder, codebuddy, opencode
+                Clients: all, codex, claude-code, trae, qoder, codebuddy, opencode
 
-                The script installs the reqflow MCP configuration for the selected client and
+                The script installs the reqflow MCP configuration for all or the selected client and
                 installs the reqflow-mcp global skill with:
                   npx skills add <local-skill-dir> -g -a <client> --copy -y
                 EOF
@@ -59,7 +59,7 @@ public final class ReqflowCodexInstallScriptTemplate
 
                 MCP_KEY="${REQFLOW_MCP_KEY:-}"
                 case "$CLIENT" in
-                  codex|claude-code|trae|qoder|codebuddy|opencode)
+                  all|codex|claude-code|trae|qoder|codebuddy|opencode)
                     ;;
                   *)
                     echo "Unsupported --client '$CLIENT'. Supported clients: $SUPPORTED_CLIENTS" >&2
@@ -238,6 +238,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 }
 
                 install_global_skill() {
+                  local target_client="$1"
                   local skill_parent
                   local skill_dir
                   local skill_file
@@ -254,31 +255,46 @@ public final class ReqflowCodexInstallScriptTemplate
                   cat > "$skill_file" <<'REQFLOW_SKILL_EOF'
                 {{REQFLOW_SKILL_CONTENT}}
                 REQFLOW_SKILL_EOF
-                  npx skills add "$SKILL_DIR" -g -a "$CLIENT" --copy -y
+                  npx skills add "$SKILL_DIR" -g -a "$target_client" --copy -y
                 }
 
-                case "$CLIENT" in
-                  codex)
-                    install_codex_mcp
-                    ;;
-                  claude-code)
-                    install_claude_code_mcp
-                    ;;
-                  trae)
-                    install_trae_mcp
-                    ;;
-                  qoder)
-                    install_qoder_mcp
-                    ;;
-                  codebuddy)
-                    install_codebuddy_mcp
-                    ;;
-                  opencode)
-                    install_opencode_mcp
-                    ;;
-                esac
+                install_selected_client() {
+                  local target_client="$1"
+                  case "$target_client" in
+                    codex)
+                      install_codex_mcp
+                      ;;
+                    claude-code)
+                      install_claude_code_mcp
+                      ;;
+                    trae)
+                      install_trae_mcp
+                      ;;
+                    qoder)
+                      install_qoder_mcp
+                      ;;
+                    codebuddy)
+                      install_codebuddy_mcp
+                      ;;
+                    opencode)
+                      install_opencode_mcp
+                      ;;
+                  esac
+                  install_global_skill "$target_client"
+                }
 
-                install_global_skill
+                install_all_clients() {
+                  local target_client
+                  for target_client in codex claude-code trae qoder codebuddy opencode; do
+                    install_selected_client "$target_client"
+                  done
+                }
+
+                if [ "$CLIENT" = "all" ]; then
+                  install_all_clients
+                else
+                  install_selected_client "$CLIENT"
+                fi
 
                 echo "Reqflow $CLIENT MCP and reqflow-mcp global skill installed."
                 echo "Do not call reqflow MCP tools automatically after installation."
@@ -288,9 +304,9 @@ public final class ReqflowCodexInstallScriptTemplate
 
     public static String powerShellScript()
     {
-        return """
+                return """
                 param(
-                  [ValidateSet("codex", "claude-code", "trae", "qoder", "codebuddy", "opencode")]
+                  [ValidateSet("all", "codex", "claude-code", "trae", "qoder", "codebuddy", "opencode")]
                   [string]$Client = "codex",
                   [string]$McpUrl,
                   [string]$McpKey = $env:REQFLOW_MCP_KEY
@@ -446,7 +462,7 @@ public final class ReqflowCodexInstallScriptTemplate
                   }
                 }
 
-                function Install-GlobalSkill {
+                function Install-GlobalSkill([string]$TargetClient) {
                   if (-not (Get-Command npx -ErrorAction SilentlyContinue)) {
                     throw "Missing npx. Install Node.js/npm, then rerun this script or run npx skills add manually."
                   }
@@ -459,19 +475,32 @@ public final class ReqflowCodexInstallScriptTemplate
                 {{REQFLOW_SKILL_CONTENT}}
                 '@
                   Set-Content -Encoding UTF8 -Path $SkillFile -Value $skillContent
-                  npx skills add $SkillDir -g -a $Client --copy -y
+                  npx skills add $SkillDir -g -a $TargetClient --copy -y
                 }
 
-                switch ($Client) {
-                  "codex" { Install-CodexMcp }
-                  "claude-code" { Install-ClaudeCodeMcp }
-                  "trae" { Install-TraeMcp }
-                  "qoder" { Install-QoderMcp }
-                  "codebuddy" { Install-CodeBuddyMcp }
-                  "opencode" { Install-OpenCodeMcp }
+                function Install-SelectedClient([string]$TargetClient) {
+                  switch ($TargetClient) {
+                    "codex" { Install-CodexMcp }
+                    "claude-code" { Install-ClaudeCodeMcp }
+                    "trae" { Install-TraeMcp }
+                    "qoder" { Install-QoderMcp }
+                    "codebuddy" { Install-CodeBuddyMcp }
+                    "opencode" { Install-OpenCodeMcp }
+                  }
+                  Install-GlobalSkill -TargetClient $TargetClient
                 }
 
-                Install-GlobalSkill
+                function Install-AllClients {
+                  foreach ($targetClient in @("codex", "claude-code", "trae", "qoder", "codebuddy", "opencode")) {
+                    Install-SelectedClient -TargetClient $targetClient
+                  }
+                }
+
+                if ($Client -eq "all") {
+                  Install-AllClients
+                } else {
+                  Install-SelectedClient -TargetClient $Client
+                }
 
                 Write-Host "Reqflow $Client MCP and reqflow-mcp global skill installed."
                 Write-Host "Do not call reqflow MCP tools automatically after installation."

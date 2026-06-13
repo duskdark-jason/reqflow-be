@@ -31,10 +31,10 @@
 | 验收 ID | 需求描述 | 实现证据 | 验证证据 | Review 结论 |
 |---|---|---|---|---|
 | AC-001 | 支持六个目标客户端 | `ReqflowCodexSetupPackageTemplate` | 后端目标测试 | 通过 |
-| AC-002 | 通用安装脚本和 MCP 配置覆盖客户端，含 OpenCode remote | `clientInstructions` | 后端目标测试 | 通过 |
-| AC-003 | 通用脚本和单独 skill 命令都使用 `npx skills add` 覆盖各客户端 | `ReqflowCodexInstallScriptTemplate`、`skillInstall.commands` | 后端目标测试；脚本冒烟 | 通过 |
+| AC-002 | 顶层统一安装脚本和高级配置覆盖客户端，含 OpenCode remote | `installCommands`、`clientInstructions` | 后端目标测试 | 通过 |
+| AC-003 | `all` 通用脚本和单独 skill 命令都使用 `npx skills add` 覆盖各客户端 | `ReqflowCodexInstallScriptTemplate`、`skillInstall.commands` | 后端目标测试；脚本冒烟 | 通过 |
 | AC-004 | 不泄漏明文 Key 或 actionToken | 模板占位符和测试断言 | 后端目标测试 | 通过 |
-| AC-005 | 前端分组展示通用安装脚本和安装指令 | `mcpKey/index.vue` | `npm run build:prod` | 通过 |
+| AC-005 | 前端只展示统一安装指令 | `mcpKey/index.vue` | `npm run build:prod` | 通过 |
 | AC-006 | harness 文档同步 | `docs/ai-harness/**` | `check-docs` 和 harness complete | 通过 |
 
 ## 返修交接清单

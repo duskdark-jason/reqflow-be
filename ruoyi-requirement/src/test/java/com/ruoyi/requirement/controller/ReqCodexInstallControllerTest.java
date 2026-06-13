@@ -14,6 +14,7 @@ class ReqCodexInstallControllerTest
 
         assertTrue(script.startsWith("#!/usr/bin/env bash"));
         assertTrue(script.contains("--client"));
+        assertTrue(script.contains("all"));
         assertTrue(script.contains("SUPPORTED_CLIENTS"));
         assertTrue(script.contains("REQFLOW_MCP_KEY"));
         assertTrue(script.contains("[mcp_servers.reqflow]"));
@@ -24,8 +25,9 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("install_qoder_mcp"));
         assertTrue(script.contains("install_codebuddy_mcp"));
         assertTrue(script.contains("install_opencode_mcp"));
+        assertTrue(script.contains("install_all_clients"));
         assertTrue(script.contains("reqflow-mcp/SKILL.md"));
-        assertTrue(script.contains("npx skills add \"$SKILL_DIR\" -g -a \"$CLIENT\" --copy -y"));
+        assertTrue(script.contains("npx skills add \"$SKILL_DIR\" -g -a \"$target_client\" --copy -y"));
         assertTrue(script.contains("name: \"reqflow-mcp\""));
         assertTrue(script.contains("description: \"Use when"));
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));
@@ -38,7 +40,7 @@ class ReqCodexInstallControllerTest
         String script = new ReqCodexInstallController().installPowerShellScript();
 
         assertTrue(script.contains("param("));
-        assertTrue(script.contains("[ValidateSet(\"codex\", \"claude-code\", \"trae\", \"qoder\", \"codebuddy\", \"opencode\")]"));
+        assertTrue(script.contains("[ValidateSet(\"all\", \"codex\", \"claude-code\", \"trae\", \"qoder\", \"codebuddy\", \"opencode\")]"));
         assertTrue(script.contains("REQFLOW_MCP_KEY"));
         assertTrue(script.contains("[mcp_servers.reqflow]"));
         assertTrue(script.contains("X-MCP-Key"));
@@ -48,8 +50,9 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("Install-QoderMcp"));
         assertTrue(script.contains("Install-CodeBuddyMcp"));
         assertTrue(script.contains("Install-OpenCodeMcp"));
+        assertTrue(script.contains("Install-AllClients"));
         assertTrue(script.contains("reqflow-mcp/SKILL.md"));
-        assertTrue(script.contains("npx skills add $SkillDir -g -a $Client --copy -y"));
+        assertTrue(script.contains("npx skills add $SkillDir -g -a $TargetClient --copy -y"));
         assertTrue(script.contains("name: \"reqflow-mcp\""));
         assertTrue(script.contains("description: \"Use when"));
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));

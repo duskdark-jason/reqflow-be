@@ -344,6 +344,7 @@ class ReqMcpUserKeyServiceImplTest
                 .orElseThrow();
         assertEquals("bash", bash.get("language"));
         assertTrue(String.valueOf(bash.get("command")).contains("install.sh"));
+        assertTrue(String.valueOf(bash.get("command")).contains("--client all"));
         assertTrue(String.valueOf(bash.get("command")).contains("${REQFLOW_MCP_KEY}"));
 
         Map<String, Object> powershell = commands.stream()
@@ -352,6 +353,7 @@ class ReqMcpUserKeyServiceImplTest
                 .orElseThrow();
         assertEquals("powershell", powershell.get("language"));
         assertTrue(String.valueOf(powershell.get("command")).contains("install.ps1"));
+        assertTrue(String.valueOf(powershell.get("command")).contains("-Client \"all\""));
         assertTrue(String.valueOf(powershell.get("command")).contains("${REQFLOW_MCP_KEY}"));
 
         assertFalse(String.valueOf(commands).contains(plainKey), String.valueOf(commands));
