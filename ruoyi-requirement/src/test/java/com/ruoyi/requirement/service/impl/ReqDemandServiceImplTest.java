@@ -36,6 +36,7 @@ import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.dto.ReqActionInstruction;
+import com.ruoyi.requirement.dto.ReqCloseoutVerificationResult;
 import com.ruoyi.requirement.mapper.ReqActionTokenMapper;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
 import com.ruoyi.requirement.mapper.ReqPackageVersionMapper;
@@ -807,6 +808,30 @@ class ReqDemandServiceImplTest
     }
 
     @Test
+    void rejectsRequirementGenerateInstructionForPlanReadyDemand()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqDemand demand = demand(10L, 31L);
+        demand.setDemandId(5L);
+        demand.setDemandNo("REQ-005");
+        demand.setTitle("Demand");
+        demand.setStatus("plan_ready");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(demand);
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.createRequirementPlanInstruction(5L, "approver"));
+
+        assertEquals("当前状态不能生成需求设计指令", exception.getMessage());
+        verify(actionTokenService, never()).createInstruction(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
     void createsRequirementDevelopInstructionForDemand()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
@@ -1054,6 +1079,38 @@ class ReqDemandServiceImplTest
                 () -> service.updateReqDemandStatus(5L, "completed", "developer"));
 
         assertTrue(exception.getMessage().contains("归档结果未通过平台验证"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
+    }
+
+    @Test
+    void reportsCloseoutVerificationBeforePlatformVerification()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqActionTokenMapper actionTokenMapper = mock(ReqActionTokenMapper.class);
+        ReqVariantMapper variantMapper = mock(ReqVariantMapper.class);
+        ReqRepositoryMapper repositoryMapper = mock(ReqRepositoryMapper.class);
+        ReqRepositoryIndexBatchMapper batchMapper = mock(ReqRepositoryIndexBatchMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("closeout_pending");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(variantMapper.selectReqVariantByVariantId(31L)).thenReturn(variant(31L, 10L, "main"));
+        when(repositoryMapper.selectReqRepositoryList(any())).thenReturn(Arrays.asList(repository(21L), repository(22L)));
+        when(batchMapper.selectReqRepositoryIndexBatchList(any())).thenReturn(Collections.singletonList(batch(21L, "main")));
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "actionTokenMapper", actionTokenMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", variantMapper);
+        ReflectionTestUtils.setField(service, "repositoryMapper", repositoryMapper);
+        ReflectionTestUtils.setField(service, "batchMapper", batchMapper);
+
+        ReqCloseoutVerificationResult result = service.verifyDemandCloseout(5L);
+
+        assertFalse(result.isVerified());
+        assertTrue(result.getMessage().contains("归档结果未通过平台验证"));
         verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
     }
 

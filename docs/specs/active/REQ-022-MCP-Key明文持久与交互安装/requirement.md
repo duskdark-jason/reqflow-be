@@ -10,6 +10,7 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - MCP 明文 Key 下次打开使用指令时也不能隐藏，必须继续放在安装命令中供用户复制。
 - MCP 请求地址配置不易发现，需要直接加到 MCP 管理页面中，并且只有管理员可以配置。
 - 用户测试发现安装到 OpenCode 时 MCP 没有安装成功，且要求不只修 OpenCode，也要确保 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 的安装结果边界清晰。
+- 需求详情页合并归档阶段需要避免“生成合并归档指令”和“确认归档完成”同时展示，后端需要提供只读归档验证结果供前端判断。
 - 本地 Harness `--spec` 只能检查 `docs/specs/active/` 中的执行中需求，避免执行过程误写 `docs/specs/done/`。
 - 项目接入初始化下发的 Harness 模板也必须同步上述 `active/` 与 `done/` 边界，避免新项目继续继承旧规范。
 - 本地 Harness 在收到归档、办结或结束任务指令时，必须在完成态门禁通过后把需求目录从 `active/` 迁移到 `done/`。
@@ -27,6 +28,7 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - 收紧 `check-harness.sh --spec` 目标路径，拒绝 `docs/specs/done/` 并补充自测。
 - 同步 `ruoyi-requirement/src/main/resources/harness-template/` 下发模板中的流程说明、检查脚本和自测。
 - MCP 合并归档指令、全局 skill 和本地 Harness 流程都明确：先在任务分支完成 `active -> done` 迁移，再 squash merge 到需求基线分支。
+- 新增合并归档验证只读接口，复用 `closeout_pending -> completed` 的平台验证口径，前端只在验证通过后展示确认归档完成。
 
 ## 非目标
 
@@ -48,10 +50,12 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - AC-010：`/requirement/mcp/key/config` 仅 `admin` 角色可读写，返回 `configKey`、`publicHost` 和完整 `mcpAddress`，保存时拒绝协议、路径、查询串或空白字符。
 - AC-011：MCP 管理页仅管理员展示 MCP 请求地址配置入口，点击后以弹窗保存 `publicHost` 并展示后端返回的完整地址，普通开发人员不可配置。
 - AC-012：OpenCode 已有 `~/.config/opencode/opencode.json` 时，脚本选择 `opencode` 必须自动合并 `mcp.reqflow` 并保留既有配置；Codex、Claude Code、CodeBuddy、OpenCode 自动配置成功时输出 `Reqflow automatic MCP configuration completed`，Trae、Qoder 或自动合并失败场景输出 `Manual MCP import required` 和片段路径。
+- AC-013：`/requirement/demand/{demandId}/closeout-verification` 返回 `{ verified, message }`，复用合并归档办结验证口径；未通过时不更新需求状态并返回未通过原因，通过后返回 `verified=true`。
 
 ## 影响范围
 
 - 接口：是，`/requirement/mcp/key/**` 返回 `plainKey` 的长期语义变化，并新增管理员 `/requirement/mcp/key/config` 读写接口。
+- 需求流程接口：是，新增 `/requirement/demand/{demandId}/closeout-verification` 只读接口。
 - 数据库：是，新增 `req_mcp_user_key.plain_key`。
 - 权限：是，MCP 请求地址配置使用 `admin` 角色控制，不扩展给开发人员角色。
 - 页面展示：是，MCP 管理页隐藏明文 Key 和 Key 前缀字段，统一命令执行后选择工具；管理员额外通过弹窗配置 MCP 请求地址。

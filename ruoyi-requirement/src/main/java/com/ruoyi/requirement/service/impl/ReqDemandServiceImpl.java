@@ -20,6 +20,7 @@ import com.ruoyi.requirement.domain.ReqRepository;
 import com.ruoyi.requirement.domain.ReqRepositoryIndexBatch;
 import com.ruoyi.requirement.domain.ReqVariant;
 import com.ruoyi.requirement.dto.ReqActionInstruction;
+import com.ruoyi.requirement.dto.ReqCloseoutVerificationResult;
 import com.ruoyi.requirement.dto.ReqMcpUserOption;
 import com.ruoyi.requirement.mapper.ReqActionTokenMapper;
 import com.ruoyi.requirement.mapper.ReqDemandMapper;
@@ -331,8 +332,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             throw new ServiceException("需求不存在");
         }
         validateDeveloperInstructionAccess(demand);
-        if (!"submitted".equals(demand.getStatus()) && !"plan_pending".equals(demand.getStatus())
-                && !"plan_ready".equals(demand.getStatus()))
+        if (!"submitted".equals(demand.getStatus()) && !"plan_pending".equals(demand.getStatus()))
         {
             throw new ServiceException("当前状态不能生成需求设计指令");
         }
@@ -412,6 +412,30 @@ public class ReqDemandServiceImpl implements IReqDemandService
         developInstruction.setContent(requirementDevelopInstructionContent(developPrompt, developInstruction.getToken(),
                 demand, suggestedTaskBranch(demand)));
         return developInstruction;
+    }
+
+    @Override
+    public ReqCloseoutVerificationResult verifyDemandCloseout(Long demandId)
+    {
+        ReqDemand demand = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        if (demand == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        validateDeveloperInstructionAccess(demand);
+        if (!"closeout_pending".equals(demand.getStatus()))
+        {
+            return new ReqCloseoutVerificationResult(false, "当前状态无需归档验证");
+        }
+        try
+        {
+            validateCloseoutVerified(demand);
+            return new ReqCloseoutVerificationResult(true, "归档结果已通过平台验证");
+        }
+        catch (ServiceException e)
+        {
+            return new ReqCloseoutVerificationResult(false, e.getMessage());
+        }
     }
 
     private String nextDemandNo()

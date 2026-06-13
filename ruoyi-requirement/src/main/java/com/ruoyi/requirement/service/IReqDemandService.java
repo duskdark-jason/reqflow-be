@@ -3,6 +3,7 @@ package com.ruoyi.requirement.service;
 import java.util.List;
 import com.ruoyi.requirement.domain.ReqDemand;
 import com.ruoyi.requirement.dto.ReqActionInstruction;
+import com.ruoyi.requirement.dto.ReqCloseoutVerificationResult;
 import com.ruoyi.requirement.dto.ReqMcpUserOption;
 
 public interface IReqDemandService
@@ -19,4 +20,5 @@ public interface IReqDemandService
     void validateDemandPackageWritable(Long demandId, String artifactType);
     ReqActionInstruction createRequirementPlanInstruction(Long demandId, String operator);
     ReqActionInstruction createRequirementDevelopInstruction(Long demandId, String operator);
+    ReqCloseoutVerificationResult verifyDemandCloseout(Long demandId);
 }

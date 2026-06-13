@@ -147,6 +147,13 @@ public class ReqDemandController extends BaseController
         return success(instruction);
     }
 
+    @PreAuthorize("@ss.hasPermi('req:demand:query')")
+    @GetMapping("/{demandId}/closeout-verification")
+    public AjaxResult closeoutVerification(@PathVariable Long demandId)
+    {
+        return success(reqDemandService.verifyDemandCloseout(demandId));
+    }
+
     private void validateDemandUpload(MultipartFile file)
     {
         if (file == null || file.isEmpty())
