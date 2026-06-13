@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Reqflow Codex 安装指令包模板。
+ * Reqflow MCP 多客户端安装指令包模板。
  */
 public final class ReqflowCodexSetupPackageTemplate
 {
-    public static final String PACKAGE_NAME = "reqflow-codex-setup";
+    public static final String PACKAGE_NAME = "reqflow-mcp-multi-client-setup";
 
     public static final String MCP_SERVER_NAME = "reqflow";
 
@@ -29,10 +29,12 @@ public final class ReqflowCodexSetupPackageTemplate
         setupPackage.put("packageName", PACKAGE_NAME);
         setupPackage.put("installScope", "global");
         setupPackage.put("installInstructions", installInstructions());
+        setupPackage.put("supportedClients", supportedClients());
         setupPackage.put("mcpServer", mcpServer(mcpAddress));
         setupPackage.put("codexConfigTemplate", codexConfigTemplate);
         setupPackage.put("installScripts", installScripts(mcpAddress));
         setupPackage.put("installCommands", installCommands(mcpAddress));
+        setupPackage.put("clientInstructions", clientInstructions(mcpAddress));
         setupPackage.put("skillPackage", ReqflowCodexGlobalSkillTemplate.globalSkillPackage());
         setupPackage.put("installPrompt", installPrompt());
         setupPackage.put("serverMetadata", serverMetadata(mcpAddress));
@@ -41,23 +43,20 @@ public final class ReqflowCodexSetupPackageTemplate
 
     public static String codexConfigTemplate(String mcpAddress)
     {
-        return "{\n"
-                + "  \"mcpServers\": {\n"
-                + "    \"reqflow\": {\n"
-                + "      \"url\": \"" + escapeJson(mcpAddress) + "\",\n"
-                + "      \"headers\": {\n"
-                + "        \"" + MCP_KEY_HEADER + "\": \"创建后返回的Key\"\n"
-                + "      }\n"
-                + "    }\n"
-                + "  }\n"
-                + "}";
+        return codexTomlConfig(mcpAddress, "创建后返回的Key");
     }
 
     private static String installInstructions()
     {
-        return "Install the reqflow MCP configuration and the reqflow-mcp global Codex skill from this setup package. "
-                + "Let Codex choose the correct configuration and skill locations for the current platform. "
+        return "Install the reqflow MCP configuration and the reqflow-mcp global skill for the selected AI client. "
+                + "Use the clientInstructions[] entry matching Codex, Claude Code, Trae, Qoder, CodeBuddy, or OpenCode. "
+                + "Prefer the provided npx skills add commands when the client supports Agent Skills. "
                 + "Do not call reqflow MCP tools automatically after installation.";
+    }
+
+    private static List<String> supportedClients()
+    {
+        return List.of("codex", "claude-code", "trae", "qoder", "codebuddy", "opencode");
     }
 
     private static Map<String, Object> mcpServer(String mcpAddress)
@@ -73,7 +72,7 @@ public final class ReqflowCodexSetupPackageTemplate
 
     private static String installPrompt()
     {
-        return "请安装 reqflow MCP 配置和 reqflow-mcp 全局 skill。配置完成后只确认 MCP server 与 skill 已安装，"
+        return "请按目标客户端安装 reqflow MCP 配置和 reqflow-mcp 全局 skill。Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 优先使用 npx skills add。配置完成后只确认 MCP server 与 skill 已安装，"
                 + "不要自动调用 publish_repository_index 或其他 reqflow MCP 工具；不要把 plainKey 或 actionToken 写入 skill 文件。";
     }
 
@@ -108,6 +107,165 @@ public final class ReqflowCodexSetupPackageTemplate
                         + "$script = irm \"" + escapeCommand(powerShellUrl) + "\"\n"
                         + "& ([scriptblock]::Create($script)) -McpUrl \"" + escapeCommand(mcpAddress) + "\""));
         return commands;
+    }
+
+    private static List<Map<String, Object>> clientInstructions(String mcpAddress)
+    {
+        List<Map<String, Object>> clients = new ArrayList<>();
+        clients.add(codexClient(mcpAddress));
+        clients.add(claudeCodeClient(mcpAddress));
+        clients.add(traeClient(mcpAddress));
+        clients.add(qoderClient(mcpAddress));
+        clients.add(codeBuddyClient(mcpAddress));
+        clients.add(openCodeClient(mcpAddress));
+        return clients;
+    }
+
+    private static Map<String, Object> codexClient(String mcpAddress)
+    {
+        Map<String, Object> client = baseClient("codex", "Codex", "streamable-http", "~/.codex/config.toml");
+        client.put("mcpConfigSnippet", codexTomlConfig(mcpAddress, MCP_KEY_PLACEHOLDER));
+        client.put("commands", installCommands(mcpAddress));
+        client.put("skillInstall", npxSkillInstall(mcpAddress, "codex", "Codex"));
+        client.put("notes", List.of(
+                "Codex MCP 配置写入 ~/.codex/config.toml。",
+                "Codex skill 优先通过 npx skills add 安装到全局 skill 目录；安装后可重启 Codex 或刷新 skill 列表。"));
+        return client;
+    }
+
+    private static Map<String, Object> claudeCodeClient(String mcpAddress)
+    {
+        Map<String, Object> client = baseClient("claude-code", "Claude Code", "streamable-http", "~/.claude.json 或项目 .mcp.json");
+        client.put("mcpConfigSnippet", mcpServersJsonConfig(mcpAddress, "http"));
+        client.put("commands", List.of(installCommand("claude-code-user", "Claude Code 全局 MCP", "bash",
+                "claude mcp add --transport http --scope user reqflow \"" + escapeCommand(mcpAddress) + "\" --header \"" + MCP_KEY_HEADER + ": " + MCP_KEY_PLACEHOLDER + "\"")));
+        client.put("skillInstall", npxSkillInstall(mcpAddress, "claude-code", "Claude Code"));
+        client.put("notes", List.of(
+                "Claude Code 可用 claude mcp add 写入用户级 MCP 配置，也可将 JSON 放入 .mcp.json。",
+                "全局 skill 可通过 npx skills add 安装到 Claude Code 的用户级 skills 目录。"));
+        return client;
+    }
+
+    private static Map<String, Object> traeClient(String mcpAddress)
+    {
+        Map<String, Object> client = baseClient("trae", "Trae", "streamable-http", "Trae 设置 > MCP > JSON 配置");
+        client.put("mcpConfigSnippet", mcpServersJsonConfig(mcpAddress, "streamable-http"));
+        client.put("commands", new ArrayList<Map<String, Object>>());
+        client.put("skillInstall", npxSkillInstall(mcpAddress, "trae", "Trae"));
+        client.put("notes", List.of(
+                "Trae 的 MCP 配置可在 Settings > MCP 中粘贴 mcpServers JSON。",
+                "Trae skill 可通过 npx skills add -a trae 全局安装，或在 Skills & Commands 中创建/导入 Global Skill。"));
+        return client;
+    }
+
+    private static Map<String, Object> qoderClient(String mcpAddress)
+    {
+        Map<String, Object> client = baseClient("qoder", "Qoder", "streamable-http", "~/.qoder 或 Qoder Settings > MCP");
+        client.put("mcpConfigSnippet", mcpServersJsonConfig(mcpAddress, "streamable-http"));
+        client.put("commands", new ArrayList<Map<String, Object>>());
+        client.put("skillInstall", npxSkillInstall(mcpAddress, "qoder", "Qoder"));
+        client.put("notes", List.of(
+                "Qoder 支持在 Connectors & MCP 中粘贴包含 headers 的 Streamable HTTP 配置。",
+                "Qoder skill 可通过 npx skills add -a qoder 安装到用户级 skill 目录。"));
+        return client;
+    }
+
+    private static Map<String, Object> codeBuddyClient(String mcpAddress)
+    {
+        Map<String, Object> client = baseClient("codebuddy", "CodeBuddy Code", "http", "~/.codebuddy/.mcp.json");
+        client.put("mcpConfigSnippet", mcpServersJsonConfig(mcpAddress, "http"));
+        client.put("commands", List.of(installCommand("codebuddy-user", "CodeBuddy 全局 MCP", "bash",
+                "codebuddy mcp add-json --scope user reqflow '{\"type\":\"http\",\"url\":\"" + escapeSingleQuotedJson(mcpAddress)
+                        + "\",\"headers\":{\"" + MCP_KEY_HEADER + "\":\"" + MCP_KEY_PLACEHOLDER + "\"}}'")));
+        client.put("skillInstall", npxSkillInstall(mcpAddress, "codebuddy", "CodeBuddy Code"));
+        client.put("notes", List.of(
+                "CodeBuddy Code 的用户级 MCP 配置推荐写入 ~/.codebuddy/.mcp.json。",
+                "CodeBuddy Code skill 可通过 npx skills add -a codebuddy 安装。"));
+        return client;
+    }
+
+    private static Map<String, Object> openCodeClient(String mcpAddress)
+    {
+        Map<String, Object> client = baseClient("opencode", "OpenCode", "remote", "~/.config/opencode/opencode.json 或项目 opencode.json");
+        client.put("mcpConfigSnippet", openCodeJsonConfig(mcpAddress));
+        client.put("commands", List.of(installCommand("opencode-mcp-add", "OpenCode 交互式 MCP 添加", "bash",
+                "opencode mcp add")));
+        client.put("skillInstall", npxSkillInstall(mcpAddress, "opencode", "OpenCode"));
+        client.put("notes", List.of(
+                "OpenCode 的远程 MCP 配置写在 opencode.json 的 mcp.reqflow 下，type 使用 remote。",
+                "OpenCode skill 可通过 npx skills add -a opencode 安装到用户级 skill 目录。"));
+        return client;
+    }
+
+    private static Map<String, Object> baseClient(String clientId, String label, String transport, String configPath)
+    {
+        Map<String, Object> client = new LinkedHashMap<>();
+        client.put("client", clientId);
+        client.put("label", label);
+        client.put("transport", transport);
+        client.put("mcpConfigPath", configPath);
+        client.put("mcpHeaderName", MCP_KEY_HEADER);
+        return client;
+    }
+
+    private static Map<String, Object> npxSkillInstall(String mcpAddress, String agent, String label)
+    {
+        String skillUrl = installScriptUrl(mcpAddress, "skill/SKILL.md");
+        Map<String, Object> skillInstall = new LinkedHashMap<>();
+        skillInstall.put("method", "npx-skills-add");
+        skillInstall.put("scope", "global");
+        skillInstall.put("source", skillUrl);
+        skillInstall.put("commands", List.of(
+                installCommand(agent + "-skill-macos-linux", label + " 全局 skill（macOS / Linux）", "bash",
+                        "SKILL_DIR=\"$(mktemp -d)/reqflow-mcp\"\n"
+                                + "mkdir -p \"$SKILL_DIR\"\n"
+                                + "curl -fsSL \"" + escapeCommand(skillUrl) + "\" -o \"$SKILL_DIR/SKILL.md\"\n"
+                                + "npx skills add \"$SKILL_DIR\" -g -a " + agent + " --copy -y"),
+                installCommand(agent + "-skill-windows-powershell", label + " 全局 skill（Windows PowerShell）", "powershell",
+                        "$skillDir = Join-Path ([System.IO.Path]::GetTempPath()) (\"reqflow-mcp-\" + [guid]::NewGuid())\n"
+                                + "New-Item -ItemType Directory -Force -Path $skillDir | Out-Null\n"
+                                + "irm \"" + escapeCommand(skillUrl) + "\" | Set-Content -Encoding UTF8 -Path (Join-Path $skillDir \"SKILL.md\")\n"
+                                + "npx skills add $skillDir -g -a " + agent + " --copy -y")));
+        return skillInstall;
+    }
+
+    private static String codexTomlConfig(String mcpAddress, String keyValue)
+    {
+        return "[mcp_servers.reqflow]\n"
+                + "url = \"" + escapeToml(mcpAddress) + "\"\n"
+                + "http_headers = { \"" + MCP_KEY_HEADER + "\" = \"" + escapeToml(keyValue) + "\" }";
+    }
+
+    private static String mcpServersJsonConfig(String mcpAddress, String type)
+    {
+        return "{\n"
+                + "  \"mcpServers\": {\n"
+                + "    \"reqflow\": {\n"
+                + "      \"type\": \"" + escapeJson(type) + "\",\n"
+                + "      \"url\": \"" + escapeJson(mcpAddress) + "\",\n"
+                + "      \"headers\": {\n"
+                + "        \"" + MCP_KEY_HEADER + "\": \"" + MCP_KEY_PLACEHOLDER + "\"\n"
+                + "      }\n"
+                + "    }\n"
+                + "  }\n"
+                + "}";
+    }
+
+    private static String openCodeJsonConfig(String mcpAddress)
+    {
+        return "{\n"
+                + "  \"$schema\": \"https://opencode.ai/config.json\",\n"
+                + "  \"mcp\": {\n"
+                + "    \"reqflow\": {\n"
+                + "      \"type\": \"remote\",\n"
+                + "      \"url\": \"" + escapeJson(mcpAddress) + "\",\n"
+                + "      \"enabled\": true,\n"
+                + "      \"headers\": {\n"
+                + "        \"" + MCP_KEY_HEADER + "\": \"" + MCP_KEY_PLACEHOLDER + "\"\n"
+                + "      }\n"
+                + "    }\n"
+                + "  }\n"
+                + "}";
     }
 
     private static Map<String, Object> installCommand(String platform, String label, String language, String command)
@@ -204,6 +362,15 @@ public final class ReqflowCodexSetupPackageTemplate
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
+    private static String escapeToml(String value)
+    {
+        if (value == null)
+        {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
     private static String escapeCommand(String value)
     {
         if (value == null)
@@ -211,6 +378,15 @@ public final class ReqflowCodexSetupPackageTemplate
             return "";
         }
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String escapeSingleQuotedJson(String value)
+    {
+        if (value == null)
+        {
+            return "";
+        }
+        return escapeJson(value).replace("'", "'\"'\"'");
     }
 
     private static String trimTrailingSlash(String value)

@@ -38,4 +38,16 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));
         assertFalse(script.contains("reqflow_mcp_test_secret"));
     }
+
+    @Test
+    void skillFileEndpointReturnsGlobalSkillContent()
+    {
+        String skill = new ReqCodexInstallController().skillFile();
+
+        assertTrue(skill.startsWith("---"));
+        assertTrue(skill.contains("name: \"reqflow-mcp\""));
+        assertTrue(skill.contains("mcp__reqflow.get_harness_template"));
+        assertTrue(skill.contains("actionToken"));
+        assertFalse(skill.contains("reqflow_mcp_test_secret"));
+    }
 }

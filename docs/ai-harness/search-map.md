@@ -17,7 +17,7 @@
 | 分支知识库 | 项目分支模块树、索引批次、影响面推荐 | `docs/ai-harness/modules/requirement-platform.md` | `ReqIndexController`、`ReqRepositoryIndexServiceImpl`、`ReqIndexModuleMapper` |
 | 需求列表 | 需求新增、编辑、查询、状态流转、需求指令生成 | `docs/ai-harness/modules/requirement-platform.md` | `ReqDemandController`、`ReqDemandServiceImpl`、`ReqDemandStatusTransition` |
 | 需求执行包 | 需求可行性评估、需求设计、执行计划、执行报告和 Review 报告 | `docs/ai-harness/contracts/requirement-platform-api.md` | `ReqPackageController`、`ReqPackageServiceImpl`、`ReqPackageVersionMapper` |
-| MCP 管理 | 人员 MCP Key、安装脚本、MCP lifecycle 和 tools/list | `docs/ai-harness/modules/requirement-platform.md` | `ReqMcpKeyController`、`ReqCodexInstallController`、`McpService` |
+| MCP 管理 | 人员 MCP Key、多客户端安装包、全局 skill 安装、MCP lifecycle 和 tools/list | `docs/ai-harness/modules/requirement-platform.md` | `ReqMcpKeyController`、`ReqCodexInstallController`、`McpService` |
 | Reqflow MCP | resources、tools、actionToken、JSON-RPC 错误语义 | `docs/ai-harness/contracts/requirement-platform-api.md` | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/mcp/McpService.java` |
 | 项目接入初始化 | 下发 harness 模板、发布仓库索引、登记初始化结果 | `docs/process/platform-key-workflow.md`、`docs/ai-harness/modules/requirement-platform.md` | `McpService#getHarnessTemplate`、`publish_repository_index` |
 | harness 模板 | 后端保存并下发的 AGENTS、docs、scripts 模板 | `docs/ai-harness/modules/requirement-platform.md` | `ruoyi-requirement/src/main/resources/harness-template/` |

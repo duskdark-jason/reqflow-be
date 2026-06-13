@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Reqflow 全局 Codex skill 包模板。
+ * Reqflow 全局 Agent Skill 包模板。
  */
 public final class ReqflowCodexGlobalSkillTemplate
 {
@@ -39,9 +39,9 @@ public final class ReqflowCodexGlobalSkillTemplate
 
     private static String installInstructions()
     {
-        return "Install this package as a global Codex skill named reqflow-mcp. "
-                + "Let Codex resolve the correct global skills directory for the current operating system, "
-                + "then create or update the files listed in files[]. Do not store personal MCP keys in the skill.";
+        return "Install this package as a global Agent Skill named reqflow-mcp. "
+                + "Prefer npx skills add for Codex, Claude Code, Trae, Qoder, CodeBuddy, and OpenCode. "
+                + "Do not store personal MCP keys in the skill.";
     }
 
     public static String skillContent()

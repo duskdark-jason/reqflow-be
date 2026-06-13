@@ -252,9 +252,9 @@ requirement_closeout
 
 人员 Key 使用 `req_mcp_user_key` 表保存，服务端只落库 SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。前端和列表接口不得展示 `keyHash`，明文 `plainKey` 只允许在创建响应中出现一次；创建接口的操作日志必须关闭响应保存，避免明文 Key 进入 `sys_oper_log`。
 
-`/requirement/mcp/key/config` 已删除，MCP 管理页不再常驻展示 MCP 地址、请求头名、Codex 配置模板、全局 skill 包或 Codex 安装指令包。
+`/requirement/mcp/key/config` 已删除，MCP 管理页不再常驻展示 MCP 地址、请求头名、客户端配置模板、全局 skill 包或安装指令包。
 
-创建 Key 响应返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 是一次性明文，前端安装指令界面必须直接展示明文 Key，并把明文渲染进可复制安装命令；`codexSetupPackage` 是推荐复制给 Codex 的安装指令包，包含 `packageName=reqflow-codex-setup`、`installScope=global`、`mcpServer`、`codexConfigTemplate`、`installScripts`、`installCommands`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`installCommands[]` 至少包含 `macos-linux` 与 `windows-powershell` 两个平台，每项包含 `platform`、`label`、`language` 和 markdown 代码块使用的 `command` 模板；`command` 使用 `${REQFLOW_MCP_KEY}` 作为 Key 占位符，后端模板不得直接包含人员明文 Key 或一次性 `actionToken`，前端只在当前安装弹窗中用创建响应明文替换占位符。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。配置完成后不得自动调用 `publish_repository_index` 或其他工具。
+创建 Key 响应返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 是一次性明文，前端安装指令界面必须直接展示明文 Key，并把明文渲染进可复制安装命令和配置片段；`codexSetupPackage` 是多客户端安装指令包，`packageName=reqflow-mcp-multi-client-setup`，`installScope=global`，并包含 `supportedClients`、`mcpServer`、`codexConfigTemplate`、`installScripts`、`installCommands`、`clientInstructions`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`supportedClients` 只包含 `codex`、`claude-code`、`trae`、`qoder`、`codebuddy`、`opencode`。`clientInstructions[]` 是主展示入口，每项包含 `client`、`label`、`transport`、`mcpConfigPath`、`mcpConfigSnippet`、可选 `commands[]`、`skillInstall` 和 `notes`。MCP 命令或配置中使用 `${REQFLOW_MCP_KEY}` 作为 Key 占位符，后端模板不得直接包含人员明文 Key 或一次性 `actionToken`，前端只在当前安装弹窗中用创建响应明文替换占位符。全局 skill 安装命令优先使用 `npx skills add`，分别定向 `-a codex`、`-a claude-code`、`-a trae`、`-a qoder`、`-a codebuddy`、`-a opencode`。OpenCode 的 MCP 配置使用 `opencode.json` 的 `mcp.reqflow`，`type=remote`，并通过 `headers` 携带 `X-MCP-Key`。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。配置完成后不得自动调用 `publish_repository_index` 或其他工具。
 
 安装脚本端点：
 
@@ -262,8 +262,9 @@ requirement_closeout
 |---|---|---|---|
 | `/requirement/codex/install.sh` | GET | 匿名可读 | 返回 macOS/Linux 安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `--key` 读取人员 Key，并写入 Codex MCP 配置和全局 `reqflow-mcp` skill |
 | `/requirement/codex/install.ps1` | GET | 匿名可读 | 返回 Windows PowerShell 安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `-McpKey` 读取人员 Key，并写入 Codex MCP 配置和全局 `reqflow-mcp` skill |
+| `/requirement/codex/skill/SKILL.md` | GET | 匿名可读 | 返回全局 `reqflow-mcp` Agent Skill 内容，供 `npx skills add` 安装到 Codex、Claude Code、Trae、Qoder、CodeBuddy 和 OpenCode |
 
-安装脚本不得内置人员明文 Key，不得自动调用 reqflow MCP tool；脚本执行后只提示用户重启或刷新 Codex。
+安装脚本和 skill 内容端点不得内置人员明文 Key，不得自动调用 reqflow MCP tool；脚本执行后只提示用户重启或刷新目标客户端。
 
 `codexSetupPackage` 内的 MCP 地址优先读取系统参数 `reqflow.mcp.public-host`。该参数由系统管理员登录后台系统参数维护，仅填写 `IP:端口` 或域名加端口，例如 `10.0.0.12:8080`，不得在项目 yml 中配置，也不得填写协议和路径；服务端按当前请求或代理头推导协议，自动拼接后端 context-path 和 `/requirement/mcp`。发布默认后端 context-path 为 `/reqflow-api`，因此 MCP endpoint 为 `/reqflow-api/requirement/mcp`；前端项目名 `/reqflow/` 只影响静态页面入口，不参与 MCP 地址生成。该参数为空时，服务端按 `X-Forwarded-Proto`、`X-Forwarded-Host`、`Host` 和 `context-path` 自动推导地址。
 

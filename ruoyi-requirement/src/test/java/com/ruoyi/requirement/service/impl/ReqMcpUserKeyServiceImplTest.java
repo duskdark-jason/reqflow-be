@@ -65,9 +65,10 @@ class ReqMcpUserKeyServiceImplTest
         assertNoCreateResultAccessor("getCodexConfig");
         assertNoCreateResultAccessor("getCodexGlobalSkillPackage");
         assertNotNull(result.getCodexSetupPackage());
-        assertEquals("reqflow-codex-setup", result.getCodexSetupPackage().get("packageName"));
+        assertEquals("reqflow-mcp-multi-client-setup", result.getCodexSetupPackage().get("packageName"));
         assertEquals("global", result.getCodexSetupPackage().get("installScope"));
         assertInstallCommands(result.getCodexSetupPackage(), result.getPlainKey());
+        assertClientSetupSections(result.getCodexSetupPackage());
         assertPackageDoesNotContainPlainKey(result.getCodexSetupPackage(), result.getPlainKey());
 
         ArgumentCaptor<ReqMcpUserKey> captor = forClass(ReqMcpUserKey.class);
@@ -196,7 +197,7 @@ class ReqMcpUserKeyServiceImplTest
 
         assertEquals(key, result.getKey());
         assertEquals(null, result.getPlainKey());
-        assertEquals("reqflow-codex-setup", result.getCodexSetupPackage().get("packageName"));
+        assertEquals("reqflow-mcp-multi-client-setup", result.getCodexSetupPackage().get("packageName"));
     }
 
     @Test
@@ -299,8 +300,28 @@ class ReqMcpUserKeyServiceImplTest
         assertTrue(packageText.contains("mcp__reqflow.publish_repository_index"), packageText);
         assertTrue(packageText.contains("mcp__reqflow.register_harness_init_result"), packageText);
         assertFalse(packageText.contains(plainKey), packageText);
-        assertFalse(packageText.contains("mkdir -p"), packageText);
-        assertFalse(packageText.contains("$HOME/.codex"), packageText);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertClientSetupSections(Map<String, Object> setupPackage)
+    {
+        Object sectionsValue = setupPackage.get("clientInstructions");
+        assertNotNull(sectionsValue);
+        List<Map<String, Object>> sections = (List<Map<String, Object>>) sectionsValue;
+        List<String> clients = sections.stream()
+                .map(section -> String.valueOf(section.get("client")))
+                .toList();
+        assertEquals(List.of("codex", "claude-code", "trae", "qoder", "codebuddy", "opencode"), clients);
+
+        String packageText = String.valueOf(setupPackage);
+        assertTrue(packageText.contains("npx skills add"), packageText);
+        assertTrue(packageText.contains("-a codex"), packageText);
+        assertTrue(packageText.contains("-a claude-code"), packageText);
+        assertTrue(packageText.contains("-a trae"), packageText);
+        assertTrue(packageText.contains("-a qoder"), packageText);
+        assertTrue(packageText.contains("-a codebuddy"), packageText);
+        assertTrue(packageText.contains("-a opencode"), packageText);
+        assertTrue(packageText.contains("\"type\": \"remote\""), packageText);
     }
 
     @SuppressWarnings("unchecked")

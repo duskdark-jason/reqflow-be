@@ -48,7 +48,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 fi
 
                 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-                SKILLS_ROOT="${CODEX_SKILLS_DIR:-$CODEX_HOME/skills}"
+                SKILLS_ROOT="${CODEX_SKILLS_DIR:-${AGENT_SKILLS_DIR:-$HOME/.agents/skills}}"
                 CONFIG_FILE="$CODEX_HOME/config.toml"
                 SKILL_DIR="$SKILLS_ROOT/reqflow-mcp"
                 SKILL_FILE="$SKILL_DIR/SKILL.md"
@@ -82,7 +82,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 {{REQFLOW_SKILL_CONTENT}}
                 REQFLOW_SKILL_EOF
 
-                echo "Reqflow Codex MCP and reqflow-mcp skill installed."
+                echo "Reqflow Codex MCP and reqflow-mcp global skill installed."
                 echo "Do not call reqflow MCP tools automatically after installation."
                 echo "Restart or refresh Codex, then verify the reqflow MCP server is loaded."
                 """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent());
@@ -106,7 +106,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 }
 
                 $CodexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
-                $SkillsRoot = if ($env:CODEX_SKILLS_DIR) { $env:CODEX_SKILLS_DIR } else { Join-Path $CodexHome "skills" }
+                $SkillsRoot = if ($env:CODEX_SKILLS_DIR) { $env:CODEX_SKILLS_DIR } elseif ($env:AGENT_SKILLS_DIR) { $env:AGENT_SKILLS_DIR } else { Join-Path $HOME ".agents\\skills" }
                 $ConfigFile = Join-Path $CodexHome "config.toml"
                 $SkillDir = Join-Path $SkillsRoot "reqflow-mcp"
                 $SkillFile = Join-Path $SkillDir "SKILL.md"
@@ -134,7 +134,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 '@
                 Set-Content -Encoding UTF8 -Path $SkillFile -Value $skillContent
 
-                Write-Host "Reqflow Codex MCP and reqflow-mcp skill installed."
+                Write-Host "Reqflow Codex MCP and reqflow-mcp global skill installed."
                 Write-Host "Do not call reqflow MCP tools automatically after installation."
                 Write-Host "Restart or refresh Codex, then verify the reqflow MCP server is loaded."
                 """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent());
