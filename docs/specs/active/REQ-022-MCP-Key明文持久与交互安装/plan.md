@@ -8,7 +8,8 @@
 4. 前端 companion：移除 MCP 管理页明文 Key 和 Key 前缀展示，只用 `plainKey` 渲染统一安装命令。覆盖 AC-005。
 5. 文档同步：更新 API 契约、模块知识库、数据库字典、关系说明和前端契约。覆盖 AC-006。
 6. Harness 门禁修正：补充 `--spec` 只能指向 `docs/specs/active/` 的脚本约束、流程说明和测试。覆盖 AC-007。
-7. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007。
+7. Harness 模板同步：同步项目接入初始化下发模板中的流程说明、检查脚本和自测，并用 `get_harness_template` 单测锁定模板内容。覆盖 AC-008。
+8. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008。
 
 ## 分层验证
 
@@ -17,8 +18,9 @@
 | L2 | AC-001、AC-002、AC-003、AC-004 | `mvn -pl ruoyi-requirement -am -Dtest=ReqflowCodexSetupPackageTemplateTest,ReqMcpUserKeyServiceImplTest,ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L2 | AC-005 | companion 前端 `node scripts/test-mcp-install-dialog-unified.js` |
 | L2 | AC-007 | `sh scripts/test-check-harness.sh` |
+| L2 | AC-008 | `sh ruoyi-requirement/src/main/resources/harness-template/scripts/test-check-harness.sh`；`mvn -pl ruoyi-requirement -am -Dtest=McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L1 | AC-005 | companion 前端 `npm run build:prod` |
-| L0 | AC-006、AC-007 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` |
+| L0 | AC-006、AC-007、AC-008 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` |
 
 ## 风险与处理
 

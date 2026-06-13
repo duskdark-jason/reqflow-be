@@ -8,6 +8,7 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - 统一执行命令执行后应让用户选择要安装的工具，而不是默认安装全部工具。
 - MCP 管理页面不展示明文 Key 和 Key 前缀字段。
 - 本地 Harness `--spec` 只能检查 `docs/specs/active/` 中的执行中需求，避免执行过程误写 `docs/specs/done/`。
+- 项目接入初始化下发的 Harness 模板也必须同步上述 `active/` 与 `done/` 边界，避免新项目继续继承旧规范。
 
 ## 目标
 
@@ -17,6 +18,7 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - 前端列表和结果弹窗不单独展示明文 Key、Key 前缀或哈希，只用 `plainKey` 渲染可复制命令。
 - 同步 API 契约、数据库字典、模块知识库和 companion 前端文档。
 - 收紧 `check-harness.sh --spec` 目标路径，拒绝 `docs/specs/done/` 并补充自测。
+- 同步 `ruoyi-requirement/src/main/resources/harness-template/` 下发模板中的流程说明、检查脚本和自测。
 
 ## 非目标
 
@@ -33,6 +35,7 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - AC-005：MCP 管理页不展示明文 Key 或 Key 前缀字段。
 - AC-006：数据库和 harness 文档同步新字段、API 语义和页面展示约束。
 - AC-007：`check-harness.sh complete --spec docs/specs/done/...` 必须失败，并提示使用 `docs/specs/active/`。
+- AC-008：`get_harness_template` 下发的 Harness 模板必须包含同样的 active-only `--spec` 约束、done 目录失败自测和流程说明。
 
 ## 影响范围
 
@@ -40,4 +43,4 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - 数据库：是，新增 `req_mcp_user_key.plain_key`。
 - 权限：否，不改变 `req:mcp:key:*` 权限。
 - 页面展示：是，MCP 管理页隐藏明文 Key 和 Key 前缀字段，统一命令执行后选择工具。
-- 流程门禁：是，`check-harness.sh --spec` 只允许指向 `docs/specs/active/`。
+- 流程门禁：是，当前仓库和项目接入初始化 Harness 模板中的 `check-harness.sh --spec` 都只允许指向 `docs/specs/active/`。

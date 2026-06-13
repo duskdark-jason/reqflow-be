@@ -84,7 +84,7 @@
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
 - 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
-- Harness 模板或脚本调整时，必须同步后端模板源、当前后端 harness、前端 harness 和 `search-map.md`；确认点门禁不能只写在文档里，必须由 `scripts/check-harness.sh` 测试覆盖。
+- Harness 模板或脚本调整时，必须同步后端模板源、当前后端 harness、前端 harness 和 `search-map.md`；确认点门禁不能只写在文档里，必须由 `scripts/check-harness.sh` 测试覆盖。`--spec` 只允许检查 `docs/specs/active/` 下执行中的需求，完成态门禁通过后才可按需归档到 `docs/specs/done/`；项目接入初始化模板也必须包含同样约束，避免新项目初始化后继续在 `done/` 中执行。
 - 需求分析和需求生成指令调整时，必须保持阶段收敛：需求分析阶段只给 `upload_requirement_assessment` 和需求分析 actionToken；需求生成阶段只给 `save_requirement_package` 和需求生成 actionToken。结论允许继续后，才在需求生成阶段落地 `requirement.md`、通过 `save_requirement_package` 回写平台版本；开发阶段只能沿用该分支生成 `plan.md` 和实现。
 - 返修指令调整时，必须保持同一任务分支和同一 spec 目录，只给 `upload_execution_report`、`upload_review_report` 和同一个返修阶段 actionToken，持续追加 `execution-report.md` 与 `review-report.md`，不得携带执行计划或需求设计生成要求。
 - 合并归档指令调整时，必须保持“本地任务分支 squash merge 到需求基线分支、push、发布完整知识库快照、平台验证通过、删除本地开发分支”的顺序；平台未验证归档结果前不得允许需求办结。

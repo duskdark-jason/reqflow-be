@@ -51,6 +51,8 @@ sh scripts/check-docs.sh
 sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-001-中文需求标题
 ```
 
+`--spec` 只用于检查 `docs/specs/active/` 下的执行中需求。完成态门禁通过后，再按需把目录移入 `docs/specs/done/`；不要在 `done/` 中边执行边修改。
+
 Harness 初始化或纯文档接入只运行：
 
 ```bash

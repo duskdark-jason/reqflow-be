@@ -16,6 +16,7 @@
 | 数据库闭环 | 通过 | 覆盖 AC-006。基线 SQL、幂等升级 SQL、表字典和关系说明已同步。 |
 | 敏感信息 | 通过 | 覆盖 AC-001、AC-002、AC-005。创建操作日志仍关闭响应保存，实体 `toString()` 不输出 `plainKey`。 |
 | Harness 门禁 | 通过 | 覆盖 AC-007。`--spec` 指向 `docs/specs/done/` 会失败，当前执行 spec 保持在 `active/`。 |
+| Harness 模板 | 通过 | 覆盖 AC-008。项目接入初始化模板已同步 active-only `--spec` 约束、done 失败自测和流程说明，并由模板脚本自测与 `McpServiceTest` 覆盖。 |
 
 ## 风险说明
 
