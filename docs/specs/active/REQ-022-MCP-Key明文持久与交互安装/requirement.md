@@ -52,6 +52,7 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - AC-012：OpenCode 已有 `~/.config/opencode/opencode.json` 时，脚本选择 `opencode` 必须自动合并 `mcp.reqflow` 并保留既有配置；Codex、Claude Code、CodeBuddy、OpenCode 自动配置成功时输出 `Reqflow automatic MCP configuration completed`，Trae、Qoder 或自动合并失败场景输出 `Manual MCP import required` 和片段路径。
 - AC-013：`/requirement/demand/{demandId}/closeout-verification` 返回 `{ verified, message }`，复用合并归档办结验证口径；未通过时不更新需求状态并返回未通过原因，通过后返回 `verified=true`。
 - AC-014：需求创建人或管理员在 `review` 待验收状态提交返修时，必须通过 `/requirement/demand/{demandId}/repair` 提交非空返修问题说明；服务端追加 `requirement_supplement` 版本并进入 `repairing`，普通 `/status/repairing` 必须拒绝并提示先填写返修问题说明。
+- AC-015：指定开发人员在 `repairing` 返修中状态提交返修验收前，服务端必须校验最新“需求人返修问题说明”之后已有新的 `execution_report` 和 `review_report`；未回写齐全时拒绝 `repairing -> review`，提示先复制返修任务指令并回写返修执行报告和 Review 报告。
 
 ## 影响范围
 

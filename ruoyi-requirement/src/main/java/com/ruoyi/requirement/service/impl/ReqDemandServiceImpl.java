@@ -212,6 +212,10 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             validateRequirementDesignGeneratedAfterLatestSupplement(current.getDemandId());
         }
+        if ("repairing".equals(current.getStatus()) && "review".equals(status))
+        {
+            validateRepairArtifactsGeneratedAfterLatestRepairRequest(current.getDemandId());
+        }
         if ("closeout_pending".equals(current.getStatus()) && "completed".equals(status))
         {
             validateCloseoutVerified(current);
@@ -829,6 +833,22 @@ public class ReqDemandServiceImpl implements IReqDemandService
         if (supplement != null && !isPackageVersionNotEarlier(requirement, supplement))
         {
             throw new ServiceException("请先生成新的需求设计后再提交需求人确认");
+        }
+    }
+
+    private void validateRepairArtifactsGeneratedAfterLatestRepairRequest(Long demandId)
+    {
+        ReqPackageVersion repairRequest = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId,
+                "requirement_supplement");
+        ReqPackageVersion executionReport = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId,
+                "execution_report");
+        ReqPackageVersion reviewReport = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId,
+                "review_report");
+        if (repairRequest == null || executionReport == null || reviewReport == null
+                || !isPackageVersionNotEarlier(executionReport, repairRequest)
+                || !isPackageVersionNotEarlier(reviewReport, repairRequest))
+        {
+            throw new ServiceException("请先复制返修任务指令并回写返修执行报告和 Review 报告后再提交返修验收");
         }
     }
 

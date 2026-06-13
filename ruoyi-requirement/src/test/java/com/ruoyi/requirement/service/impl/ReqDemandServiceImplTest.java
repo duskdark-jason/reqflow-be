@@ -1015,6 +1015,68 @@ class ReqDemandServiceImplTest
     }
 
     @Test
+    void rejectsRepairReviewSubmitUntilRepairArtifactsUploaded()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("repairing");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(packageVersionMapper.selectLatestByDemandIdAndArtifactType(5L, "execution_report"))
+                .thenReturn(packageVersion(21L, "execution_report", 1_000L));
+        when(packageVersionMapper.selectLatestByDemandIdAndArtifactType(5L, "review_report"))
+                .thenReturn(packageVersion(22L, "review_report", 1_100L));
+        when(packageVersionMapper.selectLatestByDemandIdAndArtifactType(5L, "requirement_supplement"))
+                .thenReturn(packageVersion(23L, "requirement_supplement", 2_000L));
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "packageVersionMapper", packageVersionMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.updateReqDemandStatus(5L, "review", "developer"));
+
+        assertTrue(exception.getMessage().contains("返修任务指令"));
+        assertTrue(exception.getMessage().contains("Review 报告"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
+    }
+
+    @Test
+    void developerCanSubmitRepairReviewAfterRepairArtifactsUploaded()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("repairing");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(packageVersionMapper.selectLatestByDemandIdAndArtifactType(5L, "execution_report"))
+                .thenReturn(packageVersion(21L, "execution_report", 1_000L));
+        when(packageVersionMapper.selectLatestByDemandIdAndArtifactType(5L, "review_report"))
+                .thenReturn(packageVersion(22L, "review_report", 2_000L));
+        when(packageVersionMapper.selectLatestByDemandIdAndArtifactType(5L, "requirement_supplement"))
+                .thenReturn(packageVersion(20L, "requirement_supplement", 500L));
+        when(reqDemandMapper.updateReqDemandStatus(5L, "review", "developer")).thenReturn(1);
+        mockLoginUser(8L, "requirement_developer");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "packageVersionMapper", packageVersionMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.updateReqDemandStatus(5L, "review", "developer"));
+
+        verify(reqDemandMapper).updateReqDemandStatus(5L, "review", "developer");
+        verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_repair_submitted"),
+                eq("web"), contains("返修提交验收"), isNull());
+    }
+
+    @Test
     void creatorAcceptanceMovesDemandToCloseoutPending()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
