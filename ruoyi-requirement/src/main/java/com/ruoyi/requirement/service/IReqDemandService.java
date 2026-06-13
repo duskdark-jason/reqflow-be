@@ -16,6 +16,7 @@ public interface IReqDemandService
     int deleteReqDemandByDemandIds(Long[] demandIds, String operator);
     int updateReqDemandStatus(Long demandId, String status, String updateBy);
     int submitDemandSupplement(Long demandId, String content, String updateBy);
+    int submitDemandRepair(Long demandId, String content, String updateBy);
     void validateDemandReadable(Long demandId);
     void validateDemandPackageWritable(Long demandId, String artifactType);
     ReqActionInstruction createRequirementPlanInstruction(Long demandId, String operator);

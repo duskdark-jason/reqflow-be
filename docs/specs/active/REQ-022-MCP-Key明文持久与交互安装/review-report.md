@@ -22,6 +22,7 @@
 | Harness 模板 | 通过 | 覆盖 AC-008。项目接入初始化模板已同步 active-only `--spec` 约束、done 失败自测和流程说明，并由模板脚本自测与 `McpServiceTest` 覆盖。 |
 | 归档收尾 | 通过 | 覆盖 AC-009。本地 Harness、MCP 合并归档指令、全局 skill 和初始化模板均要求完成态门禁通过后 `git mv` 到 `docs/specs/done/`，再合并归档分支。 |
 | 归档验证接口 | 通过 | 覆盖 AC-013。`closeout-verification` 复用办结前逐仓验证口径，只读返回 `verified/message`，不推进需求状态。 |
+| 返修问题说明 | 通过 | 覆盖 AC-014。需求人提交返修必须走 `/requirement/demand/{demandId}/repair` 并填写问题说明，普通 `/status/repairing` 会被拒绝。 |
 
 ## 风险说明
 

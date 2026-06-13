@@ -13,7 +13,8 @@
 9. 归档收尾规范：同步 MCP 合并归档指令、全局 skill、本地 Harness 流程和模板，明确收到归档、办结或结束任务指令时先迁移 `active -> done` 再合并分支。覆盖 AC-009。
 10. 多客户端安装结果修复：按官方文档校准 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 的安装边界；OpenCode/CodeBuddy 可解析 JSON 配置自动合并，Trae/Qoder 或无法自动合并的场景输出手工导入清单。覆盖 AC-012。
 11. 合并归档验证接口：新增只读归档验证结果接口，复用办结前逐仓平台验证口径，供前端互斥展示确认归档完成。覆盖 AC-013。
-12. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-012、AC-013。
+12. 返修问题说明接口：新增专用返修提交接口，保存需求人返修问题说明并禁止普通状态接口直接进入返修。覆盖 AC-014。
+13. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-012、AC-013、AC-014。
 
 ## 分层验证
 
@@ -26,8 +27,9 @@
 | L2 | AC-007 | `sh scripts/test-check-harness.sh` |
 | L2 | AC-008 | `sh ruoyi-requirement/src/main/resources/harness-template/scripts/test-check-harness.sh`；`mvn -pl ruoyi-requirement -am -Dtest=McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L2 | AC-009、AC-013 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqflowCodexGlobalSkillTemplateTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` |
+| L2 | AC-014 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L1 | AC-005 | companion 前端 `npm run build:prod` |
-| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-013 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` |
+| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-013、AC-014 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` |
 
 ## 风险与处理
 
@@ -37,3 +39,4 @@
 - MCP 请求地址填完整 URL 的风险：管理员配置接口只接受 host/port，完整地址由服务端拼接并回显。
 - OpenCode 或 CodeBuddy 配置文件为 JSONC 且含注释时自动合并可能失败：脚本输出 `Manual MCP import required` 和片段路径，避免误报已安装。
 - 合并归档验证读取失败或未通过：只读接口返回 `verified=false` 和原因，前端继续展示合并归档指令，状态流转接口仍负责最终兜底。
+- 返修问题说明被绕过：普通状态接口拒绝 `review -> repairing`，必须通过专用 `/repair` 接口写入说明后再进入返修。

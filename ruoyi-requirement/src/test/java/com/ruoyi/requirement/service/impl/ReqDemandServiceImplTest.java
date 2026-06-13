@@ -965,9 +965,31 @@ class ReqDemandServiceImplTest
     }
 
     @Test
-    void recordsRepairingStatusTransition()
+    void rejectsReviewRepairStatusWithoutRepairIssue()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("review");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        mockLoginUser(7L, "requirement_user");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.updateReqDemandStatus(5L, "repairing", "approver"));
+
+        assertTrue(exception.getMessage().contains("返修问题说明"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
+    }
+
+    @Test
+    void creatorCanSubmitRepairIssueAndMoveDemandToRepairing()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
         ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
         ReqDemand current = demand(10L, 31L);
         current.setDemandId(5L);
@@ -979,12 +1001,17 @@ class ReqDemandServiceImplTest
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
         ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "packageVersionMapper", packageVersionMapper);
         ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
 
-        service.updateReqDemandStatus(5L, "repairing", "approver");
+        assertEquals(1, service.submitDemandRepair(5L, "验收页面提交按钮无响应，请返修", "approver"));
 
+        verify(packageVersionMapper).insertReqPackageVersion(argThat(packageVersion ->
+                hasPackage(packageVersion, "requirement_supplement", "提交按钮无响应", "请返修")
+                        && "需求人返修问题说明".equals(packageVersion.getVersionNote())));
+        verify(reqDemandMapper).updateReqDemandStatus(5L, "repairing", "approver");
         verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_repairing"),
-                eq("web"), contains("提交返修"), isNull());
+                eq("web"), contains("提交返修问题说明"), isNull());
     }
 
     @Test

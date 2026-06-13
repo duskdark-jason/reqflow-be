@@ -166,9 +166,11 @@ completed -> archived
 rejected -> archived
 ```
 
-其中 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> closeout_pending -> completed` 是主流程；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发，`closeout_pending` 表示需求人验收通过后待指定开发人员合并归档。`submitted` 和 `plan_pending` 可由指定开发人员选择 `supplement_required` 或 `rejected` 作为结论分支：`supplement_required` 表示需要需求创建人补充说明，补充后通过专用补充接口回到 `plan_pending`；`plan_ready -> plan_pending` 表示需求创建人对已生成需求设计提出调整说明并重新进入需求生成阶段；`rejected` 表示当前需求无法实现，可由管理员归档。`review -> repairing -> review` 是验收返修分支；`closeout_pending -> completed` 必须由指定开发人员完成本地任务分支合并、push 和平台知识库归档验证后才能提交；`archived` 用于兼容历史归档场景。不允许其他跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
+其中 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> closeout_pending -> completed` 是主流程；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发，`closeout_pending` 表示需求人验收通过后待指定开发人员合并归档。`submitted` 和 `plan_pending` 可由指定开发人员选择 `supplement_required` 或 `rejected` 作为结论分支：`supplement_required` 表示需要需求创建人补充说明，补充后通过专用补充接口回到 `plan_pending`；`plan_ready -> plan_pending` 表示需求创建人对已生成需求设计提出调整说明并重新进入需求生成阶段；`rejected` 表示当前需求无法实现，可由管理员归档。`review -> repairing -> review` 是验收返修分支，但 `review -> repairing` 必须通过返修问题说明接口提交，普通状态接口不得绕过说明内容；`closeout_pending -> completed` 必须由指定开发人员完成本地任务分支合并、push 和平台知识库归档验证后才能提交；`archived` 用于兼容历史归档场景。不允许其他跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
 
 `/requirement/demand/{demandId}/supplement` 请求体为 `{ "content": "补充说明正文" }`。该接口只允许需求创建人或管理员在 `supplement_required` 或 `plan_ready` 状态调用：`supplement_required` 表示补充基础需求信息，`plan_ready` 表示对已生成需求设计提出调整说明。调用成功后追加 `requirement_supplement` 资料包版本并把需求状态改回 `plan_pending`；开发人员必须重新通过需求生成指令回写新的 `requirement` 版本后，才能把 `plan_pending` 提交为 `plan_ready`。如果状态不是待补充说明或需求设计待确认、内容为空或操作者不是创建人，会返回业务异常。普通 `/requirement/package/{demandId}/{artifactType}` 保存接口仍不开放给需求人员写入补充说明。
+
+`/requirement/demand/{demandId}/repair` 请求体为 `{ "content": "返修问题说明正文" }`。该接口只允许需求创建人或管理员在 `review` 待验收状态调用，内容不能为空。调用成功后追加 `requirement_supplement` 资料包版本，`versionNote=需求人返修问题说明`，并把需求状态改为 `repairing`；指定开发人员复制返修任务指令时必须读取 Review 报告和需求人返修问题说明，只处理本轮返修项，不重新生成需求设计或执行计划。普通 `/requirement/demand/{demandId}/status/repairing` 必须返回业务异常，提示先填写返修问题说明。
 
 `plan-instruction` 接口返回 `ReqActionInstruction`，`actionType=requirement_plan`，仅指定开发人员或管理员可在 `submitted` 或 `plan_pending` 状态生成。`submitted` 只返回需求分析指令，`targetMethod=requirement_analysis`，复制内容只包含 `upload_requirement_assessment`、需求分析 `actionToken`、建议任务分支、`arguments.actionToken` 使用说明，以及“当前流程阶段内有效、流转到下一流程即失效、最长保留 24 小时、过期或已使用后重新生成”的提示；评估报告必须给出“可继续设计、需澄清、需调整、暂不可实现”之一的结论，结论需要需求人补充、调整或暂不可实现时，本轮不得生成 `requirement.md`。`plan_pending` 只返回需求生成指令，`targetMethod=requirement_generate`，复制内容只包含 `save_requirement_package`、需求生成 `actionToken` 和同一阶段有效期提示；本阶段只生成或调整 `requirement.md`，不得生成 `plan.md`、不得改业务代码、不得写执行或 Review 报告。`plan_ready` 为需求设计待确认阶段，不生成需求设计指令。两个阶段的 actionToken 都不能替代人员 `X-MCP-Key`。
 
@@ -187,9 +189,9 @@ rejected -> archived
 
 执行包保存永远追加 `req_package_version` 新记录，不覆盖历史版本。版本号按 `demand_id + artifact_type` 独立递增。需求设计阶段先追加需求可行性评估版本，再按结论追加需求设计版本。验收返修不新建需求，继续在同一需求下追加需求设计、执行计划、执行报告或 Review 报告版本，用版本链表达返修轮次。
 
-执行包读取复用需求参与人可见性：需求创建人、指定开发人员和管理员可读。执行包保存、草稿生成和 MCP 资料包回写仅允许指定开发人员或管理员执行；即使用户拥有隐藏 `req:package:save` 权限，也不能回写未指定给自己的需求。服务端内部在提需时自动生成 `requirement_draft` 和 `context_manifest`，在需求人补充说明时生成 `requirement_supplement`，这两个流程写入不代表开放通用资料包写权限。
+执行包读取复用需求参与人可见性：需求创建人、指定开发人员和管理员可读。执行包保存、草稿生成和 MCP 资料包回写仅允许指定开发人员或管理员执行；即使用户拥有隐藏 `req:package:save` 权限，也不能回写未指定给自己的需求。服务端内部在提需时自动生成 `requirement_draft` 和 `context_manifest`，在需求人补充说明、需求设计调整或返修问题说明时生成 `requirement_supplement`，这些流程写入不代表开放通用资料包写权限。
 
-业务页面默认一级标签展示的资料类型为 `requirement_draft`、`requirement_assessment`、`requirement`、`plan`、`execution_report` 和 `review_report`。`requirement_supplement` 仍作为补充/调整版本类型和 MCP 资源保留，但前端应按语义嵌入需求可行性评估或需求设计标签内的折叠历史记录，不作为普通页面默认标签展示；`context_manifest` 仍作为 MCP 上下文资源保留，不作为普通页面默认标签展示。
+业务页面默认一级标签展示的资料类型为 `requirement_draft`、`requirement_assessment`、`requirement`、`plan`、`execution_report` 和 `review_report`。`requirement_supplement` 仍作为补充/调整/返修问题版本类型和 MCP 资源保留，但前端应按语义嵌入需求可行性评估、需求设计或 Review 报告标签内的折叠历史记录，不作为普通页面默认标签展示；`context_manifest` 仍作为 MCP 上下文资源保留，不作为普通页面默认标签展示。
 
 MCP `upload_requirement_assessment` 和 `save_requirement_package` 可显式传 `demandId`，也可传当前阶段指令里的对应 `actionToken` 由服务端解析到绑定需求；MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 可传开发执行或返修指令里的同一个阶段 `actionToken` 由服务端解析到绑定需求；这些调用仍必须通过人员 `X-MCP-Key` 或登录态权限校验。需求分析和需求生成 actionToken 被成功解析后立即写入 `last_used_time`，后续重复使用必须失败；开发阶段 actionToken 在 `developing` 内可重复用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；返修阶段 actionToken 在 `repairing` 内可重复用于 `upload_execution_report` 和 `upload_review_report`。需求流转到下一阶段后旧 actionToken 立即失效，最长保留时间仍为 24 小时。
 
@@ -273,7 +275,7 @@ requirement_closeout
 
 平台角色授权脚本为 `docs/db/sql/req_platform_release_settings.sql`。管理员角色使用 `role_key='admin'`，沿用 RuoYi 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理和使用统计菜单权限，并额外分配隐藏 `req:package:save`，用于通过 MCP 回写需求可行性评估、需求设计、执行计划、执行报告和 Review 报告。
 
-需求删除按钮权限 `req:demand:remove` 只随菜单脚本注册给管理员使用，不能加入需求人员或开发人员角色集合。状态流转接口虽然共用 `req:demand:edit`，服务层还必须按角色和参与人校验具体动作：需求创建人只能执行提需、补充说明、需求设计确认、返修和验收；指定开发人员只能执行需求分析结论、需求设计结论、开始开发、提交验收和返修验收；管理员角色可执行全部合法状态动作。
+需求删除按钮权限 `req:demand:remove` 只随菜单脚本注册给管理员使用，不能加入需求人员或开发人员角色集合。状态流转接口虽然共用 `req:demand:edit`，服务层还必须按角色和参与人校验具体动作：需求创建人只能执行提需、补充说明、需求设计确认、带问题说明的返修和验收；指定开发人员只能执行需求分析结论、需求设计结论、开始开发、提交验收和返修验收；管理员角色可执行全部合法状态动作。
 
 MCP 管理菜单权限独立于需求提交权限。需求人员角色默认不分配 `req:mcp:key:*`，管理员或开发人员可通过该菜单为已启用且未删除用户创建 Key。Key 鉴权后使用绑定用户的当前菜单权限集合；绑定用户停用或删除后，即使 Key 本身仍为启用状态也必须拒绝鉴权。即使 Key 有效，调用 MCP 工具仍受 `req:package:save`、`req:index:import`、`req:project:query` 等权限限制。
 

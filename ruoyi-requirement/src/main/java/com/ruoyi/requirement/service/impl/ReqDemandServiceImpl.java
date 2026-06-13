@@ -198,6 +198,10 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("需求状态流转不允许");
         }
+        if ("review".equals(current.getStatus()) && "repairing".equals(status))
+        {
+            throw new ServiceException("请先填写返修问题说明");
+        }
         validateStatusActionRole(current.getStatus(), status);
         validateStatusActionParticipant(current, status);
         if ("submitted".equals(status))
@@ -295,6 +299,37 @@ public class ReqDemandServiceImpl implements IReqDemandService
                     (designAdjustment ? "提交需求设计调整说明：" : "提交补充说明：") + current.getDemandNo(),
                     null);
         }
+        return rows;
+    }
+
+    @Override
+    @Transactional
+    public int submitDemandRepair(Long demandId, String content, String updateBy)
+    {
+        if (StringUtils.isBlank(content))
+        {
+            throw new ServiceException("返修问题说明不能为空");
+        }
+        ReqDemand current = reqDemandMapper.selectReqDemandByDemandId(demandId);
+        if (current == null)
+        {
+            throw new ServiceException("需求不存在");
+        }
+        if (!"review".equals(current.getStatus()))
+        {
+            throw new ServiceException("当前状态不能提交返修");
+        }
+        validateStatusActionRole(current.getStatus(), "repairing");
+        validateStatusActionParticipant(current, "repairing");
+
+        savePackageVersion(demandId, "requirement_supplement", content.trim(), "需求人返修问题说明", updateBy);
+        int rows = reqDemandMapper.updateReqDemandStatus(demandId, "repairing", updateBy);
+        if (rows < 1)
+        {
+            throw new ServiceException("返修提交失败");
+        }
+        activityLogService.record(currentUserId(), current.getProjectId(), current.getDemandId(),
+                "demand_repairing", "web", "提交返修问题说明：" + current.getDemandNo(), null);
         return rows;
     }
 
@@ -528,7 +563,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 + "\n返修阶段 actionToken: " + repairActionToken
                 + "\n" + REPAIR_STAGE_TOKEN_USAGE_RULE
                 + "\n分支要求：必须沿用原任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
-                + "\n要求：只处理本次 Review 返修项或需求人返修要求，完成修复、验证和自动复审，不重新生成需求设计或执行计划。"
+                + "\n要求：读取 Review 报告和需求人返修问题说明，只处理本次 Review 返修项或需求人返修要求，完成修复、验证和自动复审，不重新生成需求设计或执行计划。"
                 + "\n回写要求：本阶段两个 MCP 工具都使用同一个返修阶段 actionToken：修复验证完成后调用 upload_execution_report 回写返修执行报告，自动复审完成后调用 upload_review_report 回写 Review 报告。"
                 + "\n注意：返修阶段 actionToken 是上述两个工具的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
     }
