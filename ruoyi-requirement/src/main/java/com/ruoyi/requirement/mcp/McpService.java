@@ -420,7 +420,8 @@ public class McpService
         PackageToolContext packageContext = resolvePackageContext(name, arguments);
         Long demandId = packageContext.getDemandId();
         String artifactType = artifactTypeForTool(name, stringArg(arguments, "artifactType"));
-        ReqPackageVersion version = reqPackageService.saveVersion(demandId, artifactType, stringArg(arguments, "content"), name);
+        String content = contentForPackageSave(name, packageContext, artifactType, stringArg(arguments, "content"));
+        ReqPackageVersion version = reqPackageService.saveVersion(demandId, artifactType, content, name);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("version", version);
         if (shouldSubmitRepairReview(name, packageContext))
@@ -827,6 +828,64 @@ public class McpService
         if ("upload_execution_report".equals(toolName)) return "execution_report";
         if ("upload_review_report".equals(toolName)) return "review_report";
         throw new IllegalArgumentException("不支持的MCP工具：" + toolName);
+    }
+
+    private String contentForPackageSave(String toolName, PackageToolContext packageContext, String artifactType, String submittedContent)
+    {
+        if (!isRepairReportUpload(toolName, packageContext))
+        {
+            return submittedContent;
+        }
+        ReqPackageVersion latest = reqPackageService.selectLatest(packageContext.getDemandId(), artifactType);
+        String latestContent = latest == null ? null : latest.getContent();
+        return appendRepairRecord(latestContent, submittedContent, repairRecordTitle(toolName));
+    }
+
+    private boolean isRepairReportUpload(String toolName, PackageToolContext packageContext)
+    {
+        ReqActionToken token = packageContext.getActionToken();
+        return ("upload_execution_report".equals(toolName) || "upload_review_report".equals(toolName))
+                && token != null
+                && IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
+                && IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod());
+    }
+
+    private String appendRepairRecord(String latestContent, String submittedContent, String title)
+    {
+        String previous = trimToNull(latestContent);
+        String submitted = trimToNull(submittedContent);
+        if (previous == null)
+        {
+            return submittedContent;
+        }
+        if (submitted == null)
+        {
+            return previous;
+        }
+        if (submitted.contains(previous))
+        {
+            return submitted;
+        }
+        if (previous.contains(submitted))
+        {
+            return previous;
+        }
+        return previous + "\n\n---\n\n" + title + "\n\n" + submitted;
+    }
+
+    private String repairRecordTitle(String toolName)
+    {
+        return "upload_review_report".equals(toolName) ? "## 返修 Review 记录" : "## 返修执行记录";
+    }
+
+    private String trimToNull(String value)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private PackageToolContext resolvePackageContext(String toolName, Map<String, Object> arguments)

@@ -655,10 +655,14 @@ class McpServiceTest
         when(actionTokenService.resolveToken("reqflow_action_repair_stage")).thenReturn(token);
         ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
         when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "repairing"));
-        when(packageService.saveVersion(9L, "execution_report", "返修执行报告", "upload_execution_report"))
-                .thenReturn(packageVersion("execution_report", "返修执行报告"));
-        when(packageService.saveVersion(9L, "review_report", "返修 Review 报告", "upload_review_report"))
-                .thenReturn(packageVersion("review_report", "返修 Review 报告"));
+        when(packageService.selectLatest(9L, "execution_report"))
+                .thenReturn(packageVersion("execution_report", "# 执行报告\n\n原始执行内容"));
+        when(packageService.selectLatest(9L, "review_report"))
+                .thenReturn(packageVersion("review_report", "# Review 报告\n\n原始 Review 内容"));
+        when(packageService.saveVersion(eq(9L), eq("execution_report"), any(), eq("upload_execution_report")))
+                .thenReturn(packageVersion("execution_report", "合并后的返修执行报告"));
+        when(packageService.saveVersion(eq(9L), eq("review_report"), any(), eq("upload_review_report")))
+                .thenReturn(packageVersion("review_report", "合并后的返修 Review 报告"));
 
         McpService service = new TestableMcpService(true);
         ReflectionTestUtils.setField(service, "reqPackageService", packageService);
@@ -677,8 +681,16 @@ class McpServiceTest
         service.handle(request("tools/call", toolParams("upload_review_report", reviewArguments)));
 
         verify(actionTokenService, org.mockito.Mockito.times(2)).resolveToken("reqflow_action_repair_stage");
-        verify(packageService).saveVersion(9L, "execution_report", "返修执行报告", "upload_execution_report");
-        verify(packageService).saveVersion(9L, "review_report", "返修 Review 报告", "upload_review_report");
+        ArgumentCaptor<String> executionContent = forClass(String.class);
+        verify(packageService).saveVersion(eq(9L), eq("execution_report"), executionContent.capture(), eq("upload_execution_report"));
+        assertTrue(executionContent.getValue().contains("原始执行内容"));
+        assertTrue(executionContent.getValue().contains("## 返修执行记录"));
+        assertTrue(executionContent.getValue().contains("返修执行报告"));
+        ArgumentCaptor<String> reviewContent = forClass(String.class);
+        verify(packageService).saveVersion(eq(9L), eq("review_report"), reviewContent.capture(), eq("upload_review_report"));
+        assertTrue(reviewContent.getValue().contains("原始 Review 内容"));
+        assertTrue(reviewContent.getValue().contains("## 返修 Review 记录"));
+        assertTrue(reviewContent.getValue().contains("返修 Review 报告"));
         verify(demandService).updateReqDemandStatus(9L, "review", "mcp");
     }
 
