@@ -27,18 +27,14 @@
 |---|---|---|---|---|
 | 1 | `docs/db/sql/ry_20260417.sql` | 必须 | 创建 RuoYi 基础表和初始化系统数据 | 脚本包含 `DROP TABLE IF EXISTS`，会重建 `sys_*`、`gen_*` 等基础表，只能用于全新库或明确重建的库。 |
 | 2 | `docs/db/sql/quartz.sql` | 必须 | 创建 Quartz 定时任务表 | 脚本包含 `DROP TABLE IF EXISTS QRTZ_*`，会重建调度表。 |
-| 3 | `docs/db/sql/req_platform_schema.sql` | 必须 | 创建 ReqFlow 需求平台业务表 | 使用 `CREATE TABLE IF NOT EXISTS`，用于 `req_*` 业务表结构基线。 |
-| 4 | `docs/db/sql/req_platform_menu.sql` | 必须 | 初始化需求管理菜单和按钮权限 | 依赖 RuoYi `sys_menu` 已存在；脚本按菜单和权限做存在性判断。 |
-| 5 | `docs/db/sql/req_platform_release_settings.sql` | 必须 | 初始化发布系统参数、角色授权和品牌清理 | 依赖 RuoYi 基础数据和需求管理菜单已存在。 |
+| 3 | `docs/db/sql/req_platform_init.sql` | 必须 | 初始化 ReqFlow 需求平台 | 包含 `req_*` 业务表、需求管理菜单和按钮权限、MCP 服务参数、角色授权和品牌清理；依赖 RuoYi 基础数据已存在。 |
 
 示例命令：
 
 ```bash
 mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/ry_20260417.sql
 mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/quartz.sql
-mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/req_platform_schema.sql
-mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/req_platform_menu.sql
-mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/req_platform_release_settings.sql
+mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/req_platform_init.sql
 ```
 
 ### 已有库升级
@@ -50,16 +46,12 @@ mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-se
 1. 先备份目标库。
 2. 检查基础表是否已存在：`sys_menu`、`sys_config`、`sys_role`、`QRTZ_JOB_DETAILS`。
 3. 基础表缺失时，先在临时库验证 `ry_20260417.sql` 和 `quartz.sql` 对现有数据的影响，再决定是否手工补齐或重建。
-4. 执行 `docs/db/sql/req_platform_schema.sql`，补齐 ReqFlow 业务表。
-5. 执行 `docs/db/sql/req_platform_menu.sql`，补齐需求管理菜单和按钮权限。
-6. 执行 `docs/db/sql/req_platform_release_settings.sql`，补齐发布参数、角色授权和品牌清理。
+4. 执行 `docs/db/sql/req_platform_init.sql`，补齐 ReqFlow 业务表、需求管理菜单权限、发布参数、角色授权和品牌清理。
 
 升级命令示例：
 
 ```bash
-mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/req_platform_schema.sql
-mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/req_platform_menu.sql
-mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/req_platform_release_settings.sql
+mysql -h <db-host> -P <db-port> -u <db-user> -p <db-name> --default-character-set=utf8mb4 < docs/db/sql/req_platform_init.sql
 ```
 
 ## 后端打包与启动
@@ -115,6 +107,6 @@ npm run build:prod
 ## 常见风险
 
 - `ry_20260417.sql` 和 `quartz.sql` 会重建基础表，不要在已有生产库上无确认执行。
-- `req_platform_menu.sql` 依赖 `sys_menu`，必须在 RuoYi 基础库脚本之后执行。
-- `req_platform_release_settings.sql` 会调整初始角色授权和清理模板品牌数据，必须在菜单脚本之后执行。
+- `req_platform_init.sql` 依赖 RuoYi 基础表和系统数据，必须在 `ry_20260417.sql` 和 `quartz.sql` 之后执行。
+- `req_platform_init.sql` 会调整初始角色授权和清理模板品牌数据，生产已有库执行前必须先备份并确认影响范围。
 - 前端 `/reqflow/` 是静态访问项目前缀；后端 `/reqflow-api` 是 API context-path；MCP 对外地址使用后端路径。

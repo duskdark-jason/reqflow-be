@@ -108,7 +108,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 
 索引导入优先支持 `actionToken + remoteUrl`：服务端按动作 token 解析目标动作、项目和项目分支，并在同项目下按 `remoteUrl` 定位代码仓库。`actionToken` 必须能解析为 `project_init` 动作且 `targetMethod` 为 `publish_repository_index`；同时兼容旧的 `mcpKey + remoteUrl` 和 `projectId + repoId + branchName`。项目初始化上下文中的 `modules` 不能为空，且每一项必须有稳定 `moduleCode` 和业务 `moduleName`；推荐按前端页面业务功能、菜单目录、子菜单或隐藏页签生成，一行代表一个具体业务知识库模块。模块和影响面 payload 可以显式携带 `variantId`；未携带时，服务端按动作 token、项目分支或 `projectId + branchName + status=0` 反查分支并沉淀到索引模块和影响面条目。每个项目分支都需要单独初始化索引，不能用主线索引代替客户分支或其他功能分支。重新发布同一仓库同一分支时，调用方必须发送当前完整模块快照，而不是只发送增量。
 
-索引导入写入前会预检 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。缺任一表时返回业务错误 `平台索引表未初始化：<table>`，并提示执行 `docs/db/sql/req_platform_schema.sql` 中对应建表段；不得让调用方只看到数据库原始 `Table ... doesn't exist` 作为最终结论。
+索引导入写入前会预检 `req_repository_index_batch`、`req_index_module` 和 `req_impact_item`。缺任一表时返回业务错误 `平台索引表未初始化：<table>`，并提示执行 `docs/db/sql/req_platform_init.sql` 中对应建表段；不得让调用方只看到数据库原始 `Table ... doesn't exist` 作为最终结论。
 
 影响面推荐请求可传 `projectId`、`repoId`、`variantId`、`moduleId`、`moduleCode`。当传入 `variantId` 时，服务端必须校验项目分支属于当前项目，并使用该项目分支 `baselineBranch` 过滤影响面；查询只返回目标仓库或每个仓库最新 `imported` 批次的数据。返回 `pages`、`apis`、`tables`、`permissions` 和 `documents` 五类列表，每一项来自 `req_impact_item`，同类资源按 `itemKey/apiPath/permissionKey/tableName/relativePath/itemName` 去重。
 
@@ -275,7 +275,7 @@ requirement_closeout
 
 `codexSetupPackage` 内的 MCP 地址优先读取系统参数 `reqflow.mcp.public-host`。该参数由管理员在 MCP 管理页弹窗维护，也可由系统参数表预置；仅填写 `IP:端口` 或域名加端口，例如 `10.0.0.12:8080`，不得在项目 yml 中配置，也不得填写协议和路径；服务端按当前请求或代理头推导协议，自动拼接后端 context-path 和 `/requirement/mcp`。发布默认后端 context-path 为 `/reqflow-api`，因此 MCP endpoint 为 `/reqflow-api/requirement/mcp`；前端项目名 `/reqflow/` 只影响静态页面入口，不参与 MCP 地址生成。该参数为空时，服务端按 `X-Forwarded-Proto`、`X-Forwarded-Host`、`Host` 和 `context-path` 自动推导地址。
 
-平台角色授权脚本为 `docs/db/sql/req_platform_release_settings.sql`。管理员角色使用 `role_key='admin'`，沿用 RuoYi 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理和使用统计菜单权限，并额外分配隐藏 `req:package:save`，用于通过 MCP 回写需求可行性评估、需求设计、执行计划、执行报告和 Review 报告。
+平台角色授权脚本为 `docs/db/sql/req_platform_init.sql`。管理员角色使用 `role_key='admin'`，沿用 RuoYi 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理和使用统计菜单权限，并额外分配隐藏 `req:package:save`，用于通过 MCP 回写需求可行性评估、需求设计、执行计划、执行报告和 Review 报告。
 
 需求删除按钮权限 `req:demand:remove` 只随菜单脚本注册给管理员使用，不能加入需求人员或开发人员角色集合。状态流转接口虽然共用 `req:demand:edit`，服务层还必须按角色和参与人校验具体动作：需求创建人只能执行提需、补充说明、需求设计确认、带问题说明的返修和验收；指定开发人员只能执行需求分析结论、需求设计结论、开始开发、提交验收和返修验收；管理员角色可执行全部合法状态动作。
 

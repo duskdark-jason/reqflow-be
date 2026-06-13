@@ -20,7 +20,7 @@
 
 | 类型 | 优先查看文件 | 说明 |
 |---|---|---|
-| 菜单与权限 SQL | `docs/db/sql/req_platform_menu.sql`、`docs/db/sql/req_platform_release_settings.sql` | 需求管理一级菜单、子菜单、按钮权限、系统参数和三类角色授权。 |
+| 初始化 SQL | `docs/db/sql/req_platform_init.sql` | 需求平台业务表、需求管理一级菜单、子菜单、按钮权限、系统参数和三类角色授权。 |
 | 接口契约 | `docs/ai-harness/contracts/requirement-platform-api.md` | 后端接口、MCP resource、MCP tool、知识库和初始化契约。 |
 | 领域入口 | `docs/domains/requirement-platform/README.md` | 后端业务边界和长期维护规则。 |
 | 后端 Controller | `ruoyi-requirement/src/main/java/com/ruoyi/requirement/controller/` | HTTP 接口入口，随需求业务模块发布。 |
@@ -35,10 +35,7 @@
 
 - 相关契约文档：`docs/ai-harness/contracts/requirement-platform-api.md`。
 - 相关领域入口：`docs/domains/requirement-platform/README.md`。
-- 关键菜单脚本：`docs/db/sql/req_platform_menu.sql`。
-- 关键角色脚本：`docs/db/sql/req_platform_release_settings.sql`。
-- 关键表结构：`docs/db/sql/req_platform_schema.sql`。
-- 初始发布设置脚本：`docs/db/sql/req_platform_release_settings.sql`。
+- 关键初始化脚本：`docs/db/sql/req_platform_init.sql`。
 
 ## 不变量
 
@@ -57,7 +54,7 @@
 - 指定开发人员只能在点击“开始开发”进入 `developing` 后，通过需求详情获取开发阶段 actionToken；`confirmed` 待执行开发阶段不展示也不生成执行指令。该指令只给出一个开发阶段 actionToken，不展开执行计划、执行报告和 Review 报告的回写顺序；全局 skill 先调用 `get_action_context` 再映射到 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，并继续约束生成 `plan.md` 前的 subagent 拆分判断。开发阶段默认只做本地计划、开发、验证和报告草稿，必须等用户明确确认提交验收或回写平台后才调用写平台工具。
 - 指定开发人员可在 `repairing` 状态通过需求详情获取返修阶段 actionToken；该指令只给出一个返修阶段 actionToken，不展开返修步骤。全局 skill 先调用 `get_action_context` 再映射到 `upload_execution_report` 和 `upload_review_report`，并约束读取 Review 报告和需求人返修问题说明、不得重新生成需求设计或执行计划。返修阶段默认只做本地修复、验证和报告草稿，必须等用户明确确认提交返修验收后才回写平台。返修阶段报告上传支持两种安全形态：上传完整本地 `execution-report.md` 或 `review-report.md` 时按完整内容保存新版本；只上传本轮返修片段时，服务端基于上一版报告追加“返修执行记录”或“返修 Review 记录”后保存新版本，最新版报告不得只剩返修片段。
 - 指定开发人员可在 `closeout_pending` 状态通过需求详情获取合并归档短指令；该指令生成一个需求级 `publish_repository_index` actionToken，所有仓库发布索引都复用该 token，复制文本不列仓库清单、repoId、分支或归档步骤。完整归档顺序由全局 skill 调用 `get_action_context` 获取仓库列表后承接。需求流转到 `completed` 前，服务端必须逐仓校验本需求对应仓库产生带本需求归档上下文的 imported 索引批次；`/requirement/demand/{demandId}/closeout-verification` 复用同一验证口径返回只读验证结果，供前端在生成合并归档指令和确认归档完成之间互斥展示。
-- 项目初始化、需求分析、需求生成和合并归档动作 token 生成后在当前流程阶段内有效，最长保留 24 小时，且仅可使用一次；开发阶段动作 token 在 `developing` 阶段内可重复用于执行计划、执行报告和 Review 报告回写，返修阶段动作 token 在 `repairing` 阶段内可重复用于执行报告和 Review 报告回写；需求流转到下一阶段后旧 token 立即失效，超过 24 小时也需重新生成。
+- 项目初始化动作 token 生成后 24 小时内有效且仅可使用一次；需求分析、需求生成、开发、返修和合并归档动作 token 在当前流程阶段内可复用，最长保留 24 小时，需求流转到下一阶段后旧 token 立即失效。
 - 需求提交时服务端自动追加 `requirement_draft` 和 `context_manifest` 版本，供 MCP `requirement://{demandNo}/draft-package` 和 `context-manifest` 读取；需求创建人在 `supplement_required` 状态提交补充说明、在 `plan_ready` 状态提交需求设计调整说明、或在 `review` 状态提交返修问题说明时，均追加 `requirement_supplement`，MCP 可通过 `requirement://{demandNo}/supplement` 读取最新补充、调整或返修问题内容。
 - 需求资料包通过 `req_package_version` 追加版本记录，需求设计阶段保留需求草稿、需求补充、需求可行性评估和需求设计版本，返修流程依赖同一需求下执行计划、执行报告、Review 报告和需求人返修问题说明的历史版本链，不新增覆盖式更新；返修阶段 MCP 报告片段上传会合并上一版正文后再追加新版本，完整报告上传则直接作为新版本保存。通用保存和 MCP 回写只允许指定开发人员或管理员，需求人补充说明和返修问题说明仅能通过专用接口写入。前端默认一级标签不展示 `requirement_supplement`，补充/调整/返修问题版本应嵌入需求可行性评估、需求设计或 Review 报告标签内作为折叠历史记录。
 - 管理员角色沿用 `role_key='admin'` 超级管理员全部权限；需求人员角色 `requirement_user` 只分配需求列表和使用统计菜单权限；开发人员角色 `requirement_developer` 分配需求列表、MCP 管理、使用统计和隐藏 `req:package:save` 权限，供 MCP 回写资料。
@@ -91,8 +88,8 @@
 - 合并归档指令调整时，必须保持“任务分支先完成 active spec 到 done 的归档迁移、squash merge 到需求基线分支、push、发布完整知识库快照、平台验证通过、删除本地开发分支”的顺序；平台未验证归档结果前不得允许需求办结。
 - 项目接入初始化索引调整时，必须防止“已发布索引但没有具体业务模块”的假阳性；`actionToken` 或 `mcpKey` 项目初始化上下文下，`modules` 至少包含一个带 `moduleCode` 和 `moduleName` 的页面业务功能或后端主能力。
 - MCP 下发的完整 harness 模板由后端 `ruoyi-requirement/src/main/resources/harness-template/` 保存并随包发布；`files.txt` 是下发清单。该目录是项目接入初始化模板的唯一维护源，workspace 根目录不再保留离线模板副本。
-- 索引表初始化不完整时，`publish_repository_index` 必须返回指向 `docs/db/sql/req_platform_schema.sql` 对应建表段的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
-- 菜单权限调整时，必须同时检查 `docs/db/sql/req_platform_menu.sql`、Controller `@PreAuthorize` 和前端按钮权限。
+- 索引表初始化不完整时，`publish_repository_index` 必须返回指向 `docs/db/sql/req_platform_init.sql` 对应建表段的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
+- 菜单权限调整时，必须同时检查 `docs/db/sql/req_platform_init.sql`、Controller `@PreAuthorize` 和前端按钮权限。
 
 ## 验证建议
 

@@ -7,7 +7,7 @@
 | Agent 执行护栏 | `docs/ai-harness/` | 模型和同事修改代码前读取 |
 | 业务领域入口 | `docs/domains/` | 当前业务边界、领域索引和长期入口 |
 | 新需求说明 | `docs/specs/active/` | 开发中的需求 |
-| 已完成需求 | `docs/specs/done/` | 完成后仍有参考价值的需求 |
+| 已完成需求 | `docs/specs/done/` | 完成后的临时归档区；发布前可清空，仅保留 `.gitkeep` |
 | 流程规范 | `docs/process/` | 新需求、文档维护、验收流程 |
 | 模板 | `docs/templates/` | 可复制的新文档模板 |
 | 运行手册 | `docs/runbooks/` | 本地启动、部署、联调、排查 |
