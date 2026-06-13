@@ -10,6 +10,7 @@
 | `relationship.md` | 表关系、数据粒度、必要过滤、聚合风险和开发指导。 |
 | `../templates/db-change-template.md` | 单次需求的数据库变更说明模板，复制到对应 spec 目录使用。 |
 | `sql/req_platform_schema.sql` | 当前需求平台表结构基线。 |
+| `sql/req_platform_mcp_key_plain_key.sql` | 已有库补充 MCP 人员 Key 明文字段的幂等升级脚本。 |
 | `sql/req_platform_menu.sql` | 需求管理菜单和按钮权限脚本。 |
 | `sql/req_platform_release_settings.sql` | 初始发布系统参数、角色授权和品牌清理脚本。 |
 

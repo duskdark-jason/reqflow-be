@@ -45,7 +45,7 @@ class ReqMcpUserKeyServiceImplTest
     }
 
     @Test
-    void createsRandomKeyAndStoresOnlyHashAndPrefix()
+    void createsRandomKeyAndStoresPlainKeyHashAndPrefix()
     {
         ReqMcpUserKeyMapper mapper = mock(ReqMcpUserKeyMapper.class);
         ISysUserService userService = mock(ISysUserService.class);
@@ -79,6 +79,7 @@ class ReqMcpUserKeyServiceImplTest
         assertEquals("admin", saved.getCreateBy());
         assertEquals("0", saved.getStatus());
         assertNotNull(saved.getKeyHash());
+        assertEquals(result.getPlainKey(), saved.getPlainKey());
         assertNotEquals(result.getPlainKey(), saved.getKeyHash());
         assertTrue(result.getPlainKey().startsWith(saved.getKeyPrefix()));
     }
@@ -181,14 +182,16 @@ class ReqMcpUserKeyServiceImplTest
     }
 
     @Test
-    void createsInstructionPackageWithoutRecoveringPlainKey()
+    void createsInstructionPackageWithStoredPlainKey()
     {
         ReqMcpUserKeyMapper mapper = mock(ReqMcpUserKeyMapper.class);
         ReqMcpUserKeyServiceImpl service = newService(mapper, mock(ISysUserService.class), mock(ISysMenuService.class));
+        String plainKey = "reqflow_mcp_saved_plain_key";
         ReqMcpUserKey key = new ReqMcpUserKey();
         key.setKeyId(99L);
         key.setUserId(12L);
         key.setKeyName("个人Codex");
+        key.setPlainKey(plainKey);
         key.setStatus("0");
         when(mapper.selectReqMcpUserKeyByKeyId(99L)).thenReturn(key);
         mockLoginUser(1L, "admin");
@@ -196,7 +199,7 @@ class ReqMcpUserKeyServiceImplTest
         ReqMcpUserKeyCreateResult result = service.createInstruction(99L, "http://localhost:8080/requirement/mcp");
 
         assertEquals(key, result.getKey());
-        assertEquals(null, result.getPlainKey());
+        assertEquals(plainKey, result.getPlainKey());
         assertEquals("reqflow-mcp-multi-client-setup", result.getCodexSetupPackage().get("packageName"));
     }
 
@@ -344,7 +347,7 @@ class ReqMcpUserKeyServiceImplTest
                 .orElseThrow();
         assertEquals("bash", bash.get("language"));
         assertTrue(String.valueOf(bash.get("command")).contains("install.sh"));
-        assertTrue(String.valueOf(bash.get("command")).contains("--client all"));
+        assertFalse(String.valueOf(bash.get("command")).contains("--client all"));
         assertTrue(String.valueOf(bash.get("command")).contains("${REQFLOW_MCP_KEY}"));
 
         Map<String, Object> powershell = commands.stream()
@@ -353,7 +356,7 @@ class ReqMcpUserKeyServiceImplTest
                 .orElseThrow();
         assertEquals("powershell", powershell.get("language"));
         assertTrue(String.valueOf(powershell.get("command")).contains("install.ps1"));
-        assertTrue(String.valueOf(powershell.get("command")).contains("-Client \"all\""));
+        assertFalse(String.valueOf(powershell.get("command")).contains("-Client \"all\""));
         assertTrue(String.valueOf(powershell.get("command")).contains("${REQFLOW_MCP_KEY}"));
 
         assertFalse(String.valueOf(commands).contains(plainKey), String.valueOf(commands));

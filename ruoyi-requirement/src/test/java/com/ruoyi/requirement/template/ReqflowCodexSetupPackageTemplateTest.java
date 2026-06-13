@@ -31,14 +31,15 @@ class ReqflowCodexSetupPackageTemplateTest
         assertTrue(packageText.contains("[mcp_servers.reqflow]"), packageText);
         assertTrue(packageText.contains("\"type\": \"streamable-http\""), packageText);
         assertTrue(packageText.contains("\"type\": \"remote\""), packageText);
-        assertTrue(packageText.contains("--client all"), packageText);
+        assertTrue(packageText.contains("执行后选择要安装的工具"), packageText);
+        assertFalse(packageText.contains("--client all"), packageText);
         assertTrue(packageText.contains("--client codex"), packageText);
         assertTrue(packageText.contains("--client claude-code"), packageText);
         assertTrue(packageText.contains("--client trae"), packageText);
         assertTrue(packageText.contains("--client qoder"), packageText);
         assertTrue(packageText.contains("--client codebuddy"), packageText);
         assertTrue(packageText.contains("--client opencode"), packageText);
-        assertTrue(packageText.contains("-Client \"all\""), packageText);
+        assertFalse(packageText.contains("-Client \"all\""), packageText);
         assertTrue(packageText.contains("-Client \"codex\""), packageText);
         assertTrue(packageText.contains("-Client \"claude-code\""), packageText);
         assertTrue(packageText.contains("-Client \"trae\""), packageText);

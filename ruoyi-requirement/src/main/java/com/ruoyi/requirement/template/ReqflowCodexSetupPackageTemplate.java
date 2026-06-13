@@ -49,7 +49,7 @@ public final class ReqflowCodexSetupPackageTemplate
     private static String installInstructions()
     {
         return "Install the reqflow MCP configuration and the reqflow-mcp global skill with one generic instruction. "
-                + "Prefer installCommands[]; it calls install.sh/install.ps1 with --client all to cover Codex, Claude Code, Trae, Qoder, CodeBuddy, and OpenCode. "
+                + "Prefer installCommands[]; it calls install.sh/install.ps1 once and lets the user choose Codex, Claude Code, Trae, Qoder, CodeBuddy, OpenCode, or all clients after execution. "
                 + "clientInstructions[] is kept as advanced per-client fallback material. "
                 + "Do not call reqflow MCP tools automatically after installation.";
     }
@@ -72,7 +72,7 @@ public final class ReqflowCodexSetupPackageTemplate
 
     private static String installPrompt()
     {
-        return "请优先执行 installCommands 中的统一安装指令，一次安装 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 的 reqflow MCP 配置和 reqflow-mcp 全局 skill。全局 skill 由脚本通过 npx skills add 安装。配置完成后只确认 MCP server 与 skill 已安装，"
+        return "请优先执行 installCommands 中的统一安装指令，执行后选择要安装的工具，可选 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 或全部工具；全局 skill 由脚本通过 npx skills add 安装。配置完成后只确认 MCP server 与 skill 已安装，"
                 + "不要自动调用 publish_repository_index 或其他 reqflow MCP 工具；不要把 plainKey 或 actionToken 写入 skill 文件。";
     }
 
@@ -96,7 +96,23 @@ public final class ReqflowCodexSetupPackageTemplate
 
     private static List<Map<String, Object>> installCommands(String mcpAddress)
     {
-        return clientInstallCommands(mcpAddress, "all", "统一", false);
+        return interactiveInstallCommands(mcpAddress);
+    }
+
+    private static List<Map<String, Object>> interactiveInstallCommands(String mcpAddress)
+    {
+        List<Map<String, Object>> commands = new ArrayList<>();
+        String shellUrl = installScriptUrl(mcpAddress, "install.sh");
+        String powerShellUrl = installScriptUrl(mcpAddress, "install.ps1");
+        commands.add(installCommand("macos-linux", "统一交互安装脚本（macOS / Linux）", "bash",
+                "export REQFLOW_MCP_KEY=\"" + MCP_KEY_PLACEHOLDER + "\"\n"
+                        + "curl -fsSL \"" + escapeCommand(shellUrl) + "\" | bash -s -- --url \""
+                        + escapeCommand(mcpAddress) + "\""));
+        commands.add(installCommand("windows-powershell", "统一交互安装脚本（Windows PowerShell）", "powershell",
+                "$env:REQFLOW_MCP_KEY = \"" + MCP_KEY_PLACEHOLDER + "\"\n"
+                        + "$script = irm \"" + escapeCommand(powerShellUrl) + "\"\n"
+                        + "& ([scriptblock]::Create($script)) -McpUrl \"" + escapeCommand(mcpAddress) + "\""));
+        return commands;
     }
 
     private static List<Map<String, Object>> clientInstallCommands(String mcpAddress, String client, String label)
@@ -328,7 +344,7 @@ public final class ReqflowCodexSetupPackageTemplate
         List<Map<String, Object>> headers = new ArrayList<>();
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("name", MCP_KEY_HEADER);
-        header.put("description", "Reqflow MCP user key returned once when creating a key.");
+        header.put("description", "Reqflow MCP user key used as the X-MCP-Key request header.");
         header.put("isSecret", true);
         headers.add(header);
         return headers;

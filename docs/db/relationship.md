@@ -16,7 +16,7 @@
 | `req_repository_index_batch` | 仓库索引批次 | 一行代表某仓库某分支某 commit 的一次索引上传 |
 | `req_index_module` | 仓库索引模块知识 | 一行代表索引得到的一个模块或功能点 |
 | `req_impact_item` | 模块影响面条目 | 一行代表某索引批次、项目分支或真实分支下的一个页面、接口、数据表、权限或文档资源 |
-| `req_mcp_user_key` | 人员 MCP 访问 Key | 一行代表一个绑定到系统用户的 MCP Key，只保存哈希和前缀 |
+| `req_mcp_user_key` | 人员 MCP 访问 Key | 一行代表一个绑定到系统用户的 MCP Key，保存明文、哈希和前缀 |
 | `req_action_token` | MCP 动作 Token | 一行代表一个项目初始化、需求分析、需求生成、开发执行、返修或合并归档动作上下文，只保存哈希和前缀 |
 | `req_activity_log` | 业务事件 | 一行一次用户或 MCP 事件 |
 | `sys_role` / `sys_role_menu` | RuoYi 角色和菜单权限关系 | 一行一个角色 / 一行一个角色菜单授权 |
@@ -97,7 +97,7 @@
 - 需求填报字段由发布基线 schema 维护；`demand_source` 是必填业务字段，`attachments` 是逗号分隔的上传路径串，不建立独立附件表。
 - 指定开发人员字段由发布基线 schema 维护；历史需求允许 `developer_user_id` 为空，但新建和草稿编辑由服务层强制补齐。
 - MCP 读取 `memory://{projectId}/...?...variantId={variantId}` 时必须按 `req_memory_index.project_id + req_memory_index.variant_id + doc_type` 查询；分支知识库缺少 `variant_id` 会导致同项目不同长期分支的模块、契约或决策文档混用。
-- MCP 人员 Key 只允许匹配 `status='0'` 且绑定用户也为启用、未删除状态；停用 Key、停用用户或已删除用户都不能继续鉴权。Key 明文不得落库、不得出现在列表响应或操作日志中。
+- MCP 人员 Key 只允许匹配 `status='0'` 且绑定用户也为启用、未删除状态；停用 Key、停用用户或已删除用户都不能继续鉴权。`plain_key` 持久保存用于后续安装命令渲染，但页面列表不得展示明文 Key、Key 前缀或哈希，操作日志和活动记录不得写入明文。
 - MCP 动作 Token 只允许匹配 `status='0'` 且未过期记录；明文只出现在本次指令响应中，服务端落库和列表只能保存哈希、前缀和上下文。`project_init` 动作必须校验 `target_method='publish_repository_index'` 后才能用于项目接入索引导入；`requirement_closeout` 动作也使用 `publish_repository_index`，但还必须校验需求处于 `closeout_pending`、token 绑定项目分支与仓库一致，并在需求办结前形成每个有效仓库对应的本需求归档 `imported` 批次。批次上下文写入 `req_repository_index_batch.remark=closeoutDemandId={demandId};repoId={repoId}`，旧批次不能作为本轮归档证据。
 
 ## 开发指导

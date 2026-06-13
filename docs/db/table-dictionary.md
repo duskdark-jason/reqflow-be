@@ -22,7 +22,7 @@
 | `req_repository_index_batch` | 仓库索引批次 | `batch_id` | `idx_req_index_batch_project(project_id)`、`idx_req_index_batch_repo(repo_id)`、`idx_req_index_batch_commit(repo_id, branch_name, commit_hash)` | 一行代表某仓库某分支某 commit 的一次索引上传。 |
 | `req_index_module` | 仓库索引模块知识 | `index_module_id` | `idx_req_index_module_variant(project_id, variant_id, module_code)` | 与人工模块不同，是索引产物；按项目分支过滤，不能混入旧批次。 |
 | `req_impact_item` | 模块影响面条目 | `impact_id` | `idx_req_impact_project_module(project_id, module_code)`、`idx_req_impact_variant_branch(variant_id, branch_name)`、`idx_req_impact_repo(repo_id)`、`idx_req_impact_type(item_type)` | 页面、接口、表、权限和文档资源统一记录在此表，推荐时必须按最新批次和分支去重。 |
-| `req_mcp_user_key` | 人员 MCP 访问 Key | `key_id` | `uk_req_mcp_user_key_hash(key_hash)`、`idx_req_mcp_user_key_user(user_id)`、`idx_req_mcp_user_key_status(status)` | 只保存哈希和前缀；明文 Key 只能在创建响应中出现。 |
+| `req_mcp_user_key` | 人员 MCP 访问 Key | `key_id` | `uk_req_mcp_user_key_hash(key_hash)`、`idx_req_mcp_user_key_user(user_id)`、`idx_req_mcp_user_key_status(status)` | 保存明文、哈希和前缀；哈希用于鉴权查找，明文用于后续安装命令渲染，页面列表不展示明文或前缀。 |
 | `req_action_token` | MCP 动作 Token | `token_id` | `uk_req_action_token_hash(token_hash)`、`idx_req_action_token_context(action_type, project_id, variant_id, demand_id, status)` | 用于项目初始化、需求分析、需求生成、开发、返修和合并归档动作上下文，不代表人员身份。 |
 | `req_activity_log` | 需求平台业务事件 | `id` | `idx_req_activity_user(user_id)`、`idx_req_activity_project(project_id)`、`idx_req_activity_demand(demand_id)`、`idx_req_activity_time(event_time)` | 审计和活动流使用；敏感明文、Key 和本机路径不得写入 `metadata_json`。 |
 
@@ -78,7 +78,7 @@
 | 表 | 字段 | 含义 | 维护要求 |
 |---|---|---|---|
 | `req_mcp_user_key` | `user_id` | 绑定系统用户 | 关联 RuoYi `sys_user.user_id`；权限仍按用户菜单权限判断。 |
-| `req_mcp_user_key` | `key_prefix`、`key_hash` | Key 前缀和哈希 | 明文不得落库、不得写日志、不得进入活动记录。 |
+| `req_mcp_user_key` | `plain_key`、`key_prefix`、`key_hash` | Key 明文、前缀和哈希 | `plain_key` 用于后续安装命令渲染；`key_hash` 用于鉴权查找；页面列表不展示 `plainKey`、`keyPrefix` 或 `keyHash`，操作日志和活动记录不得写入明文。 |
 | `req_action_token` | `action_type`、`target_method` | 动作类型和阶段目标 | `requirement_plan` 使用 `target_method=requirement_analysis` 表示需求分析阶段，只允许 `upload_requirement_assessment`；使用 `target_method=requirement_generate` 表示需求生成阶段，只允许 `save_requirement_package`。`requirement_develop` 使用 `target_method=requirement_develop` 表示开发阶段，可用于 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；使用 `target_method=requirement_repair` 表示返修阶段，只允许 `upload_execution_report` 和 `upload_review_report`。`requirement_closeout` 使用 `target_method=publish_repository_index` 表示合并归档阶段，只允许在 `closeout_pending` 状态发布需求基线分支的完整知识库快照；动作 token 不替代 `X-MCP-Key` 认证。 |
 | `req_action_token` | `project_id`、`variant_id`、`demand_id` | 动作上下文 | 必须和平台返回的项目、分支和需求一致。 |
 | `req_action_token` | `remark` | 合并归档仓库绑定 | `requirement_closeout/publish_repository_index` token 通过 `remark=closeoutRepoId={repoId}` 绑定目标仓库；办结校验必须按仓库逐项确认对应 token 已使用。 |

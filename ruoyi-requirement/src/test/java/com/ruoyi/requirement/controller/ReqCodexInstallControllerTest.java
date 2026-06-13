@@ -16,6 +16,8 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("--client"));
         assertTrue(script.contains("all"));
         assertTrue(script.contains("SUPPORTED_CLIENTS"));
+        assertTrue(script.contains("select_clients_interactively"));
+        assertTrue(script.contains("Select reqflow clients to install"));
         assertTrue(script.contains("REQFLOW_MCP_KEY"));
         assertTrue(script.contains("[mcp_servers.reqflow]"));
         assertTrue(script.contains("X-MCP-Key"));
@@ -40,7 +42,9 @@ class ReqCodexInstallControllerTest
         String script = new ReqCodexInstallController().installPowerShellScript();
 
         assertTrue(script.contains("param("));
-        assertTrue(script.contains("[ValidateSet(\"all\", \"codex\", \"claude-code\", \"trae\", \"qoder\", \"codebuddy\", \"opencode\")]"));
+        assertTrue(script.contains("$InstallableClients = @(\"codex\", \"claude-code\", \"trae\", \"qoder\", \"codebuddy\", \"opencode\")"));
+        assertTrue(script.contains("Select-ReqflowClientsInteractively"));
+        assertTrue(script.contains("Select reqflow clients to install"));
         assertTrue(script.contains("REQFLOW_MCP_KEY"));
         assertTrue(script.contains("[mcp_servers.reqflow]"));
         assertTrue(script.contains("X-MCP-Key"));

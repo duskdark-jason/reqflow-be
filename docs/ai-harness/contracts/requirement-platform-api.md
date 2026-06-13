@@ -243,25 +243,25 @@ requirement_closeout
 
 | 路径 | 方法 | 权限 | 说明 |
 |---|---|---|---|
-| `/requirement/mcp/key/list` | GET | `req:mcp:key:list` | 分页查询人员 MCP Key，列表只返回 Key 前缀和绑定人员，不返回明文或哈希 |
+| `/requirement/mcp/key/list` | GET | `req:mcp:key:list` | 分页查询人员 MCP Key，返回 Key 名称、绑定人员、状态、最近使用信息和明文字段；前端列表不展示 `plainKey`、`keyPrefix` 或 `keyHash` |
 | `/requirement/mcp/key/user-options` | GET | `req:mcp:key:list` 或 `req:mcp:key:add` | 查询 MCP Key 可绑定的启用用户，只返回 `userId`、`userName`、`nickName`，不依赖 `system:user:list`；普通用户只返回自己，管理员可查询并指定其他用户 |
 | `/requirement/mcp/key/{keyId}` | GET | `req:mcp:key:query` | 查询单个人员 MCP Key |
-| `/requirement/mcp/key/{keyId}/instruction` | GET | `req:mcp:key:query` | 打开安装指令包；普通用户只能打开自己的 Key 指令，管理员不受限制；历史 Key 不返回明文 |
-| `/requirement/mcp/key` | POST | `req:mcp:key:add` | 为启用用户创建随机唯一 MCP Key；普通用户强制绑定自己，管理员可指定绑定用户；明文只在本次响应返回并渲染到安装命令 |
+| `/requirement/mcp/key/{keyId}/instruction` | GET | `req:mcp:key:query` | 打开安装指令包；普通用户只能打开自己的 Key 指令，管理员不受限制；返回已持久化的 `plainKey` 用于渲染安装命令 |
+| `/requirement/mcp/key` | POST | `req:mcp:key:add` | 为启用用户创建随机唯一 MCP Key；普通用户强制绑定自己，管理员可指定绑定用户；明文随记录保存并用于创建结果和后续安装指令 |
 | `/requirement/mcp/key/{keyIds}` | DELETE | `req:mcp:key:remove` | 删除一个或多个人员 MCP Key |
 
-人员 Key 使用 `req_mcp_user_key` 表保存，服务端只落库 SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。前端和列表接口不得展示 `keyHash`，明文 `plainKey` 只允许在创建响应中出现一次；创建接口的操作日志必须关闭响应保存，避免明文 Key 进入 `sys_oper_log`。
+人员 Key 使用 `req_mcp_user_key` 表保存，服务端落库 `plain_key`、SHA-256 哈希、Key 前缀、绑定用户、状态、最近使用时间和最近使用 IP。哈希继续用于鉴权查找，`plainKey` 用于后续列表数据、详情和安装指令响应；前端列表不得展示 `plainKey`、`keyPrefix` 或 `keyHash`，也不得写入本地持久化。创建接口的操作日志必须关闭响应保存，避免明文 Key 进入 `sys_oper_log`。历史库中升级前已存在且没有 `plain_key` 的 Key 无法从哈希反推明文，需要重新生成 Key。
 
 `/requirement/mcp/key/config` 已删除，MCP 管理页不再常驻展示 MCP 地址、请求头名、客户端配置模板、全局 skill 包或安装指令包。
 
-创建 Key 响应返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 是一次性明文，前端安装指令界面必须直接展示明文 Key，并把明文渲染进可复制安装命令；`codexSetupPackage` 是多客户端安装指令包，`packageName=reqflow-mcp-multi-client-setup`，`installScope=global`，并包含 `supportedClients`、`mcpServer`、`codexConfigTemplate`、`installScripts`、`installCommands`、`clientInstructions`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`supportedClients` 只包含 `codex`、`claude-code`、`trae`、`qoder`、`codebuddy`、`opencode`。`installCommands[]` 是前端主展示入口，必须只给出统一安装指令，通过 `install.sh --client all` 或 `install.ps1 -Client "all"` 一次安装 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 的 MCP 配置和全局 `reqflow-mcp` skill。`clientInstructions[]` 仅作为高级配置/调试信息的一部分保留，每项包含 `client`、`label`、`transport`、`mcpConfigPath`、`mcpConfigSnippet`、`commands[]`、`skillInstall` 和 `notes`；前端普通弹窗不得按客户端拆开展示。`skillInstall.commands[]` 是单独安装全局 skill 的备用入口，继续使用 `npx skills add`，分别定向 `-a codex`、`-a claude-code`、`-a trae`、`-a qoder`、`-a codebuddy`、`-a opencode`。MCP 命令或配置中使用 `${REQFLOW_MCP_KEY}` 作为 Key 占位符，后端模板不得直接包含人员明文 Key 或一次性 `actionToken`，前端只在当前安装弹窗中用创建响应明文替换占位符。OpenCode 的 MCP 配置使用 `opencode.json` 的 `mcp.reqflow`，`type=remote`，并通过 `headers` 携带 `X-MCP-Key`。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。配置完成后不得自动调用 `publish_repository_index` 或其他工具。
+创建 Key 和打开指令响应均返回 `key`、`plainKey` 和 `codexSetupPackage`。其中 `plainKey` 由前端用于把明文渲染进可复制安装命令，但页面不得单独展示明文 Key 字段；`codexSetupPackage` 是多客户端安装指令包，`packageName=reqflow-mcp-multi-client-setup`，`installScope=global`，并包含 `supportedClients`、`mcpServer`、`codexConfigTemplate`、`installScripts`、`installCommands`、`clientInstructions`、`skillPackage`、`installPrompt` 和 `serverMetadata`。`supportedClients` 只包含 `codex`、`claude-code`、`trae`、`qoder`、`codebuddy`、`opencode`。`installCommands[]` 是前端主展示入口，必须只给出一组统一安装指令；用户执行后由脚本交互选择 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 或全部工具，自动化场景仍可通过 `--client all|codex|claude-code|trae|qoder|codebuddy|opencode` 或 `-Client` 跳过交互。`clientInstructions[]` 仅作为高级配置/调试信息的一部分保留，每项包含 `client`、`label`、`transport`、`mcpConfigPath`、`mcpConfigSnippet`、`commands[]`、`skillInstall` 和 `notes`；前端普通弹窗不得按客户端拆开展示。`skillInstall.commands[]` 是单独安装全局 skill 的备用入口，继续使用 `npx skills add`，分别定向 `-a codex`、`-a claude-code`、`-a trae`、`-a qoder`、`-a codebuddy`、`-a opencode`。MCP 命令或配置中使用 `${REQFLOW_MCP_KEY}` 作为 Key 占位符，后端模板不得直接包含人员明文 Key 或一次性 `actionToken`，前端只在安装命令渲染时用响应明文替换占位符。OpenCode 的 MCP 配置使用 `opencode.json` 的 `mcp.reqflow`，`type=remote`，并通过 `headers` 携带 `X-MCP-Key`。`mcpServer` 必须包含 `name=reqflow`、`transport=streamable-http`、`url` 和 `headerName=X-MCP-Key`；`serverMetadata` 参考 MCP registry/server.json 风格，描述远程 MCP 地址、鉴权 header、`project-init`、`index-publish`、`package-handoff` 工具组和安全提示。配置完成后不得自动调用 `publish_repository_index` 或其他工具。
 
 安装脚本端点：
 
 | 路径 | 方法 | 权限 | 说明 |
 |---|---|---|---|
-| `/requirement/codex/install.sh` | GET | 匿名可读 | 返回 macOS/Linux 通用安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `--key` 读取人员 Key，通过 `--client all|codex|claude-code|trae|qoder|codebuddy|opencode` 安装全部或指定客户端 MCP 配置，并调用 `npx skills add -g -a <client> --copy -y` 安装全局 `reqflow-mcp` skill |
-| `/requirement/codex/install.ps1` | GET | 匿名可读 | 返回 Windows PowerShell 通用安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `-McpKey` 读取人员 Key，通过 `-Client all|codex|claude-code|trae|qoder|codebuddy|opencode` 安装全部或指定客户端 MCP 配置，并调用 `npx skills add -g -a <client> --copy -y` 安装全局 `reqflow-mcp` skill |
+| `/requirement/codex/install.sh` | GET | 匿名可读 | 返回 macOS/Linux 通用安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `--key` 读取人员 Key；不传 `--client` 时在执行后交互选择工具，传 `--client all|codex|claude-code|trae|qoder|codebuddy|opencode` 时直接安装全部或指定客户端 MCP 配置，并调用 `npx skills add -g -a <client> --copy -y` 安装全局 `reqflow-mcp` skill |
+| `/requirement/codex/install.ps1` | GET | 匿名可读 | 返回 Windows PowerShell 通用安装脚本，脚本从 `REQFLOW_MCP_KEY` 或 `-McpKey` 读取人员 Key；不传 `-Client` 时在执行后交互选择工具，传 `-Client all|codex|claude-code|trae|qoder|codebuddy|opencode` 时直接安装全部或指定客户端 MCP 配置，并调用 `npx skills add -g -a <client> --copy -y` 安装全局 `reqflow-mcp` skill |
 | `/requirement/codex/skill/SKILL.md` | GET | 匿名可读 | 返回全局 `reqflow-mcp` Agent Skill 内容，供 `npx skills add` 安装到 Codex、Claude Code、Trae、Qoder、CodeBuddy 和 OpenCode |
 
 安装脚本和 skill 内容端点不得内置人员明文 Key，不得自动调用 reqflow MCP tool；脚本执行后只提示用户重启或刷新目标客户端。Codex 脚本可直接写 `~/.codex/config.toml`，Claude Code 和 CodeBuddy 优先调用各自 CLI 写入配置，Trae、Qoder 以及已有配置文件的 OpenCode/CodeBuddy 场景可输出可合并的 JSON 配置片段。

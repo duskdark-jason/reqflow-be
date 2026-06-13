@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS req_mcp_user_key (
   user_id BIGINT NOT NULL,
   key_name VARCHAR(100) NOT NULL,
   key_prefix VARCHAR(32) NOT NULL,
+  plain_key VARCHAR(128) DEFAULT NULL,
   key_hash CHAR(64) NOT NULL,
   status CHAR(1) NOT NULL DEFAULT '0',
   last_used_time DATETIME DEFAULT NULL,

@@ -16,7 +16,8 @@ public final class ReqflowCodexInstallScriptTemplate
                 set -euo pipefail
 
                 SUPPORTED_CLIENTS="all codex claude-code trae qoder codebuddy opencode"
-                CLIENT="codex"
+                INSTALLABLE_CLIENTS="codex claude-code trae qoder codebuddy opencode"
+                CLIENT=""
                 MCP_URL=""
                 MCP_KEY_HEADER="X-MCP-Key"
 
@@ -26,6 +27,7 @@ public final class ReqflowCodexInstallScriptTemplate
 
                 Clients: all, codex, claude-code, trae, qoder, codebuddy, opencode
 
+                Omit --client to select target clients interactively after execution.
                 The script installs the reqflow MCP configuration for all or the selected client and
                 installs the reqflow-mcp global skill with:
                   npx skills add <local-skill-dir> -g -a <client> --copy -y
@@ -58,14 +60,6 @@ public final class ReqflowCodexInstallScriptTemplate
                 done
 
                 MCP_KEY="${REQFLOW_MCP_KEY:-}"
-                case "$CLIENT" in
-                  all|codex|claude-code|trae|qoder|codebuddy|opencode)
-                    ;;
-                  *)
-                    echo "Unsupported --client '$CLIENT'. Supported clients: $SUPPORTED_CLIENTS" >&2
-                    exit 2
-                    ;;
-                esac
                 if [ -z "$MCP_URL" ]; then
                   echo "Missing --url <reqflow-mcp-url>" >&2
                   exit 2
@@ -290,13 +284,80 @@ public final class ReqflowCodexInstallScriptTemplate
                   done
                 }
 
-                if [ "$CLIENT" = "all" ]; then
-                  install_all_clients
+                resolve_clients() {
+                  local selection="$1"
+                  local item
+                  local selected=""
+                  selection=$(printf '%s' "$selection" | tr '[:upper:]' '[:lower:]' | tr ',' ' ')
+                  if [ -z "$selection" ]; then
+                    selection="all"
+                  fi
+                  for item in $selection; do
+                    case "$item" in
+                      1|all)
+                        printf '%s\n' "$INSTALLABLE_CLIENTS"
+                        return 0
+                        ;;
+                      2|codex)
+                        selected="$selected codex"
+                        ;;
+                      3|claude-code)
+                        selected="$selected claude-code"
+                        ;;
+                      4|trae)
+                        selected="$selected trae"
+                        ;;
+                      5|qoder)
+                        selected="$selected qoder"
+                        ;;
+                      6|codebuddy)
+                        selected="$selected codebuddy"
+                        ;;
+                      7|opencode)
+                        selected="$selected opencode"
+                        ;;
+                      *)
+                        echo "Unsupported client selection '$item'. Supported clients: $SUPPORTED_CLIENTS" >&2
+                        exit 2
+                        ;;
+                    esac
+                  done
+                  printf '%s\n' "$selected"
+                }
+
+                select_clients_interactively() {
+                  local selection
+                  if [ ! -r /dev/tty ]; then
+                    echo "No interactive terminal detected. Pass --client all or --client <client>." >&2
+                    exit 2
+                  fi
+                  {
+                    echo "Select reqflow clients to install:"
+                    echo "  1) all"
+                    echo "  2) codex"
+                    echo "  3) claude-code"
+                    echo "  4) trae"
+                    echo "  5) qoder"
+                    echo "  6) codebuddy"
+                    echo "  7) opencode"
+                    printf "Enter number(s) or client names, separated by comma or space [1]: "
+                  } > /dev/tty
+                  IFS= read -r selection < /dev/tty
+                  resolve_clients "$selection"
+                }
+
+                SELECTED_CLIENTS="${CLIENT:-}"
+                if [ -z "$SELECTED_CLIENTS" ]; then
+                  SELECTED_CLIENTS=$(select_clients_interactively)
                 else
-                  install_selected_client "$CLIENT"
+                  SELECTED_CLIENTS=$(resolve_clients "$SELECTED_CLIENTS")
                 fi
 
-                echo "Reqflow $CLIENT MCP and reqflow-mcp global skill installed."
+                for target_client in $SELECTED_CLIENTS; do
+                  install_selected_client "$target_client"
+                done
+
+                echo "Reqflow MCP and reqflow-mcp global skill installed for:$SELECTED_CLIENTS."
                 echo "Do not call reqflow MCP tools automatically after installation."
                 echo "Restart or refresh the selected client, then verify the reqflow MCP server is loaded."
                 """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent());
@@ -306,14 +367,14 @@ public final class ReqflowCodexInstallScriptTemplate
     {
                 return """
                 param(
-                  [ValidateSet("all", "codex", "claude-code", "trae", "qoder", "codebuddy", "opencode")]
-                  [string]$Client = "codex",
+                  [string]$Client = "",
                   [string]$McpUrl,
                   [string]$McpKey = $env:REQFLOW_MCP_KEY
                 )
 
                 $ErrorActionPreference = "Stop"
                 $McpHeaderName = "X-MCP-Key"
+                $InstallableClients = @("codex", "claude-code", "trae", "qoder", "codebuddy", "opencode")
 
                 if ([string]::IsNullOrWhiteSpace($McpUrl)) {
                   throw "Missing -McpUrl <reqflow-mcp-url>"
@@ -496,13 +557,57 @@ public final class ReqflowCodexInstallScriptTemplate
                   }
                 }
 
-                if ($Client -eq "all") {
-                  Install-AllClients
-                } else {
-                  Install-SelectedClient -TargetClient $Client
+                function Resolve-ReqflowClients([string]$Selection) {
+                  if ([string]::IsNullOrWhiteSpace($Selection)) {
+                    $Selection = "all"
+                  }
+                  $selected = New-Object System.Collections.Generic.List[string]
+                  foreach ($item in ($Selection.ToLowerInvariant() -split '[,\\s]+' | Where-Object { $_ })) {
+                    switch ($item) {
+                      "1" { return $InstallableClients }
+                      "all" { return $InstallableClients }
+                      "2" { if (-not $selected.Contains("codex")) { [void]$selected.Add("codex") } }
+                      "codex" { if (-not $selected.Contains("codex")) { [void]$selected.Add("codex") } }
+                      "3" { if (-not $selected.Contains("claude-code")) { [void]$selected.Add("claude-code") } }
+                      "claude-code" { if (-not $selected.Contains("claude-code")) { [void]$selected.Add("claude-code") } }
+                      "4" { if (-not $selected.Contains("trae")) { [void]$selected.Add("trae") } }
+                      "trae" { if (-not $selected.Contains("trae")) { [void]$selected.Add("trae") } }
+                      "5" { if (-not $selected.Contains("qoder")) { [void]$selected.Add("qoder") } }
+                      "qoder" { if (-not $selected.Contains("qoder")) { [void]$selected.Add("qoder") } }
+                      "6" { if (-not $selected.Contains("codebuddy")) { [void]$selected.Add("codebuddy") } }
+                      "codebuddy" { if (-not $selected.Contains("codebuddy")) { [void]$selected.Add("codebuddy") } }
+                      "7" { if (-not $selected.Contains("opencode")) { [void]$selected.Add("opencode") } }
+                      "opencode" { if (-not $selected.Contains("opencode")) { [void]$selected.Add("opencode") } }
+                      default { throw "Unsupported client selection '$item'. Supported clients: all, codex, claude-code, trae, qoder, codebuddy, opencode." }
+                    }
+                  }
+                  return $selected.ToArray()
                 }
 
-                Write-Host "Reqflow $Client MCP and reqflow-mcp global skill installed."
+                function Select-ReqflowClientsInteractively {
+                  Write-Host "Select reqflow clients to install:"
+                  Write-Host "  1) all"
+                  Write-Host "  2) codex"
+                  Write-Host "  3) claude-code"
+                  Write-Host "  4) trae"
+                  Write-Host "  5) qoder"
+                  Write-Host "  6) codebuddy"
+                  Write-Host "  7) opencode"
+                  $selection = Read-Host "Enter number(s) or client names, separated by comma or space [1]"
+                  return Resolve-ReqflowClients $selection
+                }
+
+                if ([string]::IsNullOrWhiteSpace($Client)) {
+                  $SelectedClients = Select-ReqflowClientsInteractively
+                } else {
+                  $SelectedClients = Resolve-ReqflowClients $Client
+                }
+
+                foreach ($targetClient in $SelectedClients) {
+                  Install-SelectedClient -TargetClient $targetClient
+                }
+
+                Write-Host ("Reqflow MCP and reqflow-mcp global skill installed for: " + ($SelectedClients -join ", "))
                 Write-Host "Do not call reqflow MCP tools automatically after installation."
                 Write-Host "Restart or refresh the selected client, then verify the reqflow MCP server is loaded."
                 """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent());
