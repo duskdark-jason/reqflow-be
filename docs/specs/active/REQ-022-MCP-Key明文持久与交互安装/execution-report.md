@@ -29,11 +29,12 @@
 | `ReqDemandController.java`、`IReqDemandService.java`、`ReqDemandServiceImpl.java`、`ReqDemandServiceImplTest.java` | 新增返修问题说明提交接口，服务端禁止普通状态接口直接提交返修，返修说明追加为 `requirement_supplement` 版本。 |
 | `ReqDemandServiceImpl.java`、`ReqDemandServiceImplTest.java` | 提交返修验收前校验最新返修问题说明之后的新执行报告和 Review 报告，旧报告不能直接复用。 |
 | `McpService.java`、`McpServiceTest.java` | 返修阶段 MCP 上传执行报告或 Review 报告时，片段内容会基于上一版追加返修记录，完整报告内容直接保存为新版本，避免最新版报告丢失原正文。 |
+| `ReqDemandServiceImpl.java`、`ReqDemandServiceImplTest.java`、`ReqflowCodexGlobalSkillTemplate.java`、`ReqflowCodexGlobalSkillTemplateTest.java` | 将需求分析、需求生成、开发、返修和合并归档复制指令压缩为短动态上下文；全局 skill 增加 `stage -> MCP tool` 映射表承接详细执行规则。 |
 | `../reqflow-ui/src/api/requirement/mcpKey.js`、`../reqflow-ui/src/views/requirement/mcpKey/index.vue`、`../reqflow-ui/scripts/test-mcp-install-dialog-unified.js` | 页面不展示明文 Key 和 Key 前缀字段，仅用明文渲染统一安装命令；管理员通过弹窗配置 MCP 请求地址；静态检查防回归。 |
 
 ## 模块知识库沉淀
 
-- 影响模块：MCP 管理、MCP 请求地址配置、MCP Key 持久化、多客户端安装脚本、本地 Harness 门禁、合并归档指令、需求返修流程、返修 MCP 报告回写
+- 影响模块：MCP 管理、MCP 请求地址配置、MCP Key 持久化、多客户端安装脚本、本地 Harness 门禁、合并归档指令、需求返修流程、返修 MCP 报告回写、阶段短指令与全局 skill
 - 模块知识库动作：更新
 - 模块知识库文档：`docs/ai-harness/modules/requirement-platform.md`、`docs/ai-harness/contracts/requirement-platform-api.md`
 
@@ -66,8 +67,9 @@
 | L2 | AC-014 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，覆盖普通状态接口拒绝返修和专用接口保存返修问题说明 |
 | L2 | AC-015 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，覆盖返修验收必须等待本轮返修执行报告和 Review 报告回写 |
 | L2 | AC-016 | `mvn -pl ruoyi-requirement -am -Dtest=McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，先红于返修片段直接成为最新版报告，修复后 30 个测试通过 |
+| L2 | AC-017 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqflowCodexGlobalSkillTemplateTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，先红于平台指令仍包含具体 `mcpTool` 和 skill 缺少阶段映射，修复后 44 个测试通过 |
 | L1 | AC-005 | `npm run build:prod`（companion 前端） | 通过，存在历史体积告警 |
-| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-013、AC-014、AC-015、AC-016 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` | 通过 |
+| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-013、AC-014、AC-015、AC-016、AC-017 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` | 通过 |
 
 ## 运行态证据
 
@@ -89,6 +91,7 @@
 - 用户指出需求人员提交返修时需要指出问题，已新增返修问题说明提交接口并禁止普通状态接口直接进入返修。
 - 用户补充开发人员返修过程也应先复制返修任务指令再提交返修验收，已补服务端门禁，必须在最新返修说明之后回写新的执行报告和 Review 报告。
 - 用户补充返修 MCP 推送不能把返修片段直接替换平台上的执行报告，已补服务端返修阶段报告增量合并逻辑：上传完整本地报告时保存完整报告，上传片段时基于上一版报告追加返修记录并保存新版本。
+- 用户确认平台各阶段复制指令应尽量简短，只明确当前阶段，详细工具选择和阶段规则由全局 skill 承接；已将需求分析、需求生成、开发、返修和合并归档指令改为短动态上下文，并在 `reqflow-mcp` skill 中增加阶段工具映射表。
 - 用户补充“MCP 明文 KEY 下次打开仍放在指令里”和“MCP 请求地址加到 MCP 管理页且仅管理员可配置”，已补后端配置接口、前端管理员配置入口和静态检查；后续补充“请求地址改为弹窗配置”，已将前端从顶部表单调整为按钮入口加弹窗。
 - 用户实测 OpenCode MCP 没有安装成功，并要求同时确认其它工具；已按官方文档把 OpenCode/CodeBuddy 调整为可自动合并配置，Claude/CodeBuddy 优先 CLI，Trae/Qoder 明确为设置页手工导入，不再把生成片段误报为已安装。
 

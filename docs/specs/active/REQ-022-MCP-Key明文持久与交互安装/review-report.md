@@ -25,6 +25,7 @@
 | 返修问题说明 | 通过 | 覆盖 AC-014。需求人提交返修必须走 `/requirement/demand/{demandId}/repair` 并填写问题说明，普通 `/status/repairing` 会被拒绝。 |
 | 返修验收门禁 | 通过 | 覆盖 AC-015。开发人员提交返修验收前，服务端要求最新返修说明之后的新执行报告和 Review 报告都已回写。 |
 | 返修报告增量回写 | 通过 | 覆盖 AC-016。返修阶段 MCP 上传片段时基于上一版报告追加返修记录，上传完整报告时按完整内容保存新版本，避免平台最新版报告只剩返修片段。 |
+| 阶段短指令与全局 skill | 通过 | 覆盖 AC-017。平台复制指令只保留 `stage`、`targetMethod`、需求编号、分支和 actionToken；全局 `reqflow-mcp` skill 维护 `stage -> MCP tool` 映射和阶段边界。 |
 
 ## 风险说明
 

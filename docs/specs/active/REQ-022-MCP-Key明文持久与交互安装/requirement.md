@@ -54,6 +54,7 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - AC-014：需求创建人或管理员在 `review` 待验收状态提交返修时，必须通过 `/requirement/demand/{demandId}/repair` 提交非空返修问题说明；服务端追加 `requirement_supplement` 版本并进入 `repairing`，普通 `/status/repairing` 必须拒绝并提示先填写返修问题说明。
 - AC-015：指定开发人员在 `repairing` 返修中状态提交返修验收前，服务端必须校验最新“需求人返修问题说明”之后已有新的 `execution_report` 和 `review_report`；未回写齐全时拒绝 `repairing -> review`，提示先复制返修任务指令并回写返修执行报告和 Review 报告。
 - AC-016：返修阶段 MCP `upload_execution_report` 或 `upload_review_report` 上传完整本地报告时按完整报告保存新版本；只上传返修片段时，服务端必须基于上一版报告追加“返修执行记录”或“返修 Review 记录”后保存新版本，不得让返修片段成为最新版全文并掩盖原执行报告或 Review 报告。
+- AC-017：需求分析、需求生成、开发、返修和合并归档阶段的平台复制指令必须压缩为短动态上下文，只保留 `reqflow-mcp`、`mcpServer: reqflow`、`stage`、`targetMethod`、需求编号、分支、actionToken 和 `arguments.actionToken` 提醒，不再在指令正文列出具体 `mcpTool` 清单或完整阶段步骤；全局 `reqflow-mcp` skill 必须提供 `stage -> MCP tool` 映射和各阶段本地文件/停止条件。
 
 ## 影响范围
 
@@ -61,6 +62,7 @@ MCP 管理页已支持 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode
 - 需求流程接口：是，新增 `/requirement/demand/{demandId}/closeout-verification` 只读接口。
 - 返修流程接口：是，新增 `/requirement/demand/{demandId}/repair` 提交返修问题说明。
 - MCP 回写语义：是，返修阶段执行报告和 Review 报告上传支持完整文件或增量片段，服务端保存新版本时保留上一版正文。
+- 阶段指令语义：是，平台复制指令改为短上下文，详细执行规则迁移到全局 skill。
 - 数据库：是，新增 `req_mcp_user_key.plain_key`。
 - 权限：是，MCP 请求地址配置使用 `admin` 角色控制，不扩展给开发人员角色。
 - 页面展示：是，MCP 管理页隐藏明文 Key 和 Key 前缀字段，统一命令执行后选择工具；管理员额外通过弹窗配置 MCP 请求地址。

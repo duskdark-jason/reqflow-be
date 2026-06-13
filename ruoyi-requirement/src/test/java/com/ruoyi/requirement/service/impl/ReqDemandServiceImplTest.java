@@ -724,34 +724,26 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
         assertEquals(IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS, instruction.getTargetMethod());
-        assertTrue(instruction.getContent().contains("upload_requirement_assessment"));
+        assertFalse(instruction.getContent().contains("upload_requirement_assessment"));
         assertFalse(instruction.getContent().contains("save_requirement_package"));
         assertFalse(instruction.getContent().contains("save_development_plan"));
         assertFalse(instruction.getContent().contains("执行计划"));
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_requirement_assessment"));
-        assertFalse(instruction.getContent().contains("mcpTool: reqflow.save_requirement_package"));
+        assertFalse(instruction.getContent().contains("mcpTool:"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
         assertTrue(instruction.getContent().contains("不是 X-MCP-Key"));
         assertTrue(instruction.getContent().contains("当前流程阶段内有效"));
-        assertTrue(instruction.getContent().contains("流转到下一流程即失效"));
-        assertTrue(instruction.getContent().contains("最长保留24小时"));
-        assertTrue(instruction.getContent().contains("重新生成"));
-        assertTrue(instruction.getContent().contains("需求分析阶段"));
+        assertTrue(instruction.getContent().contains("stage: requirement_analysis"));
+        assertTrue(instruction.getContent().contains("targetMethod: requirement_analysis"));
         assertTrue(instruction.getContent().contains("需求分析 actionToken: reqflow_action_assessment_token"));
         assertFalse(instruction.getContent().contains("需求生成 actionToken"));
-        assertTrue(instruction.getContent().contains("评估结论"));
-        assertTrue(instruction.getContent().contains("需澄清"));
-        assertTrue(instruction.getContent().contains("暂不可实现"));
-        assertTrue(instruction.getContent().contains("停止生成 requirement.md"));
         assertTrue(instruction.getContent().contains("建议任务分支: feature/req-5-demand"));
-        assertTrue(instruction.getContent().contains("git pull --ff-only"));
-        assertTrue(instruction.getContent().contains("不生成 plan.md"));
-        assertTrue(instruction.getContent().contains("不改业务代码"));
-        assertTrue(instruction.getContent().contains("业务背景"));
-        assertTrue(instruction.getContent().contains("附件"));
+        assertFalse(instruction.getContent().contains("git pull --ff-only"));
+        assertFalse(instruction.getContent().contains("业务背景"));
+        assertFalse(instruction.getContent().contains("附件"));
         assertTrue(instruction.getContent().contains("demandId: 5"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-005"));
+        assertTrue(instruction.getContent().length() < 520);
     }
 
     @Test
@@ -791,20 +783,21 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
         assertEquals(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE, instruction.getTargetMethod());
-        assertTrue(instruction.getContent().contains("save_requirement_package"));
+        assertFalse(instruction.getContent().contains("save_requirement_package"));
         assertFalse(instruction.getContent().contains("upload_requirement_assessment"));
         assertFalse(instruction.getContent().contains("save_development_plan"));
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_requirement_package"));
-        assertTrue(instruction.getContent().contains("需求生成阶段"));
+        assertFalse(instruction.getContent().contains("mcpTool:"));
+        assertTrue(instruction.getContent().contains("stage: requirement_generate"));
+        assertTrue(instruction.getContent().contains("targetMethod: requirement_generate"));
         assertTrue(instruction.getContent().contains("需求生成 actionToken: reqflow_action_generate_token"));
         assertTrue(instruction.getContent().contains("当前流程阶段内有效"));
-        assertTrue(instruction.getContent().contains("流转到下一流程即失效"));
-        assertTrue(instruction.getContent().contains("必须沿用需求分析阶段创建的任务分支"));
-        assertTrue(instruction.getContent().contains("不生成 plan.md"));
-        assertTrue(instruction.getContent().contains("不改业务代码"));
+        assertFalse(instruction.getContent().contains("必须沿用需求分析阶段创建的任务分支"));
+        assertFalse(instruction.getContent().contains("不生成 plan.md"));
+        assertFalse(instruction.getContent().contains("不改业务代码"));
         assertTrue(instruction.getContent().contains("demandId: 5"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-005"));
+        assertTrue(instruction.getContent().length() < 520);
     }
 
     @Test
@@ -868,24 +861,19 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, instruction.getActionType());
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.save_development_plan"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_execution_report"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_review_report"));
+        assertFalse(instruction.getContent().contains("mcpTool:"));
+        assertTrue(instruction.getContent().contains("stage: requirement_develop"));
+        assertTrue(instruction.getContent().contains("targetMethod: requirement_develop"));
         assertTrue(instruction.getContent().contains("任务分支: feature/req-6-demand"));
         assertTrue(instruction.getContent().contains("开发阶段 actionToken: reqflow_action_develop_stage_token"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
         assertTrue(instruction.getContent().contains("当前开发阶段内有效"));
-        assertTrue(instruction.getContent().contains("流转到待验收后即失效"));
-        assertTrue(instruction.getContent().contains("多次用于执行计划、执行报告和 Review 报告回写"));
-        assertTrue(instruction.getContent().contains("不得重新生成不同任务分支"));
-        assertTrue(instruction.getContent().contains("先分析需求是否可以拆分为多个 subagent"));
-        assertTrue(instruction.getContent().contains("互不共享状态"));
+        assertFalse(instruction.getContent().contains("先分析需求是否可以拆分为多个 subagent"));
+        assertFalse(instruction.getContent().contains("互不共享状态"));
         assertFalse(instruction.getContent().contains("返修要求"));
-        assertTrue(instruction.getContent().contains("执行计划"));
-        assertTrue(instruction.getContent().contains("执行报告"));
-        assertTrue(instruction.getContent().contains("Review 报告"));
         assertTrue(instruction.getContent().contains("demandId: 6"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-006"));
+        assertTrue(instruction.getContent().length() < 520);
     }
 
     @Test
@@ -950,18 +938,16 @@ class ReqDemandServiceImplTest
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, instruction.getActionType());
         assertEquals(IReqActionTokenService.TARGET_REQUIREMENT_REPAIR, instruction.getTargetMethod());
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
-        assertFalse(instruction.getContent().contains("mcpTool: reqflow.save_development_plan"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_execution_report"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.upload_review_report"));
+        assertFalse(instruction.getContent().contains("mcpTool:"));
+        assertTrue(instruction.getContent().contains("stage: requirement_repair"));
+        assertTrue(instruction.getContent().contains("targetMethod: requirement_repair"));
         assertTrue(instruction.getContent().contains("任务分支: feature/req-6-demand"));
         assertTrue(instruction.getContent().contains("返修阶段 actionToken: reqflow_action_repair_stage_token"));
         assertTrue(instruction.getContent().contains("当前返修阶段内有效"));
-        assertTrue(instruction.getContent().contains("流转到待验收后即失效"));
-        assertTrue(instruction.getContent().contains("多次用于执行报告和 Review 报告回写"));
-        assertTrue(instruction.getContent().contains("不得重新生成不同任务分支"));
-        assertTrue(instruction.getContent().contains("不重新生成需求设计或执行计划"));
+        assertFalse(instruction.getContent().contains("不重新生成需求设计或执行计划"));
         assertTrue(instruction.getContent().contains("demandId: 6"));
         assertTrue(instruction.getContent().contains("demandNo: REQ-006"));
+        assertTrue(instruction.getContent().length() < 520);
     }
 
     @Test
@@ -1331,15 +1317,14 @@ class ReqDemandServiceImplTest
         assertEquals("requirement_closeout", instruction.getActionType());
         assertEquals("publish_repository_index", instruction.getTargetMethod());
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
+        assertTrue(instruction.getContent().contains("stage: requirement_closeout"));
+        assertTrue(instruction.getContent().contains("targetMethod: publish_repository_index"));
         assertTrue(instruction.getContent().contains("需求分支: release/main"));
         assertTrue(instruction.getContent().contains("本地开发分支: feature/req-6-demand"));
-        assertTrue(instruction.getContent().contains("docs/specs/active/REQ-006-*"));
-        assertTrue(instruction.getContent().contains("sh scripts/check-harness.sh complete --spec"));
-        assertTrue(instruction.getContent().contains("git mv \"$SPEC_DIR\" docs/specs/done/"));
-        assertTrue(instruction.getContent().contains("先在任务分支完成 active 到 done 的归档迁移"));
-        assertTrue(instruction.getContent().contains("git merge --squash feature/req-6-demand"));
-        assertTrue(instruction.getContent().contains("git push"));
-        assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));
+        assertFalse(instruction.getContent().contains("sh scripts/check-harness.sh complete --spec"));
+        assertFalse(instruction.getContent().contains("git mv \"$SPEC_DIR\" docs/specs/done/"));
+        assertFalse(instruction.getContent().contains("git merge --squash feature/req-6-demand"));
+        assertFalse(instruction.getContent().contains("mcpTool:"));
         assertTrue(instruction.getContent().contains("后端仓库"));
         assertTrue(instruction.getContent().contains("repoId: 21"));
         assertTrue(instruction.getContent().contains("reqflow_action_closeout_backend"));
@@ -1348,8 +1333,8 @@ class ReqDemandServiceImplTest
         assertTrue(instruction.getContent().contains("reqflow_action_closeout_frontend"));
         assertTrue(instruction.getContent().contains("arguments.actionToken"));
         assertTrue(instruction.getContent().contains("一次性"));
-        assertTrue(instruction.getContent().contains("平台验证"));
-        assertTrue(instruction.getContent().contains("git branch -d feature/req-6-demand"));
+        assertFalse(instruction.getContent().contains("git branch -d feature/req-6-demand"));
+        assertTrue(instruction.getContent().length() < 900);
         verify(actionTokenService).createInstruction(eq("requirement_closeout"), eq(10L), eq(31L), eq(6L),
                 eq("publish_repository_index"), any(), eq("生成合并归档指令"), eq("developer"),
                 eq("closeoutRepoId=21"));

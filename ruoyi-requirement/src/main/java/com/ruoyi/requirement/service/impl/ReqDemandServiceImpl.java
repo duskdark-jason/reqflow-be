@@ -490,20 +490,15 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return prompt
                 + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求分析。"
                 + "\nmcpServer: reqflow"
-                + "\ntoolName: upload_requirement_assessment"
-                + "\nmcpTool: reqflow.upload_requirement_assessment"
-                + "\ntargetMethod: upload_requirement_assessment"
+                + "\nstage: requirement_analysis"
+                + "\ntargetMethod: requirement_analysis"
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
                 + "\n建议任务分支: " + taskBranch
                 + "\n需求分析 actionToken: " + analysisActionToken
                 + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：先读取需求详情中的基础需求、业务背景、预期结果、验收标准、附件和历史需求设计版本。"
-                + "\n分支要求：校验当前 workspace 仓库远端与平台项目一致，切换目标基线分支并 git pull --ff-only 后，创建或切换到上面的建议任务分支。"
-                + "\n评估要求：先形成需求可行性评估报告，必须给出评估结论、主要风险、阻断点、需要需求人补充或调整的内容、是否允许继续生成需求设计；结论类型从“可继续设计、需澄清、需调整、暂不可实现”中选择。"
-                + "\n回写要求：调用 upload_requirement_assessment，arguments.actionToken 填需求分析 actionToken，content 填评估报告；如果结论是需澄清、需调整或暂不可实现，本轮停止生成 requirement.md，并把该结论作为反馈推送给需求人。"
-                + "\n本地文件：本阶段只允许生成或更新评估结论，不生成 plan.md、不改业务代码、不写执行或 Review 报告。"
-                + "\n注意：需求分析 actionToken 是 upload_requirement_assessment 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n使用：按 skill 根据 stage 选择工具；需求分析 actionToken 填 arguments.actionToken，不是 X-MCP-Key。"
+                + "\n如未安装 skill，先在 MCP 管理页执行统一安装命令。";
     }
 
     private String requirementGenerateInstructionContent(String prompt, String generateActionToken, ReqDemand demand,
@@ -512,18 +507,15 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return prompt
                 + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求生成。"
                 + "\nmcpServer: reqflow"
-                + "\ntoolName: save_requirement_package"
-                + "\nmcpTool: reqflow.save_requirement_package"
-                + "\ntargetMethod: save_requirement_package"
+                + "\nstage: requirement_generate"
+                + "\ntargetMethod: requirement_generate"
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
                 + "\n任务分支: " + taskBranch
                 + "\n需求生成 actionToken: " + generateActionToken
                 + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：读取需求详情、需求分析评估结论、需求人补充说明和历史需求设计版本，只生成或调整 `requirement.md`。"
-                + "\n分支要求：必须沿用需求分析阶段创建的任务分支，不得重新生成不同任务分支。"
-                + "\n回写要求：调用 save_requirement_package，arguments.actionToken 填需求生成 actionToken，content 填详细需求设计；本阶段不生成 plan.md、不改业务代码、不写执行或 Review 报告。"
-                + "\n注意：需求生成 actionToken 是 save_requirement_package 的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n使用：按 skill 根据 stage 选择工具；需求生成 actionToken 填 arguments.actionToken，不是 X-MCP-Key。"
+                + "\n如未安装 skill，先在 MCP 管理页执行统一安装命令。";
     }
 
     private String requirementDevelopInstructionContent(String prompt, String developActionToken, ReqDemand demand,
@@ -532,22 +524,15 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return prompt
                 + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求开发。"
                 + "\nmcpServer: reqflow"
-                + "\ntoolName: save_development_plan"
-                + "\nmcpTool: reqflow.save_development_plan"
-                + "\ntoolName: upload_execution_report"
-                + "\nmcpTool: reqflow.upload_execution_report"
-                + "\ntoolName: upload_review_report"
-                + "\nmcpTool: reqflow.upload_review_report"
-                + "\ntargetMethods: save_development_plan, upload_execution_report, upload_review_report"
+                + "\nstage: requirement_develop"
+                + "\ntargetMethod: requirement_develop"
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
                 + "\n任务分支: " + taskBranch
                 + "\n开发阶段 actionToken: " + developActionToken
                 + "\n" + DEVELOPMENT_STAGE_TOKEN_USAGE_RULE
-                + "\n分支要求：必须沿用需求设计阶段创建的任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
-                + "\n要求：先读取需求详情、最终需求设计和本地 requirement.md；生成执行计划前，先分析需求是否可以拆分为多个 subagent 并行执行，只有任务边界清晰、互不共享状态、可独立验证时才拆分；再生成或更新 plan.md，按目标仓库规范完成实现、验证、自动 Review 和提交。"
-                + "\n回写要求：本阶段三个 MCP 工具都使用同一个开发阶段 actionToken：先调用 save_development_plan 回写执行计划，开发验证完成后调用 upload_execution_report 回写执行报告，自动 Review 完成后调用 upload_review_report 回写 Review 报告。"
-                + "\n注意：开发阶段 actionToken 是上述三个工具的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n使用：按 skill 根据 stage 选择工具；开发阶段 actionToken 填 arguments.actionToken，不是 X-MCP-Key。"
+                + "\n如未安装 skill，先在 MCP 管理页执行统一安装命令。";
     }
 
     private String requirementRepairInstructionContent(String prompt, String repairActionToken, ReqDemand demand,
@@ -556,20 +541,15 @@ public class ReqDemandServiceImpl implements IReqDemandService
         return prompt
                 + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求返修。"
                 + "\nmcpServer: reqflow"
-                + "\ntoolName: upload_execution_report"
-                + "\nmcpTool: reqflow.upload_execution_report"
-                + "\ntoolName: upload_review_report"
-                + "\nmcpTool: reqflow.upload_review_report"
-                + "\ntargetMethods: upload_execution_report, upload_review_report"
+                + "\nstage: requirement_repair"
+                + "\ntargetMethod: requirement_repair"
                 + "\ndemandId: " + demand.getDemandId()
                 + "\ndemandNo: " + demand.getDemandNo()
                 + "\n任务分支: " + taskBranch
                 + "\n返修阶段 actionToken: " + repairActionToken
                 + "\n" + REPAIR_STAGE_TOKEN_USAGE_RULE
-                + "\n分支要求：必须沿用原任务分支，不得重新生成不同任务分支；如果本地不在该分支，先切换到该分支。"
-                + "\n要求：读取 Review 报告和需求人返修问题说明，只处理本次 Review 返修项或需求人返修要求，完成修复、验证和自动复审，不重新生成需求设计或执行计划。"
-                + "\n回写要求：本阶段两个 MCP 工具都使用同一个返修阶段 actionToken：修复验证完成后调用 upload_execution_report 回写返修执行报告，自动复审完成后调用 upload_review_report 回写 Review 报告。"
-                + "\n注意：返修阶段 actionToken 是上述两个工具的 arguments.actionToken，不是 X-MCP-Key；MCP 鉴权仍使用人员 X-MCP-Key。";
+                + "\n使用：按 skill 根据 stage 选择工具；返修阶段 actionToken 填 arguments.actionToken，不是 X-MCP-Key。"
+                + "\n如未安装 skill，先在 MCP 管理页执行统一安装命令。";
     }
 
     private ReqActionInstruction createRequirementCloseoutInstruction(ReqDemand demand, String operator)
@@ -611,30 +591,14 @@ public class ReqDemandServiceImpl implements IReqDemandService
         content.append(prompt)
                 .append("\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求归档收尾。")
                 .append("\nmcpServer: reqflow")
-                .append("\ntoolName: publish_repository_index")
-                .append("\nmcpTool: reqflow.publish_repository_index")
+                .append("\nstage: requirement_closeout")
                 .append("\ntargetMethod: publish_repository_index")
                 .append("\ndemandId: ").append(demand.getDemandId())
                 .append("\ndemandNo: ").append(demand.getDemandNo())
                 .append("\n需求分支: ").append(variant.getBaselineBranch())
                 .append("\n本地开发分支: ").append(taskBranch)
                 .append("\n").append(CLOSEOUT_TOKEN_USAGE_RULE)
-                .append("\n平台验证：每个目标仓库必须使用本指令中对应的一次性 actionToken 调用 publish_repository_index；平台验证 actionToken 已使用且项目分支知识库覆盖全部有效仓库后，才允许结束任务。")
-                .append("\n执行要求：")
-                .append("\n1. 逐个目标仓库校验 Git 远端与平台登记一致，确认本地开发分支为 ").append(taskBranch).append("。")
-                .append("\n2. 切回本地开发分支：git switch ").append(taskBranch).append("。")
-                .append("\n3. 先在任务分支完成 active 到 done 的归档迁移；如仓库存在匹配当前需求的本地 Harness spec，执行：")
-                .append("\n   SPEC_DIR=$(find docs/specs/active -maxdepth 1 -type d -name '").append(demand.getDemandNo()).append("-*' | head -n 1)")
-                .append("\n   sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec \"$SPEC_DIR\"")
-                .append("\n   mkdir -p docs/specs/done && git mv \"$SPEC_DIR\" docs/specs/done/")
-                .append("\n   迁移后不要继续修改 done 目录中的执行文档；如果仓库未接入本地 Harness 或没有匹配 docs/specs/active/").append(demand.getDemandNo()).append("-*，在归档提交中记录原因。")
-                .append("\n4. 提交任务分支上的归档迁移或说明变更，并确保任务分支验证通过。")
-                .append("\n5. 切换需求分支并拉取最新代码：git switch ").append(variant.getBaselineBranch()).append(" && git pull --ff-only。")
-                .append("\n6. 将本地开发分支压缩合并到需求分支：git merge --squash ").append(taskBranch).append("，完成必要冲突处理、校验和提交。")
-                .append("\n7. 推送需求分支：git push。")
-                .append("\n8. 发布当前仓库完整知识库快照，modules 不能为空；actionToken 必须写入 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。")
-                .append("\n9. 知识库发布成功后删除本地开发分支：git branch -d ").append(taskBranch).append("；不要删除远端开发分支，除非另有明确授权。")
-                .append("\n10. 回到需求平台点击“确认归档完成”，由平台验证归档结果后再结束任务。")
+                .append("\n使用：按 skill 根据 stage 完成归档；每个仓库 actionToken 填 arguments.actionToken，不是 X-MCP-Key。")
                 .append("\n\n目标仓库与一次性归档 actionToken：");
         for (int i = 0; i < repositories.size(); i++)
         {
@@ -644,8 +608,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
                     .append("\n  remoteUrl: ").append(text(repository.getRepoUrl()))
                     .append("\n  repoId: ").append(repository.getRepoId())
                     .append("\n  repoType: ").append(text(repository.getRepoType()))
-                    .append("\n  归档 actionToken: ").append(instruction.getToken())
-                    .append("\n  调用要求：mcpTool: reqflow.publish_repository_index，arguments.actionToken 填上面的归档 actionToken。");
+                    .append("\n  归档 actionToken: ").append(instruction.getToken());
         }
         return content.toString();
     }

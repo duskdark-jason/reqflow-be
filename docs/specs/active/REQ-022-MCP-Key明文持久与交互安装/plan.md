@@ -16,7 +16,8 @@
 12. 返修问题说明接口：新增专用返修提交接口，保存需求人返修问题说明并禁止普通状态接口直接进入返修。覆盖 AC-014。
 13. 返修验收门禁：服务端校验返修说明之后的新执行报告和 Review 报告，未回写齐全时拒绝提交返修验收。覆盖 AC-015。
 14. 返修报告增量回写：返修阶段 MCP 上传完整报告时直接保存完整报告新版本；上传返修片段时由服务端基于上一版追加返修记录，避免最新版报告丢失原正文。覆盖 AC-016。
-15. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-012、AC-013、AC-014、AC-015、AC-016。
+15. 阶段指令瘦身：平台复制指令只保留 stage、targetMethod、需求编号、分支和 actionToken，具体 MCP 工具映射迁移到全局 `reqflow-mcp` skill。覆盖 AC-017。
+16. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-012、AC-013、AC-014、AC-015、AC-016、AC-017。
 
 ## 分层验证
 
@@ -31,8 +32,9 @@
 | L2 | AC-009、AC-013 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqflowCodexGlobalSkillTemplateTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L2 | AC-014、AC-015 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L2 | AC-016 | `mvn -pl ruoyi-requirement -am -Dtest=McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` |
+| L2 | AC-017 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqflowCodexGlobalSkillTemplateTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L1 | AC-005 | companion 前端 `npm run build:prod` |
-| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-013、AC-014、AC-015、AC-016 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` |
+| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-013、AC-014、AC-015、AC-016、AC-017 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` |
 
 ## 风险与处理
 
@@ -45,3 +47,4 @@
 - 返修问题说明被绕过：普通状态接口拒绝 `review -> repairing`，必须通过专用 `/repair` 接口写入说明后再进入返修。
 - 返修验收提前提交：服务端按最新返修问题说明校验新执行报告和 Review 报告，旧报告或缺失报告不能推进到待验收。
 - 返修片段掩盖原报告：MCP 服务端在返修阶段识别 `requirement_repair` actionToken，片段上传时合并上一版报告，完整文件上传时避免重复追加。
+- 指令过短导致 agent 不知道调用哪个工具：短指令必须包含稳定 `stage`，全局 skill 必须维护 `stage -> MCP tool` 映射表，并由测试锁定。

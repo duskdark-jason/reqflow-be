@@ -4,6 +4,8 @@
 
 未提供需求平台 Key、未接入 MCP 或当前 Codex 会话没有可用 MCP 工具时，不进入本文件的模式一到三，改按 `local-harness-workflow.md` 执行。本地 Harness 模式的 spec、Review、返修和完成门禁与 MCP 接入模式一致，但不得伪造平台读取或回写结果。
 
+平台复制给执行端的阶段指令只提供短动态上下文：`reqflow-mcp`、`mcpServer: reqflow`、`stage`、`targetMethod`、需求编号、分支和 actionToken。具体应调用哪些 MCP tools、读写哪些本地文件、哪些动作必须停止或禁止，由全局 `reqflow-mcp` skill 根据 `stage` 识别并执行，平台指令正文不重复完整工具清单和流程手册。
+
 ## 模式一：需求平台需求设计模式
 
 适用场景：编排人员或指定开发人员拿到需求设计 Key，在 Codex 中通过需求平台 MCP 获取需求初稿、关联项目、目标远端仓库、目标基线分支、建议任务分支、影响模块、历史需求设计版本和需求人补充调整指令，并推演详细需求设计。
