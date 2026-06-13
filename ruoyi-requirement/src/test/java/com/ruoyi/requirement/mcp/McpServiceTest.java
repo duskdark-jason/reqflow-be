@@ -515,6 +515,34 @@ class McpServiceTest
     }
 
     @Test
+    void requirementGenerateTokenExpiresAfterDemandIsReadyForRequesterConfirmation()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveToken("reqflow_action_generate")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "plan_ready"));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_generate");
+        arguments.put("content", "需求设计");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("save_requirement_package", arguments)));
+
+        assertToolErrorResult(response, "动作Token所属流程阶段已结束");
+        verify(packageService, never()).saveVersion(any(), any(), any(), any());
+    }
+
+    @Test
     void developmentToolsCanResolveDemandBySameDevelopStageActionToken()
     {
         IReqPackageService packageService = mock(IReqPackageService.class);
@@ -618,6 +646,7 @@ class McpServiceTest
     void repairToolsCanResolveDemandBySameRepairStageActionToken()
     {
         IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqDemandService demandService = mock(IReqDemandService.class);
         IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
         ReqActionToken token = new ReqActionToken();
         token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
@@ -633,6 +662,7 @@ class McpServiceTest
 
         McpService service = new TestableMcpService(true);
         ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "reqDemandService", demandService);
         ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
         ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
 
@@ -649,6 +679,7 @@ class McpServiceTest
         verify(actionTokenService, org.mockito.Mockito.times(2)).resolveToken("reqflow_action_repair_stage");
         verify(packageService).saveVersion(9L, "execution_report", "返修执行报告", "upload_execution_report");
         verify(packageService).saveVersion(9L, "review_report", "返修 Review 报告", "upload_review_report");
+        verify(demandService).updateReqDemandStatus(9L, "review", "mcp");
     }
 
     @Test

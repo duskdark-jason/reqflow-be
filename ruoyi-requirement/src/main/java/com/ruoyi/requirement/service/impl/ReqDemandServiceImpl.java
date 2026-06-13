@@ -844,9 +844,12 @@ public class ReqDemandServiceImpl implements IReqDemandService
                 "execution_report");
         ReqPackageVersion reviewReport = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId,
                 "review_report");
-        if (repairRequest == null || executionReport == null || reviewReport == null
-                || !isPackageVersionNotEarlier(executionReport, repairRequest)
-                || !isPackageVersionNotEarlier(reviewReport, repairRequest))
+        if (executionReport == null || reviewReport == null)
+        {
+            throw new ServiceException("请先复制返修任务指令并回写返修执行报告和 Review 报告后再提交返修验收");
+        }
+        if (repairRequest != null && (!isPackageVersionNotEarlier(executionReport, repairRequest)
+                || !isPackageVersionNotEarlier(reviewReport, repairRequest)))
         {
             throw new ServiceException("请先复制返修任务指令并回写返修执行报告和 Review 报告后再提交返修验收");
         }

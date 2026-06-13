@@ -36,7 +36,7 @@
 - 落地 `meta.md` 时必须记录需求平台返回的影响模块，并声明模块知识库动作。涉及菜单、页面、接口、权限、核心流程或数据口径时，必须更新 `docs/ai-harness/modules/*.md`。
 - 开发阶段使用同一个开发阶段 actionToken 完成 `save_development_plan`、`upload_execution_report` 和 `upload_review_report` 回写；该 token 只在 `developing` 流程阶段有效，转入待验收后失效。
 - 开发完成后进入自动 Review 循环：Execution Agent 持续追加或更新 `execution-report.md` 并通过 MCP `upload_execution_report` 回写新版本；Review Agent 只读审查、追加或更新 `review-report.md` 并通过 MCP `upload_review_report` 回写新版本。发现 `RF-*` 后自动切回执行阶段修复并回填 `execution-report.md`，再自动复审，直到最终 Review 结论为 `通过`。
-- 返修阶段沿用同一任务分支和同一 spec 目录；需求人补充返修说明后，开发人员复制新的返修任务提示词，使用同一个返修阶段 actionToken 持续补充 `execution-report.md` 和 `review-report.md` 并回写平台。返修阶段不得重新生成 `requirement.md` 或 `plan.md`，需求平台按版本保留每次执行和 Review 资料。
+- 返修阶段沿用同一任务分支和同一 spec 目录；需求人补充返修说明后，开发人员复制新的返修任务提示词，使用同一个返修阶段 actionToken 持续补充 `execution-report.md` 和 `review-report.md` 并回写平台。返修阶段 `upload_review_report` 成功后平台会自动尝试回到待验收状态；返修阶段不得重新生成 `requirement.md` 或 `plan.md`，需求平台按版本保留每次执行和 Review 资料。
 - 需求人验收通过后，需求平台进入待合并归档阶段并给指定开发人员下发合并归档指令。开发人员必须先在每个目标仓库的本地任务分支上运行完成态门禁，把匹配需求的 `docs/specs/active/REQ-*` 目录 `git mv` 到 `docs/specs/done/`；没有对应 active spec 时必须在归档提交中写明原因。随后把本地任务分支 squash merge 到需求基线分支，push 基线分支，再通过 `publish_repository_index` 使用合并归档 actionToken 发布当前完整知识库快照；平台验证所有有效仓库归档索引通过后，才允许确认完成并删除本地开发分支。
 
 ## 模式三：项目接入初始化模式

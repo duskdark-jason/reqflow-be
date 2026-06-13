@@ -417,9 +417,17 @@ public class McpService
             return toolResult(Collections.singletonMap("result", repositoryIndexService.importRepositoryIndex(indexRequest, "mcp", currentUsername(), currentUserId())));
         }
         requirePermission(name, "req:package:save");
-        Long demandId = resolvePackageDemandId(name, arguments);
+        PackageToolContext packageContext = resolvePackageContext(name, arguments);
+        Long demandId = packageContext.getDemandId();
         String artifactType = artifactTypeForTool(name, stringArg(arguments, "artifactType"));
-        return toolResult(Collections.singletonMap("version", reqPackageService.saveVersion(demandId, artifactType, stringArg(arguments, "content"), name)));
+        ReqPackageVersion version = reqPackageService.saveVersion(demandId, artifactType, stringArg(arguments, "content"), name);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("version", version);
+        if (shouldSubmitRepairReview(name, packageContext))
+        {
+            result.put("statusUpdated", reqDemandService.updateReqDemandStatus(demandId, "review", currentUsername()));
+        }
+        return toolResult(result);
     }
 
     private ReqRepositoryIndexImportRequest toIndexRequest(Map<String, Object> arguments)
@@ -821,7 +829,7 @@ public class McpService
         throw new IllegalArgumentException("不支持的MCP工具：" + toolName);
     }
 
-    private Long resolvePackageDemandId(String toolName, Map<String, Object> arguments)
+    private PackageToolContext resolvePackageContext(String toolName, Map<String, Object> arguments)
     {
         String actionToken = stringArg(arguments, "actionToken");
         if (actionToken == null || actionToken.isEmpty())
@@ -831,7 +839,7 @@ public class McpService
             {
                 throw new IllegalArgumentException("需求ID或actionToken不能为空");
             }
-            return demandId;
+            return new PackageToolContext(demandId, null);
         }
         ReqActionToken token = actionTokenService.resolveToken(actionToken);
         if (IReqActionTokenService.ACTION_REQUIREMENT_PLAN.equals(token.getActionType()))
@@ -841,16 +849,16 @@ public class McpService
                 validateActionTokenDemandStage(token, "submitted");
                 if ("upload_requirement_assessment".equals(toolName))
                 {
-                    return token.getDemandId();
+                    return new PackageToolContext(token.getDemandId(), token);
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
             if (IReqActionTokenService.TARGET_REQUIREMENT_GENERATE.equals(token.getTargetMethod()))
             {
-                validateActionTokenDemandStage(token, "plan_pending", "plan_ready");
+                validateActionTokenDemandStage(token, "plan_pending");
                 if ("save_requirement_package".equals(toolName))
                 {
-                    return token.getDemandId();
+                    return new PackageToolContext(token.getDemandId(), token);
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
@@ -860,7 +868,7 @@ public class McpService
             }
             else if ("save_requirement_package".equals(token.getTargetMethod()))
             {
-                validateActionTokenDemandStage(token, "plan_pending", "plan_ready");
+                validateActionTokenDemandStage(token, "plan_pending");
             }
             else
             {
@@ -868,7 +876,7 @@ public class McpService
             }
             if (toolName.equals(token.getTargetMethod()))
             {
-                return token.getDemandId();
+                return new PackageToolContext(token.getDemandId(), token);
             }
             throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
         }
@@ -880,7 +888,7 @@ public class McpService
                 if ("save_development_plan".equals(toolName) || "upload_execution_report".equals(toolName)
                         || "upload_review_report".equals(toolName))
                 {
-                    return token.getDemandId();
+                    return new PackageToolContext(token.getDemandId(), token);
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
@@ -889,14 +897,14 @@ public class McpService
                 validateActionTokenDemandStage(token, "repairing");
                 if ("upload_execution_report".equals(toolName) || "upload_review_report".equals(toolName))
                 {
-                    return token.getDemandId();
+                    return new PackageToolContext(token.getDemandId(), token);
                 }
                 throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
             }
             validateActionTokenDemandStage(token, "developing", "repairing");
             if (toolName.equals(token.getTargetMethod()))
             {
-                return token.getDemandId();
+                return new PackageToolContext(token.getDemandId(), token);
             }
             throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
         }
@@ -904,7 +912,38 @@ public class McpService
         {
             throw new IllegalArgumentException("动作Token不支持当前MCP工具：" + toolName);
         }
-        return token.getDemandId();
+        return new PackageToolContext(token.getDemandId(), token);
+    }
+
+    private boolean shouldSubmitRepairReview(String toolName, PackageToolContext packageContext)
+    {
+        ReqActionToken token = packageContext.getActionToken();
+        return "upload_review_report".equals(toolName)
+                && token != null
+                && IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP.equals(token.getActionType())
+                && IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod());
+    }
+
+    private static class PackageToolContext
+    {
+        private final Long demandId;
+        private final ReqActionToken actionToken;
+
+        PackageToolContext(Long demandId, ReqActionToken actionToken)
+        {
+            this.demandId = demandId;
+            this.actionToken = actionToken;
+        }
+
+        Long getDemandId()
+        {
+            return demandId;
+        }
+
+        ReqActionToken getActionToken()
+        {
+            return actionToken;
+        }
     }
 
     private void validateActionTokenDemandStage(ReqActionToken token, String... validStatuses)
