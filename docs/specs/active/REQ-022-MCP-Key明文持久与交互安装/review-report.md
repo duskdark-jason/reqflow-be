@@ -25,7 +25,8 @@
 | 返修问题说明 | 通过 | 覆盖 AC-014。需求人提交返修必须走 `/requirement/demand/{demandId}/repair` 并填写问题说明，普通 `/status/repairing` 会被拒绝。 |
 | 返修验收门禁 | 通过 | 覆盖 AC-015。开发人员提交返修验收前，服务端要求最新返修说明之后的新执行报告和 Review 报告都已回写。 |
 | 返修报告增量回写 | 通过 | 覆盖 AC-016。返修阶段 MCP 上传片段时基于上一版报告追加返修记录，上传完整报告时按完整内容保存新版本，避免平台最新版报告只剩返修片段。 |
-| 阶段短指令与全局 skill | 通过 | 覆盖 AC-017。平台复制指令只保留 `stage`、`targetMethod`、需求编号、分支和 actionToken；全局 `reqflow-mcp` skill 维护 `stage -> MCP tool` 映射和阶段边界。 |
+| 阶段短指令与全局 skill | 通过 | 覆盖 AC-017。平台复制指令不再列具体工具和完整步骤；全局 `reqflow-mcp` skill 维护 `stage -> MCP tool` 映射和阶段边界。 |
+| 轻量上下文与增量读取 | 通过 | 覆盖 AC-018。平台复制指令只保留 actionToken，`get_action_context` 不消费 token 且只返回阶段、允许工具、资源 URI 和资料包版本 hash；skill 按 `platformSync` 判断是否拉取全文。 |
 
 ## 风险说明
 
@@ -33,6 +34,7 @@
 - 明文持久化本身是明确产品选择，后续必须避免把 `plainKey` 写入操作日志、活动记录、本地存储或列表字段。
 - MCP 请求地址只保存 host/port，完整地址由后端按协议、context-path 和 `/requirement/mcp` 生成；部署时不能把前端静态项目名当作 MCP 路径前缀。
 - Trae/Qoder 官方路径以设置页 JSON 导入为主，脚本只能生成片段和全局 skill；用户必须按 `Manual MCP import required` 完成导入后再验证 MCP 连接。
+- `get_action_context` 只是上下文探针，后续真实上传仍会消费或复用对应阶段 actionToken；客户端必须避免把 actionToken 当作人员 `X-MCP-Key`。
 
 ## RF项
 

@@ -26,6 +26,9 @@ class ReqflowCodexGlobalSkillTemplateTest
         assertTrue(skillContent.contains("closeout, archive, finish, or complete a local Harness task"), skillContent);
         assertTrue(skillContent.contains("before squash merge"), skillContent);
         assertTrue(skillContent.contains("git mv \"$SPEC_DIR\" docs/specs/done/"), skillContent);
+        assertTrue(skillContent.contains("get_action_context"), skillContent);
+        assertTrue(skillContent.contains("Call `mcp__reqflow.get_action_context` first"), skillContent);
+        assertTrue(skillContent.contains("platformSync"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_analysis"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_generate"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_develop"), skillContent);

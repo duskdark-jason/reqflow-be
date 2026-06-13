@@ -114,19 +114,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
     @Transactional
     public ReqActionToken resolveToken(String plainToken)
     {
-        if (StringUtils.isEmpty(plainToken))
-        {
-            throw new ServiceException("动作Token不能为空");
-        }
-        ReqActionToken token = actionTokenMapper.selectReqActionTokenByTokenHash(hashToken(plainToken));
-        if (token == null || !UserConstants.NORMAL.equals(token.getStatus()))
-        {
-            throw new ServiceException("动作Token不存在或已停用");
-        }
-        if (isExpired(token))
-        {
-            throw new ServiceException("动作Token已过期，请重新生成");
-        }
+        ReqActionToken token = selectUsableToken(plainToken);
         boolean reusableStageToken = isReusableStageToken(token);
         if (isUsed(token) && !reusableStageToken)
         {
@@ -142,6 +130,35 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
             {
                 throw new ServiceException("动作Token已使用，请重新生成");
             }
+        }
+        return token;
+    }
+
+    @Override
+    public ReqActionToken resolveTokenForContext(String plainToken)
+    {
+        ReqActionToken token = selectUsableToken(plainToken);
+        if (isUsed(token) && !isReusableStageToken(token))
+        {
+            throw new ServiceException("动作Token已使用，请重新生成");
+        }
+        return token;
+    }
+
+    private ReqActionToken selectUsableToken(String plainToken)
+    {
+        if (StringUtils.isEmpty(plainToken))
+        {
+            throw new ServiceException("动作Token不能为空");
+        }
+        ReqActionToken token = actionTokenMapper.selectReqActionTokenByTokenHash(hashToken(plainToken));
+        if (token == null || !UserConstants.NORMAL.equals(token.getStatus()))
+        {
+            throw new ServiceException("动作Token不存在或已停用");
+        }
+        if (isExpired(token))
+        {
+            throw new ServiceException("动作Token已过期，请重新生成");
         }
         return token;
     }

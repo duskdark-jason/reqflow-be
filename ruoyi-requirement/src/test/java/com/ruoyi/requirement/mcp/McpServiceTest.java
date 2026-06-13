@@ -91,6 +91,7 @@ class McpServiceTest
 
         assertTrue(String.valueOf(response.getResult()).contains("publish_repository_index"));
         assertTrue(String.valueOf(response.getResult()).contains("get_harness_template"));
+        assertTrue(String.valueOf(response.getResult()).contains("get_action_context"));
     }
 
     @Test
@@ -129,6 +130,61 @@ class McpServiceTest
         Map<String, Object> pageItemProperties = (Map<String, Object>) pageItems.get("properties");
         assertTrue(pageItemProperties.containsKey("moduleCode"), String.valueOf(pageItems));
         assertTrue(String.valueOf(pageItemProperties.get("moduleCode")).contains("modules[].moduleCode"), String.valueOf(pageItemProperties));
+        Map<String, Object> actionContext = tools.stream()
+                .filter(tool -> "get_action_context".equals(tool.get("name")))
+                .findFirst()
+                .orElseThrow();
+        Map<String, Object> actionContextSchema = (Map<String, Object>) actionContext.get("inputSchema");
+        Map<String, Object> actionContextProperties = (Map<String, Object>) actionContextSchema.get("properties");
+        assertTrue(actionContextProperties.containsKey("actionToken"), String.valueOf(actionContextSchema));
+        assertTrue(((List<String>) actionContextSchema.get("required")).contains("actionToken"),
+                String.valueOf(actionContextSchema));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void actionContextReturnsLightweightStageAndVersionSummaryWithoutConsumingToken()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP);
+        token.setProjectId(10L);
+        token.setVariantId(31L);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveTokenForContext("reqflow_action_develop")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        ReqDemand demand = demand(9L, "developing");
+        demand.setTitle("缩短指令");
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand);
+        ReqPackageVersion requirement = packageVersion("requirement", "需求设计正文不应直接进入上下文");
+        requirement.setVersionNo(3);
+        requirement.setVersionNote("需求设计");
+        when(packageService.selectReqPackageVersionListByDemandId(9L)).thenReturn(Collections.singletonList(requirement));
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", mock(ReqVariantMapper.class));
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_develop");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("get_action_context", arguments)));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        Map<String, Object> content = (Map<String, Object>) result.get("structuredContent");
+        assertEquals("requirement_develop", content.get("stage"));
+        assertEquals("requirement_develop", content.get("targetMethod"));
+        assertTrue(String.valueOf(content.get("allowedTools")).contains("save_development_plan"));
+        assertTrue(String.valueOf(content.get("resources")).contains("requirement://REQ-20260609-001"));
+        assertTrue(String.valueOf(content.get("packageVersions")).contains("versionNo=3"),
+                String.valueOf(content.get("packageVersions")));
+        assertFalse(String.valueOf(content).contains("需求设计正文不应直接进入上下文"), String.valueOf(content));
+        verify(actionTokenService).resolveTokenForContext("reqflow_action_develop");
+        verify(actionTokenService, never()).resolveToken("reqflow_action_develop");
     }
 
     @Test

@@ -27,4 +27,6 @@ public interface IReqActionTokenService
             String targetMethod, String prompt, String copyLabel, String operator, String remark);
 
     ReqActionToken resolveToken(String plainToken);
+
+    ReqActionToken resolveTokenForContext(String plainToken);
 }

@@ -487,69 +487,34 @@ public class ReqDemandServiceImpl implements IReqDemandService
     private String requirementAnalysisInstructionContent(String prompt, String analysisActionToken, ReqDemand demand,
             String taskBranch)
     {
-        return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求分析。"
-                + "\nmcpServer: reqflow"
-                + "\nstage: requirement_analysis"
-                + "\ntargetMethod: requirement_analysis"
-                + "\ndemandId: " + demand.getDemandId()
-                + "\ndemandNo: " + demand.getDemandNo()
-                + "\n建议任务分支: " + taskBranch
-                + "\n需求分析 actionToken: " + analysisActionToken
-                + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n使用：按 skill 根据 stage 选择工具；需求分析 actionToken 填 arguments.actionToken，不是 X-MCP-Key。"
-                + "\n如未安装 skill，先在 MCP 管理页执行统一安装命令。";
+        return actionTokenInstructionContent(prompt, analysisActionToken);
     }
 
     private String requirementGenerateInstructionContent(String prompt, String generateActionToken, ReqDemand demand,
             String taskBranch)
     {
-        return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求生成。"
-                + "\nmcpServer: reqflow"
-                + "\nstage: requirement_generate"
-                + "\ntargetMethod: requirement_generate"
-                + "\ndemandId: " + demand.getDemandId()
-                + "\ndemandNo: " + demand.getDemandNo()
-                + "\n任务分支: " + taskBranch
-                + "\n需求生成 actionToken: " + generateActionToken
-                + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n使用：按 skill 根据 stage 选择工具；需求生成 actionToken 填 arguments.actionToken，不是 X-MCP-Key。"
-                + "\n如未安装 skill，先在 MCP 管理页执行统一安装命令。";
+        return actionTokenInstructionContent(prompt, generateActionToken);
     }
 
     private String requirementDevelopInstructionContent(String prompt, String developActionToken, ReqDemand demand,
             String taskBranch)
     {
-        return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求开发。"
-                + "\nmcpServer: reqflow"
-                + "\nstage: requirement_develop"
-                + "\ntargetMethod: requirement_develop"
-                + "\ndemandId: " + demand.getDemandId()
-                + "\ndemandNo: " + demand.getDemandNo()
-                + "\n任务分支: " + taskBranch
-                + "\n开发阶段 actionToken: " + developActionToken
-                + "\n" + DEVELOPMENT_STAGE_TOKEN_USAGE_RULE
-                + "\n使用：按 skill 根据 stage 选择工具；开发阶段 actionToken 填 arguments.actionToken，不是 X-MCP-Key。"
-                + "\n如未安装 skill，先在 MCP 管理页执行统一安装命令。";
+        return actionTokenInstructionContent(prompt, developActionToken);
     }
 
     private String requirementRepairInstructionContent(String prompt, String repairActionToken, ReqDemand demand,
             String taskBranch)
     {
+        return actionTokenInstructionContent(prompt, repairActionToken);
+    }
+
+    private String actionTokenInstructionContent(String prompt, String actionToken)
+    {
         return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求返修。"
+                + "\n请按全局 skill `reqflow-mcp` 执行。"
                 + "\nmcpServer: reqflow"
-                + "\nstage: requirement_repair"
-                + "\ntargetMethod: requirement_repair"
-                + "\ndemandId: " + demand.getDemandId()
-                + "\ndemandNo: " + demand.getDemandNo()
-                + "\n任务分支: " + taskBranch
-                + "\n返修阶段 actionToken: " + repairActionToken
-                + "\n" + REPAIR_STAGE_TOKEN_USAGE_RULE
-                + "\n使用：按 skill 根据 stage 选择工具；返修阶段 actionToken 填 arguments.actionToken，不是 X-MCP-Key。"
-                + "\n如未安装 skill，先在 MCP 管理页执行统一安装命令。";
+                + "\nactionToken: " + actionToken
+                + "\n先调用 get_action_context 获取阶段上下文。";
     }
 
     private ReqActionInstruction createRequirementCloseoutInstruction(ReqDemand demand, String operator)
@@ -579,37 +544,22 @@ public class ReqDemandServiceImpl implements IReqDemandService
                         ReqCloseoutContext.tokenRemark(repository.getRepoId())))
                 .collect(Collectors.toList());
         ReqActionInstruction firstInstruction = repositoryInstructions.get(0);
-        firstInstruction.setContent(requirementCloseoutInstructionContent(prompt, demand, variant, repositories,
-                repositoryInstructions, suggestedTaskBranch(demand)));
+        firstInstruction.setContent(requirementCloseoutInstructionContent(prompt, repositoryInstructions));
         return firstInstruction;
     }
 
-    private String requirementCloseoutInstructionContent(String prompt, ReqDemand demand, ReqVariant variant,
-            List<ReqRepository> repositories, List<ReqActionInstruction> repositoryInstructions, String taskBranch)
+    private String requirementCloseoutInstructionContent(String prompt, List<ReqActionInstruction> repositoryInstructions)
     {
         StringBuilder content = new StringBuilder();
         content.append(prompt)
-                .append("\n请按全局 skill `reqflow-mcp` 执行 Reqflow 需求归档收尾。")
+                .append("\n请按全局 skill `reqflow-mcp` 执行。")
                 .append("\nmcpServer: reqflow")
-                .append("\nstage: requirement_closeout")
-                .append("\ntargetMethod: publish_repository_index")
-                .append("\ndemandId: ").append(demand.getDemandId())
-                .append("\ndemandNo: ").append(demand.getDemandNo())
-                .append("\n需求分支: ").append(variant.getBaselineBranch())
-                .append("\n本地开发分支: ").append(taskBranch)
-                .append("\n").append(CLOSEOUT_TOKEN_USAGE_RULE)
-                .append("\n使用：按 skill 根据 stage 完成归档；每个仓库 actionToken 填 arguments.actionToken，不是 X-MCP-Key。")
-                .append("\n\n目标仓库与一次性归档 actionToken：");
-        for (int i = 0; i < repositories.size(); i++)
+                .append("\nactionTokens:");
+        for (ReqActionInstruction instruction : repositoryInstructions)
         {
-            ReqRepository repository = repositories.get(i);
-            ReqActionInstruction instruction = repositoryInstructions.get(i);
-            content.append("\n- 仓库：").append(firstNotEmpty(repository.getRepoName(), repository.getRepoUrl()))
-                    .append("\n  remoteUrl: ").append(text(repository.getRepoUrl()))
-                    .append("\n  repoId: ").append(repository.getRepoId())
-                    .append("\n  repoType: ").append(text(repository.getRepoType()))
-                    .append("\n  归档 actionToken: ").append(instruction.getToken());
+            content.append("\n- ").append(instruction.getToken());
         }
+        content.append("\n逐个 actionToken 调用 get_action_context 获取归档上下文。");
         return content.toString();
     }
 

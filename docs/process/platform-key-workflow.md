@@ -4,7 +4,7 @@
 
 未提供需求平台 Key、未接入 MCP 或当前 Codex 会话没有可用 MCP 工具时，不进入本文件的模式一到三，改按 `local-harness-workflow.md` 执行。本地 Harness 模式的 spec、Review、返修和完成门禁与 MCP 接入模式一致，但不得伪造平台读取或回写结果。
 
-平台复制给执行端的阶段指令只提供短动态上下文：`reqflow-mcp`、`mcpServer: reqflow`、`stage`、`targetMethod`、需求编号、分支和 actionToken。具体应调用哪些 MCP tools、读写哪些本地文件、哪些动作必须停止或禁止，由全局 `reqflow-mcp` skill 根据 `stage` 识别并执行，平台指令正文不重复完整工具清单和流程手册。
+平台复制给执行端的阶段指令只提供最小动态上下文：`reqflow-mcp`、`mcpServer: reqflow` 和 actionToken。执行端必须先调用 `get_action_context` 读取轻量阶段上下文，再根据返回的 `stage`、`allowedTools`、`resources`、`packageVersions` 和 `syncPolicy` 执行。具体应调用哪些 MCP tools、读写哪些本地文件、哪些动作必须停止或禁止，由全局 `reqflow-mcp` skill 根据 `stage` 识别并执行，平台指令正文不重复完整工具清单、需求详情和流程手册。
 
 ## 模式一：需求平台需求设计模式
 
@@ -12,7 +12,7 @@
 
 硬性规则：
 
-- 必须通过需求平台 MCP 读取 Key 对应的需求、项目、仓库远端、目标基线分支、建议任务分支、影响模块和历史需求设计版本；不得只依赖对话描述。
+- 必须先通过需求平台 MCP `get_action_context` 读取 actionToken 对应的轻量上下文，再按返回的资源 URI 读取缺失或已变化的需求、项目、仓库远端、目标基线分支、建议任务分支、影响模块和历史需求设计版本；不得只依赖对话描述。
 - 必须检查当前 workspace 内仓库的 Git 远端是否与需求平台返回的目标仓库一致；不一致时先自动切换到匹配的本地仓库或 workspace。
 - 自动切换失败时必须停止，并说明需求平台期望的仓库、当前检测到的仓库、尝试过的切换路径和失败原因。
 - 必须先切换到目标基线分支并本地拉取最新代码；推荐命令为 `git switch <baseline-branch>` 和 `git pull --ff-only`。拉取失败、工作区存在未说明改动或远端不一致时必须停止说明。
@@ -30,7 +30,7 @@
 
 硬性规则：
 
-- 必须通过需求平台 MCP 读取 Key 对应的最终需求设计、任务分支、目标仓库、开发基线分支和验收要求。
+- 必须先通过需求平台 MCP `get_action_context` 读取 actionToken 对应的轻量上下文，再按返回的资源 URI 读取缺失或已变化的最终需求设计、任务分支、目标仓库、开发基线分支和验收要求。
 - 必须检查当前 workspace 内仓库的 Git 远端是否与需求平台关联的系统一致；不一致时停止，除非能自动切换到明确匹配的本地仓库。
 - 必须检查当前分支是否为需求平台需求设计阶段创建的任务分支；不一致时优先自动切换到同名任务分支，切换失败必须停止并说明当前分支、期望任务分支和处理建议。
 - 开发阶段不得重新生成不同任务分支；如本地任务分支缺失，只能按需求平台记录的同名任务分支恢复，不能自行创造新分支名。
@@ -71,6 +71,14 @@
 - 未提供有效 Key、MCP 不可用、Key 无法解析，或平台返回的远端/分支与当前工作区冲突时，必须停止平台驱动流程并说明原因。
 - 用户允许本地推进时，统一按 `local-harness-workflow.md` 使用 `本地 Harness 模式`，把文档落到本地 `docs/specs`，不得伪造需求平台回写结果。
 - 平台恢复后，可以人工或通过 MCP 把本地 spec 补登记到需求平台，但必须保持需求 Key、仓库、分支和 commit 关联一致。
+
+## 平台同步与增量读取
+
+- 执行端拿到 `actionToken` 后必须先调用 `get_action_context`。该工具只返回阶段、允许工具、仓库/需求摘要、资源 URI、资料包版本号和内容哈希，不直接返回大段资料包正文。
+- 本地存在 `meta.md` 的 `platformSync` 时，必须用 `packageVersions[].artifactType/versionNo/contentHash` 和本地记录比对；一致时优先使用本地文件，不再拉取平台全文。
+- 只有本地缺失或版本、哈希不一致时，才按 `resources` 或 `packageVersions[].resourceUri` 拉取对应平台资源。
+- 只需要最新变化时，优先读取最新补充说明、返修问题、执行报告增量或 Review 报告增量，避免把本地已有的完整上下文重复塞入当前对话。
+- 成功回写需求设计、执行计划、执行报告或 Review 报告后，必须同步更新本地 `meta.md platformSync`，让后续阶段能继续增量读取。
 
 ## meta.md 记录要求
 
