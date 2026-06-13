@@ -23,6 +23,9 @@ class ReqflowCodexGlobalSkillTemplateTest
         assertTrue(skillContent.contains("frontend routes"), skillContent);
         assertTrue(skillContent.contains("frontend page business function"), skillContent);
         assertTrue(skillContent.contains("snapshot sync"), skillContent);
+        assertTrue(skillContent.contains("closeout, archive, finish, or complete a local Harness task"), skillContent);
+        assertTrue(skillContent.contains("before squash merge"), skillContent);
+        assertTrue(skillContent.contains("git mv \"$SPEC_DIR\" docs/specs/done/"), skillContent);
     }
 
     @SuppressWarnings("unchecked")

@@ -736,6 +736,8 @@ class McpServiceTest
         assertTrue(resultText.contains("指定 spec 必须位于 docs/specs/active"), resultText);
         assertTrue(resultText.contains("expected target spec under done directory to fail"), resultText);
         assertTrue(resultText.contains("不要在 `done/` 中边执行边修改"), resultText);
+        assertTrue(resultText.contains("收到归档、办结或结束任务指令"), resultText);
+        assertTrue(resultText.contains("git mv \"$SPEC_DIR\" docs/specs/done/"), resultText);
         assertTrue(resultText.contains("自动 Review、返修和复审循环"), resultText);
         assertTrue(resultText.contains("publish_repository_index"), resultText);
         assertTrue(resultText.contains("register_harness_init_result"), resultText);

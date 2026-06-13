@@ -53,8 +53,8 @@ REQ-001-中文需求标题.md
 7. Execution Agent 回填返修记录后自动回到 Review Agent 复审；Review Agent 在 `review-report.md` 的 `复审记录` 中更新每个 `RF-*` 的复审结论。
 8. 自动 Review、返修和复审循环持续到最终 Review 结论为 `通过`。
 9. 完成后，将长期有效内容沉淀到 `ai-harness/` 或 `domains/`。
-10. 需求完成且仍有参考价值时，将目录移动到 `done/`。
-11. `review-report.md` 最终结论为 `通过` 后，才能从 `active/` 移入 `done/`；`有条件通过` 和 `阻断` 只能作为中间交接结论。
+10. 收到归档、办结或结束任务指令时，先在 `active/` 目录运行完成态门禁，再通过 `git mv "$SPEC_DIR" docs/specs/done/` 归档需求目录。
+11. `review-report.md` 最终结论为 `通过` 后，才能从 `active/` 移入 `done/`；`有条件通过` 和 `阻断` 只能作为中间交接结论。迁移后不要继续修改 `done/` 中的执行文件。
 
 ## 检查命令
 

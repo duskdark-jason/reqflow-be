@@ -143,7 +143,7 @@ Review Agent 刚写完 `review-report.md`、尚未返修时，运行 `sh scripts
 
 完成后检查：
 
-- 需求说明是否需要从 `specs/active/` 移到 `specs/done/`。
+- 收到归档、办结或结束任务指令时，是否已先在 `specs/active/` 通过完成态门禁，并把需求说明 `git mv` 到 `specs/done/`；没有对应 active spec 时是否写明原因。
 - 是否有长期有效结论要沉淀到 `ai-harness/` 或 `domains/`。
 - 是否有重要决策要写入 `ai-harness/decisions/`。
 - 是否新增、拆分或重命名入口，需要同步 `ai-harness/search-map.md`。

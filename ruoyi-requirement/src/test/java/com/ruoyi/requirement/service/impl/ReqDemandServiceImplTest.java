@@ -1155,6 +1155,10 @@ class ReqDemandServiceImplTest
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
         assertTrue(instruction.getContent().contains("需求分支: release/main"));
         assertTrue(instruction.getContent().contains("本地开发分支: feature/req-6-demand"));
+        assertTrue(instruction.getContent().contains("docs/specs/active/REQ-006-*"));
+        assertTrue(instruction.getContent().contains("sh scripts/check-harness.sh complete --spec"));
+        assertTrue(instruction.getContent().contains("git mv \"$SPEC_DIR\" docs/specs/done/"));
+        assertTrue(instruction.getContent().contains("先在任务分支完成 active 到 done 的归档迁移"));
         assertTrue(instruction.getContent().contains("git merge --squash feature/req-6-demand"));
         assertTrue(instruction.getContent().contains("git push"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));

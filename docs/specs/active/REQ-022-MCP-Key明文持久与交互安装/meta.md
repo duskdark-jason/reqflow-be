@@ -16,7 +16,7 @@
 - 基线分支：当前任务分支
 - companion 仓库：../reqflow-ui
 - 关联 spec：REQ-020-MCP多客户端安装支持
-- 影响模块：MCP 管理、MCP Key 持久化、多客户端安装脚本、本地 Harness 门禁、Harness 模板
+- 影响模块：MCP 管理、MCP Key 持久化、多客户端安装脚本、本地 Harness 门禁、Harness 模板、合并归档指令
 - 模块知识库动作：更新
 - 模块知识库文档：docs/ai-harness/modules/requirement-platform.md
 - 无需更新原因：不适用
@@ -24,4 +24,4 @@
 
 ## 状态说明
 
-本需求把人员 MCP Key 明文从一次性返回调整为可持久返回，并把统一安装指令调整为执行后选择安装工具。已完成后端实现、数据库文档、companion 前端展示约束、本地 Harness 门禁和项目接入初始化模板同步。
+本需求把人员 MCP Key 明文从一次性返回调整为可持久返回，并把统一安装指令调整为执行后选择安装工具。已完成后端实现、数据库文档、companion 前端展示约束、本地 Harness 门禁、项目接入初始化模板同步和归档收尾规范同步。

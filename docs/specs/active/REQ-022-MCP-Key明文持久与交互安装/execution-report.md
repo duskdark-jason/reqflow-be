@@ -20,11 +20,13 @@
 | `scripts/check-harness.sh`、`scripts/test-check-harness.sh` | 限制 `--spec` 只能指向 `docs/specs/active/`，并补充 done 目录失败用例。 |
 | `ruoyi-requirement/src/main/resources/harness-template/docs/process/local-harness-workflow.md`、`ruoyi-requirement/src/main/resources/harness-template/scripts/check-harness.sh`、`ruoyi-requirement/src/main/resources/harness-template/scripts/test-check-harness.sh` | 同步项目接入初始化下发模板的 active-only `--spec` 约束、流程说明和自测。 |
 | `McpServiceTest.java` | 锁定 `get_harness_template` 下发内容必须包含 active-only 约束、done 失败用例和流程说明。 |
+| `ReqDemandServiceImpl.java`、`ReqflowCodexGlobalSkillTemplate.java`、`docs/process/**`、`docs/specs/README.md`、`ruoyi-requirement/src/main/resources/harness-template/docs/**` | 同步归档、办结、结束任务时的 `active -> done` 收尾规范，要求在任务分支完成迁移后再 squash merge。 |
+| `ReqDemandServiceImplTest.java`、`ReqflowCodexGlobalSkillTemplateTest.java`、`McpServiceTest.java` | 覆盖归档指令、全局 skill 和模板下发内容必须包含 `git mv "$SPEC_DIR" docs/specs/done/` 收尾动作。 |
 | `../reqflow-ui/src/views/requirement/mcpKey/index.vue`、`../reqflow-ui/scripts/test-mcp-install-dialog-unified.js` | 页面不展示明文 Key 和 Key 前缀字段，仅用明文渲染统一安装命令；静态检查防回归。 |
 
 ## 模块知识库沉淀
 
-- 影响模块：MCP 管理、MCP Key 持久化、多客户端安装脚本
+- 影响模块：MCP 管理、MCP Key 持久化、多客户端安装脚本、本地 Harness 门禁、合并归档指令
 - 模块知识库动作：更新
 - 模块知识库文档：`docs/ai-harness/modules/requirement-platform.md`、`docs/ai-harness/contracts/requirement-platform-api.md`
 
@@ -50,8 +52,9 @@
 | L2 | AC-007 | `sh scripts/test-check-harness.sh` | 通过 |
 | L2 | AC-008 | `sh ruoyi-requirement/src/main/resources/harness-template/scripts/test-check-harness.sh` | 通过 |
 | L2 | AC-008 | `mvn -pl ruoyi-requirement -am -Dtest=McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，29 个测试通过 |
+| L2 | AC-009 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqflowCodexGlobalSkillTemplateTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，67 个测试通过 |
 | L1 | AC-005 | `npm run build:prod`（companion 前端） | 通过，存在历史体积告警 |
-| L0 | AC-006、AC-007、AC-008 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` | 通过 |
+| L0 | AC-006、AC-007、AC-008、AC-009 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` | 通过 |
 
 ## 运行态证据
 
@@ -68,6 +71,7 @@
 - 用户补充“不展示明文 Key、Key 前缀字段”，已调整为后端返回明文但前端仅用于命令渲染。
 - 用户指出执行中不应写 `docs/specs/done/`，已将当前 spec 移回 `active/`，并收紧 `check-harness.sh --spec` 目标路径。
 - 用户补充“harness 模板也要同步更新”，已将同样约束同步到项目接入初始化模板源。
+- 用户补充“本地 harness 在收到归档、办结等结束任务指令时也要将 active 迁到 done”，已同步本地流程、MCP 合并归档指令、全局 skill 和模板。
 
 ## Review 返修记录
 

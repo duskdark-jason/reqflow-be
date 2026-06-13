@@ -56,7 +56,7 @@
 - 指定开发人员可通过需求详情获取 `requirement_plan` 动作 token 指令；`submitted` 状态只生成需求分析指令，使用 `target_method=requirement_analysis` 和 `upload_requirement_assessment` 回写 `requirement_assessment`；`plan_pending/plan_ready` 状态只生成需求生成指令，使用 `target_method=requirement_generate` 和 `save_requirement_package` 保存 `requirement`。需求分析阶段必须先给出可行性结论和风险，需求生成阶段只写 `requirement.md`，不能替代人员 `X-MCP-Key`。
 - 指定开发人员只能在点击“开始开发”进入 `developing` 后，通过需求详情获取 `requirement_develop` 开发阶段动作 token 指令；`confirmed` 待执行开发阶段不展示也不生成执行指令。该指令只给出一个开发阶段 actionToken，可在当前开发阶段内用于 MCP `save_development_plan`、`upload_execution_report` 和 `upload_review_report`，生成 `plan.md` 前必须先分析需求是否可拆分为多个 subagent 并行执行，只有职责边界清晰、无共享状态且可独立验证时才拆分；不能替代人员 `X-MCP-Key`。
 - 指定开发人员可在 `repairing` 状态通过需求详情获取 `requirement_repair` 返修阶段动作 token 指令；该指令只给出一个返修阶段 actionToken，可在当前返修阶段内用于 MCP `upload_execution_report` 和 `upload_review_report`，不得重新生成需求设计或执行计划。
-- 指定开发人员可在 `closeout_pending` 状态通过需求详情获取 `requirement_closeout` 合并归档指令；该指令按项目分支下每个有效仓库生成一次性 `publish_repository_index` actionToken，引导本地先把任务分支 squash merge 到需求基线分支并 push，再按当前完整代码快照发布知识库索引，最后删除本地开发分支。需求流转到 `completed` 前，服务端必须逐仓校验本需求生成的合并归档 token 已被使用，且对应仓库产生带本需求归档上下文的 imported 索引批次。
+- 指定开发人员可在 `closeout_pending` 状态通过需求详情获取 `requirement_closeout` 合并归档指令；该指令按项目分支下每个有效仓库生成一次性 `publish_repository_index` actionToken，引导本地先在任务分支完成 `docs/specs/active/REQ-*` 到 `docs/specs/done/` 的归档迁移，再把任务分支 squash merge 到需求基线分支并 push，然后按当前完整代码快照发布知识库索引，最后删除本地开发分支。需求流转到 `completed` 前，服务端必须逐仓校验本需求生成的合并归档 token 已被使用，且对应仓库产生带本需求归档上下文的 imported 索引批次。
 - 项目初始化、需求分析、需求生成和合并归档动作 token 生成后在当前流程阶段内有效，最长保留 24 小时，且仅可使用一次；开发阶段动作 token 在 `developing` 阶段内可重复用于执行计划、执行报告和 Review 报告回写，返修阶段动作 token 在 `repairing` 阶段内可重复用于执行报告和 Review 报告回写；需求流转到下一阶段后旧 token 立即失效，超过 24 小时也需重新生成。
 - 需求提交时服务端自动追加 `requirement_draft` 和 `context_manifest` 版本，供 MCP `requirement://{demandNo}/draft-package` 和 `context-manifest` 读取；需求创建人在 `supplement_required` 状态提交补充说明、或在 `plan_ready` 状态提交需求设计调整说明时，均追加 `requirement_supplement`，MCP 可通过 `requirement://{demandNo}/supplement` 读取最新补充或调整内容。
 - 需求资料包通过 `req_package_version` 追加版本记录，需求设计阶段保留需求草稿、需求补充、需求可行性评估和需求设计版本，返修流程依赖同一需求下执行计划、执行报告和 Review 报告的历史版本链，不新增覆盖式更新；通用保存和 MCP 回写只允许指定开发人员或管理员，需求人补充说明仅能通过专用补充接口写入。前端默认一级标签不展示 `requirement_supplement`，补充/调整版本应嵌入需求可行性评估或需求设计标签内作为折叠历史记录。
@@ -87,7 +87,7 @@
 - Harness 模板或脚本调整时，必须同步后端模板源、当前后端 harness、前端 harness 和 `search-map.md`；确认点门禁不能只写在文档里，必须由 `scripts/check-harness.sh` 测试覆盖。`--spec` 只允许检查 `docs/specs/active/` 下执行中的需求，完成态门禁通过后才可按需归档到 `docs/specs/done/`；项目接入初始化模板也必须包含同样约束，避免新项目初始化后继续在 `done/` 中执行。
 - 需求分析和需求生成指令调整时，必须保持阶段收敛：需求分析阶段只给 `upload_requirement_assessment` 和需求分析 actionToken；需求生成阶段只给 `save_requirement_package` 和需求生成 actionToken。结论允许继续后，才在需求生成阶段落地 `requirement.md`、通过 `save_requirement_package` 回写平台版本；开发阶段只能沿用该分支生成 `plan.md` 和实现。
 - 返修指令调整时，必须保持同一任务分支和同一 spec 目录，只给 `upload_execution_report`、`upload_review_report` 和同一个返修阶段 actionToken，持续追加 `execution-report.md` 与 `review-report.md`，不得携带执行计划或需求设计生成要求。
-- 合并归档指令调整时，必须保持“本地任务分支 squash merge 到需求基线分支、push、发布完整知识库快照、平台验证通过、删除本地开发分支”的顺序；平台未验证归档结果前不得允许需求办结。
+- 合并归档指令调整时，必须保持“任务分支先完成 active spec 到 done 的归档迁移、squash merge 到需求基线分支、push、发布完整知识库快照、平台验证通过、删除本地开发分支”的顺序；平台未验证归档结果前不得允许需求办结。
 - 项目接入初始化索引调整时，必须防止“已发布索引但没有具体业务模块”的假阳性；`actionToken` 或 `mcpKey` 项目初始化上下文下，`modules` 至少包含一个带 `moduleCode` 和 `moduleName` 的页面业务功能或后端主能力。
 - MCP 下发的完整 harness 模板由后端 `ruoyi-requirement/src/main/resources/harness-template/` 保存并随包发布；`files.txt` 是下发清单。该目录是项目接入初始化模板的唯一维护源，workspace 根目录不再保留离线模板副本。
 - 索引表初始化不完整时，`publish_repository_index` 必须返回指向 `docs/db/sql/req_platform_schema.sql` 对应建表段的友好业务错误，不能把 `Table ... doesn't exist` 原样作为最终结论。
