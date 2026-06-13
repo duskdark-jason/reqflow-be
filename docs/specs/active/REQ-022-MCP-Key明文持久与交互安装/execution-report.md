@@ -14,6 +14,7 @@
 |---|---|
 | `ReqMcpUserKey.java`、`ReqMcpUserKeyMapper.xml`、`ReqMcpUserKeyServiceImpl.java` | 新增 `plainKey/plain_key` 映射，新建 Key 时保存明文，打开使用指令时返回已保存明文，鉴权仍使用哈希。 |
 | `ReqflowCodexSetupPackageTemplate.java`、`ReqflowCodexInstallScriptTemplate.java` | 顶层统一命令不再默认 `all`，脚本未传 client 时交互选择工具，传 `all` 或单个客户端时直接安装。 |
+| `ReqflowCodexInstallScriptTemplate.java`、`ReqflowCodexSetupPackageTemplate.java`、`ReqCodexInstallControllerTest.java`、`ReqflowCodexSetupPackageTemplateTest.java` | 修复 OpenCode 已有配置只输出片段导致 MCP 未实际安装的问题；OpenCode/CodeBuddy 可解析 JSON 配置自动合并，Trae/Qoder 或无法自动合并场景输出 `Manual MCP import required`，最终输出区分自动配置、手工导入和 skill 安装结果。 |
 | `ReqMcpKeyController.java`、`ReqMcpPublicHostConfig.java` | 新增管理员专用 MCP 请求地址配置读写接口，保存 `reqflow.mcp.public-host` 并回显完整 MCP 地址。 |
 | `docs/db/sql/req_platform_schema.sql`、`docs/db/sql/req_platform_mcp_key_plain_key.sql` | 基线表结构和已有库幂等升级脚本新增 `plain_key`。 |
 | `ReqMcpUserKeyServiceImplTest.java`、`ReqflowCodexSetupPackageTemplateTest.java`、`ReqCodexInstallControllerTest.java` | 覆盖明文持久、历史指令返回明文、统一命令交互选择和脚本内容。 |
@@ -49,7 +50,9 @@
 
 | 层级 | 验收 ID | 命令或方式 | 结果 |
 |---|---|---|---|
-| L2 | AC-001、AC-002、AC-003、AC-004 | `mvn -pl ruoyi-requirement -am -Dtest=ReqflowCodexSetupPackageTemplateTest,ReqMcpUserKeyServiceImplTest,ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，15 个测试通过 |
+| L2 | AC-001、AC-002、AC-003、AC-004 | `mvn -pl ruoyi-requirement -am -Dtest=ReqflowCodexSetupPackageTemplateTest,ReqMcpUserKeyServiceImplTest,ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，16 个测试通过 |
+| L2 | AC-012 | `mvn -pl ruoyi-requirement -am -Dtest=ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，先红于 OpenCode 已有配置未合并，修复后 4 个测试通过 |
+| L2 | AC-012 | 生成 `install.sh` 后用临时 HOME 和假 `npx`、`claude`、`codebuddy` 执行 `--client all` 冒烟 | 通过，6 次 `npx skills add`，OpenCode 既有配置保留并新增 `mcp.reqflow`，Trae/Qoder 输出 `Manual MCP import required` |
 | L2 | AC-010 | `mvn -pl ruoyi-requirement -am -Dtest=ReqMcpKeyControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，9 个测试通过 |
 | L2 | AC-002、AC-005、AC-011 | `node scripts/test-mcp-install-dialog-unified.js`（companion 前端） | 通过 |
 | L2 | AC-007 | `sh scripts/test-check-harness.sh` | 通过 |
@@ -76,6 +79,7 @@
 - 用户补充“harness 模板也要同步更新”，已将同样约束同步到项目接入初始化模板源。
 - 用户补充“本地 harness 在收到归档、办结等结束任务指令时也要将 active 迁到 done”，已同步本地流程、MCP 合并归档指令、全局 skill 和模板。
 - 用户补充“MCP 明文 KEY 下次打开仍放在指令里”和“MCP 请求地址加到 MCP 管理页且仅管理员可配置”，已补后端配置接口、前端管理员配置入口和静态检查；后续补充“请求地址改为弹窗配置”，已将前端从顶部表单调整为按钮入口加弹窗。
+- 用户实测 OpenCode MCP 没有安装成功，并要求同时确认其它工具；已按官方文档把 OpenCode/CodeBuddy 调整为可自动合并配置，Claude/CodeBuddy 优先 CLI，Trae/Qoder 明确为设置页手工导入，不再把生成片段误报为已安装。
 
 ## Review 返修记录
 

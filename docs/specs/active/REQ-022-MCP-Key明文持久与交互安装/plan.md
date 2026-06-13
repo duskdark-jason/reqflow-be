@@ -11,13 +11,15 @@
 7. Harness 门禁修正：补充 `--spec` 只能指向 `docs/specs/active/` 的脚本约束、流程说明和测试。覆盖 AC-007。
 8. Harness 模板同步：同步项目接入初始化下发模板中的流程说明、检查脚本和自测，并用 `get_harness_template` 单测锁定模板内容。覆盖 AC-008。
 9. 归档收尾规范：同步 MCP 合并归档指令、全局 skill、本地 Harness 流程和模板，明确收到归档、办结或结束任务指令时先迁移 `active -> done` 再合并分支。覆盖 AC-009。
-10. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008、AC-009、AC-010、AC-011。
+10. 多客户端安装结果修复：按官方文档校准 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 的安装边界；OpenCode/CodeBuddy 可解析 JSON 配置自动合并，Trae/Qoder 或无法自动合并的场景输出手工导入清单。覆盖 AC-012。
+11. 验证：运行后端目标测试、前端静态检查、构建、harness 校验和 diff 检查。覆盖 AC-001、AC-002、AC-003、AC-004、AC-005、AC-006、AC-007、AC-008、AC-009、AC-010、AC-011、AC-012。
 
 ## 分层验证
 
 | 层级 | 覆盖验收 | 命令或方式 |
 |---|---|---|
 | L2 | AC-001、AC-002、AC-003、AC-004 | `mvn -pl ruoyi-requirement -am -Dtest=ReqflowCodexSetupPackageTemplateTest,ReqMcpUserKeyServiceImplTest,ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` |
+| L2 | AC-012 | `mvn -pl ruoyi-requirement -am -Dtest=ReqCodexInstallControllerTest,ReqflowCodexSetupPackageTemplateTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L2 | AC-010 | `mvn -pl ruoyi-requirement -am -Dtest=ReqMcpKeyControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` |
 | L2 | AC-002、AC-005、AC-011 | companion 前端 `node scripts/test-mcp-install-dialog-unified.js` |
 | L2 | AC-007 | `sh scripts/test-check-harness.sh` |
@@ -32,3 +34,4 @@
 - 明文持久化提高泄漏风险：页面不展示明文/前缀/哈希，操作日志继续关闭创建响应保存，`toString()` 不输出 `plainKey`。
 - `curl | bash` 交互读取 stdin 风险：Shell 脚本从 `/dev/tty` 读取选择；无交互终端时提示传 `--client`。
 - MCP 请求地址填完整 URL 的风险：管理员配置接口只接受 host/port，完整地址由服务端拼接并回显。
+- OpenCode 或 CodeBuddy 配置文件为 JSONC 且含注释时自动合并可能失败：脚本输出 `Manual MCP import required` 和片段路径，避免误报已安装。

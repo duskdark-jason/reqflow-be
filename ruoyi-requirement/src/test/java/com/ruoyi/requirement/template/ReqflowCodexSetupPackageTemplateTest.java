@@ -32,6 +32,11 @@ class ReqflowCodexSetupPackageTemplateTest
         assertTrue(packageText.contains("\"type\": \"streamable-http\""), packageText);
         assertTrue(packageText.contains("\"type\": \"remote\""), packageText);
         assertTrue(packageText.contains("执行后选择要安装的工具"), packageText);
+        assertTrue(packageText.contains("Manual MCP import required"), packageText);
+        assertTrue(packageText.contains("写入或合并 OpenCode 全局 opencode.json"), packageText);
+        assertTrue(packageText.contains("写入或合并 CodeBuddy 用户级 MCP 配置"), packageText);
+        assertTrue(packageText.contains("Trae 可导入的 mcpServers JSON 片段"), packageText);
+        assertTrue(packageText.contains("Qoder 可导入的 Streamable HTTP mcpServers JSON 片段"), packageText);
         assertFalse(packageText.contains("--client all"), packageText);
         assertTrue(packageText.contains("--client codex"), packageText);
         assertTrue(packageText.contains("--client claude-code"), packageText);

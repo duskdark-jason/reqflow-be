@@ -20,6 +20,9 @@ public final class ReqflowCodexInstallScriptTemplate
                 CLIENT=""
                 MCP_URL=""
                 MCP_KEY_HEADER="X-MCP-Key"
+                AUTOMATIC_MCP_CLIENTS=""
+                MANUAL_MCP_IMPORTS=""
+                SKILL_CLIENTS=""
 
                 usage() {
                   cat <<'EOF'
@@ -71,6 +74,35 @@ public final class ReqflowCodexInstallScriptTemplate
 
                 SUPPORT_DIR="${REQFLOW_INSTALL_DIR:-$HOME/.reqflow-mcp}"
                 mkdir -p "$SUPPORT_DIR"
+
+                append_unique_word() {
+                  local words="$1"
+                  local word="$2"
+                  case " $words " in
+                    *" $word "*)
+                      printf '%s' "$words"
+                      ;;
+                    *)
+                      printf '%s %s' "$words" "$word"
+                      ;;
+                  esac
+                }
+
+                record_automatic_mcp() {
+                  AUTOMATIC_MCP_CLIENTS=$(append_unique_word "$AUTOMATIC_MCP_CLIENTS" "$1")
+                }
+
+                record_manual_import() {
+                  local client="$1"
+                  local snippet_file="$2"
+                  local instruction="$3"
+                  MANUAL_MCP_IMPORTS="${MANUAL_MCP_IMPORTS}
+                  - ${client}: ${snippet_file} (${instruction})"
+                }
+
+                record_skill_install() {
+                  SKILL_CLIENTS=$(append_unique_word "$SKILL_CLIENTS" "$1")
+                }
 
                 toml_escape() {
                   printf '%s' "$1" | sed 's/\\\\/\\\\\\\\/g; s/"/\\\\"/g'
@@ -125,6 +157,69 @@ public final class ReqflowCodexInstallScriptTemplate
                 EOF
                 }
 
+                merge_json_config() {
+                  local target_file="$1"
+                  local root_key="$2"
+                  local server_json="$3"
+                  local schema="${4:-}"
+                  if ! command -v node >/dev/null 2>&1; then
+                    return 1
+                  fi
+                  mkdir -p "$(dirname "$target_file")"
+                  CONFIG_FILE="$target_file" ROOT_KEY="$root_key" SERVER_NAME="reqflow" SERVER_JSON="$server_json" CONFIG_SCHEMA="$schema" node <<'NODE'
+                const fs = require('fs');
+                const file = process.env.CONFIG_FILE;
+                const rootKey = process.env.ROOT_KEY;
+                const serverName = process.env.SERVER_NAME || 'reqflow';
+                const schema = process.env.CONFIG_SCHEMA;
+                let config = {};
+                if (fs.existsSync(file)) {
+                  const text = fs.readFileSync(file, 'utf8').trim();
+                  if (text) {
+                    config = JSON.parse(text);
+                  }
+                }
+                const server = JSON.parse(process.env.SERVER_JSON);
+                if (!config || typeof config !== 'object' || Array.isArray(config)) {
+                  config = {};
+                }
+                if (schema && !config.$schema) {
+                  config.$schema = schema;
+                }
+                if (!config[rootKey] || typeof config[rootKey] !== 'object' || Array.isArray(config[rootKey])) {
+                  config[rootKey] = {};
+                }
+                config[rootKey][serverName] = server;
+                fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\\n');
+                NODE
+                }
+
+                resolve_opencode_config_file() {
+                  local config_dir="$HOME/.config/opencode"
+                  if [ -n "${OPENCODE_CONFIG:-}" ]; then
+                    printf '%s\n' "$OPENCODE_CONFIG"
+                  elif [ -e "$config_dir/opencode.json" ]; then
+                    printf '%s\n' "$config_dir/opencode.json"
+                  elif [ -e "$config_dir/opencode.jsonc" ]; then
+                    printf '%s\n' "$config_dir/opencode.jsonc"
+                  else
+                    printf '%s\n' "$config_dir/opencode.json"
+                  fi
+                }
+
+                resolve_codebuddy_config_file() {
+                  local codebuddy_home="${CODEBUDDY_CONFIG_DIR:-${CODEBUDDY_HOME:-$HOME/.codebuddy}}"
+                  if [ -e "$codebuddy_home/.mcp.json" ]; then
+                    printf '%s\n' "$codebuddy_home/.mcp.json"
+                  elif [ -e "$codebuddy_home/mcp.json" ]; then
+                    printf '%s\n' "$codebuddy_home/mcp.json"
+                  elif [ -e "$HOME/.codebuddy.json" ]; then
+                    printf '%s\n' "$HOME/.codebuddy.json"
+                  else
+                    printf '%s\n' "$codebuddy_home/.mcp.json"
+                  fi
+                }
+
                 install_codex_mcp() {
                   local codex_home
                   local config_file
@@ -153,6 +248,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 http_headers = { "$MCP_KEY_HEADER" = "$mcp_key_toml" }
                 EOF
                   echo "Wrote Codex MCP config: $config_file"
+                  record_automatic_mcp "codex"
                 }
 
                 install_claude_code_mcp() {
@@ -160,6 +256,7 @@ public final class ReqflowCodexInstallScriptTemplate
                   if command -v claude >/dev/null 2>&1; then
                     if claude mcp add --transport http --scope user reqflow "$MCP_URL" --header "$MCP_KEY_HEADER: $MCP_KEY"; then
                       echo "Configured Claude Code MCP with claude mcp add."
+                      record_automatic_mcp "claude-code"
                       return 0
                     fi
                     echo "claude mcp add failed; writing a .mcp.json snippet instead." >&2
@@ -168,6 +265,7 @@ public final class ReqflowCodexInstallScriptTemplate
                   write_mcp_servers_snippet "$snippet_file" "http"
                   echo "Wrote Claude Code MCP snippet: $snippet_file"
                   echo "Import or merge the snippet into the Claude Code user/project MCP settings."
+                  record_manual_import "claude-code" "$snippet_file" "merge into Claude Code user or project MCP settings"
                 }
 
                 install_trae_mcp() {
@@ -175,6 +273,7 @@ public final class ReqflowCodexInstallScriptTemplate
                   write_mcp_servers_snippet "$snippet_file" "streamable-http"
                   echo "Wrote Trae MCP snippet: $snippet_file"
                   echo "Open Trae Settings > MCP and import or paste this mcpServers JSON."
+                  record_manual_import "trae" "$snippet_file" "import in Trae Settings > MCP"
                 }
 
                 install_qoder_mcp() {
@@ -182,13 +281,13 @@ public final class ReqflowCodexInstallScriptTemplate
                   write_mcp_servers_snippet "$snippet_file" "streamable-http"
                   echo "Wrote Qoder MCP snippet: $snippet_file"
                   echo "Open Qoder Settings > MCP and import or paste this mcpServers JSON."
+                  record_manual_import "qoder" "$snippet_file" "import in Qoder Settings > MCP"
                 }
 
                 install_codebuddy_mcp() {
                   local mcp_url_json
                   local mcp_key_json
                   local server_json
-                  local codebuddy_home
                   local config_file
                   local snippet_file
                   mcp_url_json=$(json_escape "$MCP_URL")
@@ -198,36 +297,51 @@ public final class ReqflowCodexInstallScriptTemplate
                   if command -v codebuddy >/dev/null 2>&1; then
                     if codebuddy mcp add-json --scope user reqflow "$server_json"; then
                       echo "Configured CodeBuddy MCP with codebuddy mcp add-json."
+                      record_automatic_mcp "codebuddy"
                       return 0
                     fi
                     echo "codebuddy mcp add-json failed; writing a JSON snippet instead." >&2
                   fi
 
-                  codebuddy_home="${CODEBUDDY_HOME:-$HOME/.codebuddy}"
-                  config_file="$codebuddy_home/.mcp.json"
+                  config_file=$(resolve_codebuddy_config_file)
                   if [ ! -e "$config_file" ]; then
-                    mkdir -p "$codebuddy_home"
                     write_mcp_servers_snippet "$config_file" "http"
                     echo "Wrote CodeBuddy MCP config: $config_file"
+                    record_automatic_mcp "codebuddy"
+                  elif merge_json_config "$config_file" "mcpServers" "$server_json"; then
+                    echo "Merged CodeBuddy MCP config: $config_file"
+                    record_automatic_mcp "codebuddy"
                   else
                     snippet_file="$SUPPORT_DIR/codebuddy-reqflow-mcp.json"
                     write_mcp_servers_snippet "$snippet_file" "http"
-                    echo "Existing CodeBuddy config found. Merge snippet: $snippet_file"
+                    echo "Existing CodeBuddy config could not be merged automatically. Merge snippet: $snippet_file"
+                    record_manual_import "codebuddy" "$snippet_file" "merge into CodeBuddy MCP settings"
                   fi
                 }
 
                 install_opencode_mcp() {
                   local config_file
                   local snippet_file
-                  config_file="${OPENCODE_CONFIG:-$HOME/.config/opencode/opencode.json}"
+                  local mcp_url_json
+                  local mcp_key_json
+                  local server_json
+                  config_file=$(resolve_opencode_config_file)
+                  mcp_url_json=$(json_escape "$MCP_URL")
+                  mcp_key_json=$(json_escape "$MCP_KEY")
+                  server_json="{\\"type\\":\\"remote\\",\\"url\\":\\"$mcp_url_json\\",\\"enabled\\":true,\\"headers\\":{\\"$MCP_KEY_HEADER\\":\\"$mcp_key_json\\"}}"
                   if [ ! -e "$config_file" ]; then
                     mkdir -p "$(dirname "$config_file")"
                     write_opencode_config "$config_file"
                     echo "Wrote OpenCode MCP config: $config_file"
+                    record_automatic_mcp "opencode"
+                  elif merge_json_config "$config_file" "mcp" "$server_json" "https://opencode.ai/config.json"; then
+                    echo "Wrote OpenCode MCP config: $config_file"
+                    record_automatic_mcp "opencode"
                   else
                     snippet_file="$SUPPORT_DIR/opencode-reqflow-mcp.json"
                     write_opencode_config "$snippet_file"
-                    echo "Existing OpenCode config found. Merge snippet into the mcp object: $snippet_file"
+                    echo "Existing OpenCode config could not be merged automatically. Merge snippet into the mcp object: $snippet_file"
+                    record_manual_import "opencode" "$snippet_file" "merge into OpenCode mcp object"
                   fi
                 }
 
@@ -250,6 +364,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 {{REQFLOW_SKILL_CONTENT}}
                 REQFLOW_SKILL_EOF
                   npx skills add "$SKILL_DIR" -g -a "$target_client" --copy -y
+                  record_skill_install "$target_client"
                 }
 
                 install_selected_client() {
@@ -357,7 +472,15 @@ public final class ReqflowCodexInstallScriptTemplate
                   install_selected_client "$target_client"
                 done
 
-                echo "Reqflow MCP and reqflow-mcp global skill installed for:$SELECTED_CLIENTS."
+                if [ -n "${AUTOMATIC_MCP_CLIENTS// /}" ]; then
+                  echo "Reqflow automatic MCP configuration completed for:$AUTOMATIC_MCP_CLIENTS."
+                fi
+                if [ -n "$MANUAL_MCP_IMPORTS" ]; then
+                  echo "Manual MCP import required:$MANUAL_MCP_IMPORTS"
+                fi
+                if [ -n "${SKILL_CLIENTS// /}" ]; then
+                  echo "reqflow-mcp global skill installed for:$SKILL_CLIENTS."
+                fi
                 echo "Do not call reqflow MCP tools automatically after installation."
                 echo "Restart or refresh the selected client, then verify the reqflow MCP server is loaded."
                 """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent());
@@ -385,6 +508,25 @@ public final class ReqflowCodexInstallScriptTemplate
 
                 $SupportDir = if ($env:REQFLOW_INSTALL_DIR) { $env:REQFLOW_INSTALL_DIR } else { Join-Path $HOME ".reqflow-mcp" }
                 New-Item -ItemType Directory -Force -Path $SupportDir | Out-Null
+                $AutomaticMcpClients = New-Object System.Collections.Generic.List[string]
+                $ManualMcpImports = New-Object System.Collections.Generic.List[string]
+                $SkillClients = New-Object System.Collections.Generic.List[string]
+
+                function Add-AutomaticMcpClient([string]$Client) {
+                  if (-not $AutomaticMcpClients.Contains($Client)) {
+                    [void]$AutomaticMcpClients.Add($Client)
+                  }
+                }
+
+                function Add-ManualMcpImport([string]$Client, [string]$Path, [string]$Instruction) {
+                  [void]$ManualMcpImports.Add("  - ${Client}: ${Path} (${Instruction})")
+                }
+
+                function Add-SkillClient([string]$Client) {
+                  if (-not $SkillClients.Contains($Client)) {
+                    [void]$SkillClients.Add($Client)
+                  }
+                }
 
                 function Escape-TomlString([string]$Value) {
                   return $Value.Replace("\\", "\\\\").Replace('"', '\\"')
@@ -436,6 +578,88 @@ public final class ReqflowCodexInstallScriptTemplate
                   New-OpenCodeObject | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 -Path $Path
                 }
 
+                function Merge-JsonConfig([string]$Path, [string]$RootKey, [string]$ServerJson, [string]$Schema = "") {
+                  if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+                    return $false
+                  }
+                  $parent = Split-Path -Parent $Path
+                  if (-not [string]::IsNullOrWhiteSpace($parent)) {
+                    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+                  }
+                  $env:REQFLOW_MERGE_CONFIG_FILE = $Path
+                  $env:REQFLOW_MERGE_ROOT_KEY = $RootKey
+                  $env:REQFLOW_MERGE_SERVER_NAME = "reqflow"
+                  $env:REQFLOW_MERGE_SERVER_JSON = $ServerJson
+                  $env:REQFLOW_MERGE_SCHEMA = $Schema
+                  $nodeScript = @'
+                const fs = require('fs');
+                const file = process.env.REQFLOW_MERGE_CONFIG_FILE;
+                const rootKey = process.env.REQFLOW_MERGE_ROOT_KEY;
+                const serverName = process.env.REQFLOW_MERGE_SERVER_NAME || 'reqflow';
+                const schema = process.env.REQFLOW_MERGE_SCHEMA;
+                let config = {};
+                if (fs.existsSync(file)) {
+                  const text = fs.readFileSync(file, 'utf8').trim();
+                  if (text) {
+                    config = JSON.parse(text);
+                  }
+                }
+                const server = JSON.parse(process.env.REQFLOW_MERGE_SERVER_JSON);
+                if (!config || typeof config !== 'object' || Array.isArray(config)) {
+                  config = {};
+                }
+                if (schema && !config.$schema) {
+                  config.$schema = schema;
+                }
+                if (!config[rootKey] || typeof config[rootKey] !== 'object' || Array.isArray(config[rootKey])) {
+                  config[rootKey] = {};
+                }
+                config[rootKey][serverName] = server;
+                fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\\n');
+                '@
+                  $nodeScript | node
+                  return $LASTEXITCODE -eq 0
+                }
+
+                function Resolve-OpenCodeConfigFile {
+                  if ($env:OPENCODE_CONFIG) {
+                    return $env:OPENCODE_CONFIG
+                  }
+                  $configDir = Join-Path $HOME ".config\\opencode"
+                  $jsonPath = Join-Path $configDir "opencode.json"
+                  $jsoncPath = Join-Path $configDir "opencode.jsonc"
+                  if (Test-Path $jsonPath) {
+                    return $jsonPath
+                  }
+                  if (Test-Path $jsoncPath) {
+                    return $jsoncPath
+                  }
+                  return $jsonPath
+                }
+
+                function Resolve-CodeBuddyConfigFile {
+                  $codeBuddyHome = if ($env:CODEBUDDY_CONFIG_DIR) {
+                    $env:CODEBUDDY_CONFIG_DIR
+                  } elseif ($env:CODEBUDDY_HOME) {
+                    $env:CODEBUDDY_HOME
+                  } else {
+                    Join-Path $HOME ".codebuddy"
+                  }
+                  $primaryPath = Join-Path $codeBuddyHome ".mcp.json"
+                  $legacyPath = Join-Path $codeBuddyHome "mcp.json"
+                  $oldPath = Join-Path $HOME ".codebuddy.json"
+                  if (Test-Path $primaryPath) {
+                    return $primaryPath
+                  }
+                  if (Test-Path $legacyPath) {
+                    return $legacyPath
+                  }
+                  if (Test-Path $oldPath) {
+                    return $oldPath
+                  }
+                  return $primaryPath
+                }
+
                 function Install-CodexMcp {
                   $CodexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
                   $ConfigFile = Join-Path $CodexHome "config.toml"
@@ -452,6 +676,7 @@ public final class ReqflowCodexInstallScriptTemplate
                   $mcpKeyToml = Escape-TomlString $McpKey
                   Add-Content -Encoding UTF8 -Path $ConfigFile -Value "`n`n[mcp_servers.reqflow]`nurl = `"$mcpUrlToml`"`nhttp_headers = { `"$McpHeaderName`" = `"$mcpKeyToml`" }"
                   Write-Host "Wrote Codex MCP config: $ConfigFile"
+                  Add-AutomaticMcpClient -Client "codex"
                 }
 
                 function Install-ClaudeCodeMcp {
@@ -459,6 +684,7 @@ public final class ReqflowCodexInstallScriptTemplate
                     & claude mcp add --transport http --scope user reqflow $McpUrl --header "$McpHeaderName: $McpKey"
                     if ($LASTEXITCODE -eq 0) {
                       Write-Host "Configured Claude Code MCP with claude mcp add."
+                      Add-AutomaticMcpClient -Client "claude-code"
                       return
                     }
                     Write-Warning "claude mcp add failed; writing a .mcp.json snippet instead."
@@ -466,6 +692,7 @@ public final class ReqflowCodexInstallScriptTemplate
                   $snippetFile = Join-Path $SupportDir "claude-code-reqflow-mcp.json"
                   Write-McpServersSnippet -Path $snippetFile -TransportType "http"
                   Write-Host "Wrote Claude Code MCP snippet: $snippetFile"
+                  Add-ManualMcpImport -Client "claude-code" -Path $snippetFile -Instruction "merge into Claude Code user or project MCP settings"
                 }
 
                 function Install-TraeMcp {
@@ -473,6 +700,7 @@ public final class ReqflowCodexInstallScriptTemplate
                   Write-McpServersSnippet -Path $snippetFile -TransportType "streamable-http"
                   Write-Host "Wrote Trae MCP snippet: $snippetFile"
                   Write-Host "Open Trae Settings > MCP and import or paste this mcpServers JSON."
+                  Add-ManualMcpImport -Client "trae" -Path $snippetFile -Instruction "import in Trae Settings > MCP"
                 }
 
                 function Install-QoderMcp {
@@ -480,6 +708,7 @@ public final class ReqflowCodexInstallScriptTemplate
                   Write-McpServersSnippet -Path $snippetFile -TransportType "streamable-http"
                   Write-Host "Wrote Qoder MCP snippet: $snippetFile"
                   Write-Host "Open Qoder Settings > MCP and import or paste this mcpServers JSON."
+                  Add-ManualMcpImport -Client "qoder" -Path $snippetFile -Instruction "import in Qoder Settings > MCP"
                 }
 
                 function Install-CodeBuddyMcp {
@@ -494,32 +723,51 @@ public final class ReqflowCodexInstallScriptTemplate
                     & codebuddy mcp add-json --scope user reqflow $serverJson
                     if ($LASTEXITCODE -eq 0) {
                       Write-Host "Configured CodeBuddy MCP with codebuddy mcp add-json."
+                      Add-AutomaticMcpClient -Client "codebuddy"
                       return
                     }
                     Write-Warning "codebuddy mcp add-json failed; writing a JSON snippet instead."
                   }
 
-                  $codeBuddyHome = if ($env:CODEBUDDY_HOME) { $env:CODEBUDDY_HOME } else { Join-Path $HOME ".codebuddy" }
-                  $configFile = Join-Path $codeBuddyHome ".mcp.json"
+                  $configFile = Resolve-CodeBuddyConfigFile
                   if (-not (Test-Path $configFile)) {
                     Write-McpServersSnippet -Path $configFile -TransportType "http"
                     Write-Host "Wrote CodeBuddy MCP config: $configFile"
+                    Add-AutomaticMcpClient -Client "codebuddy"
+                  } elseif (Merge-JsonConfig -Path $configFile -RootKey "mcpServers" -ServerJson $serverJson) {
+                    Write-Host "Merged CodeBuddy MCP config: $configFile"
+                    Add-AutomaticMcpClient -Client "codebuddy"
                   } else {
                     $snippetFile = Join-Path $SupportDir "codebuddy-reqflow-mcp.json"
                     Write-McpServersSnippet -Path $snippetFile -TransportType "http"
-                    Write-Host "Existing CodeBuddy config found. Merge snippet: $snippetFile"
+                    Write-Host "Existing CodeBuddy config could not be merged automatically. Merge snippet: $snippetFile"
+                    Add-ManualMcpImport -Client "codebuddy" -Path $snippetFile -Instruction "merge into CodeBuddy MCP settings"
                   }
                 }
 
                 function Install-OpenCodeMcp {
-                  $configFile = if ($env:OPENCODE_CONFIG) { $env:OPENCODE_CONFIG } else { Join-Path $HOME ".config\\opencode\\opencode.json" }
+                  $configFile = Resolve-OpenCodeConfigFile
+                  $headers = [ordered]@{}
+                  $headers[$McpHeaderName] = $McpKey
+                  $server = [ordered]@{
+                    type = "remote"
+                    url = $McpUrl
+                    enabled = $true
+                    headers = $headers
+                  }
+                  $serverJson = $server | ConvertTo-Json -Depth 8 -Compress
                   if (-not (Test-Path $configFile)) {
                     Write-OpenCodeConfig -Path $configFile
                     Write-Host "Wrote OpenCode MCP config: $configFile"
+                    Add-AutomaticMcpClient -Client "opencode"
+                  } elseif (Merge-JsonConfig -Path $configFile -RootKey "mcp" -ServerJson $serverJson -Schema "https://opencode.ai/config.json") {
+                    Write-Host "Wrote OpenCode MCP config: $configFile"
+                    Add-AutomaticMcpClient -Client "opencode"
                   } else {
                     $snippetFile = Join-Path $SupportDir "opencode-reqflow-mcp.json"
                     Write-OpenCodeConfig -Path $snippetFile
-                    Write-Host "Existing OpenCode config found. Merge snippet into the mcp object: $snippetFile"
+                    Write-Host "Existing OpenCode config could not be merged automatically. Merge snippet into the mcp object: $snippetFile"
+                    Add-ManualMcpImport -Client "opencode" -Path $snippetFile -Instruction "merge into OpenCode mcp object"
                   }
                 }
 
@@ -537,6 +785,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 '@
                   Set-Content -Encoding UTF8 -Path $SkillFile -Value $skillContent
                   npx skills add $SkillDir -g -a $TargetClient --copy -y
+                  Add-SkillClient -Client $TargetClient
                 }
 
                 function Install-SelectedClient([string]$TargetClient) {
@@ -607,7 +856,18 @@ public final class ReqflowCodexInstallScriptTemplate
                   Install-SelectedClient -TargetClient $targetClient
                 }
 
-                Write-Host ("Reqflow MCP and reqflow-mcp global skill installed for: " + ($SelectedClients -join ", "))
+                if ($AutomaticMcpClients.Count -gt 0) {
+                  Write-Host ("Reqflow automatic MCP configuration completed for: " + ($AutomaticMcpClients -join ", "))
+                }
+                if ($ManualMcpImports.Count -gt 0) {
+                  Write-Host "Manual MCP import required:"
+                  foreach ($manualImport in $ManualMcpImports) {
+                    Write-Host $manualImport
+                  }
+                }
+                if ($SkillClients.Count -gt 0) {
+                  Write-Host ("reqflow-mcp global skill installed for: " + ($SkillClients -join ", "))
+                }
                 Write-Host "Do not call reqflow MCP tools automatically after installation."
                 Write-Host "Restart or refresh the selected client, then verify the reqflow MCP server is loaded."
                 """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent());
