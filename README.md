@@ -62,6 +62,8 @@ mvn -pl ruoyi-requirement -am test
 
 修改数据库表、字段、索引、菜单权限或迁移脚本时，必须同步更新 `docs/db/table-dictionary.md`、`docs/db/relationship.md` 或相关 `docs/ai-harness` 文档。
 
+完整部署顺序和 SQL 执行说明见 `docs/runbooks/deploy.md`。
+
 ## 文档入口
 
 - 总入口：`docs/README.md`

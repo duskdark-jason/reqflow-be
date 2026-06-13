@@ -26,6 +26,7 @@
 | search-map | 面向模型的关键词导航和拆分触发 | `docs/ai-harness/search-map.md` | `scripts/check-harness.sh`、`harness-template/docs/ai-harness/search-map.md` |
 | 检查脚本 | 文档占位符、harness 初始化、Review、完成态门禁 | `docs/process/agent-workflow.md` | `scripts/check-docs.sh`、`scripts/check-harness.sh` |
 | 数据库表结构 | `req_*` 表、菜单权限、系统参数、索引表和迁移脚本 | `docs/db/README.md` | `docs/db/sql/req_platform_schema.sql`、`docs/db/table-dictionary.md` |
+| 部署 | SQL 执行顺序、后端打包、前端静态路径和发布后检查 | `docs/runbooks/deploy.md` | `docs/db/sql/*.sql`、`ruoyi-admin/src/main/resources/application*.yml` |
 | 菜单权限 | 需求管理菜单、按钮权限、角色授权和后端 `@PreAuthorize` | `docs/ai-harness/modules/requirement-platform.md` | `docs/db/sql/req_platform_menu.sql`、Controller 权限注解 |
 
 ## 维护触发
