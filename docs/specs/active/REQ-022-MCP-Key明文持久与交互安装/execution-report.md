@@ -14,19 +14,21 @@
 |---|---|
 | `ReqMcpUserKey.java`、`ReqMcpUserKeyMapper.xml`、`ReqMcpUserKeyServiceImpl.java` | 新增 `plainKey/plain_key` 映射，新建 Key 时保存明文，打开使用指令时返回已保存明文，鉴权仍使用哈希。 |
 | `ReqflowCodexSetupPackageTemplate.java`、`ReqflowCodexInstallScriptTemplate.java` | 顶层统一命令不再默认 `all`，脚本未传 client 时交互选择工具，传 `all` 或单个客户端时直接安装。 |
+| `ReqMcpKeyController.java`、`ReqMcpPublicHostConfig.java` | 新增管理员专用 MCP 请求地址配置读写接口，保存 `reqflow.mcp.public-host` 并回显完整 MCP 地址。 |
 | `docs/db/sql/req_platform_schema.sql`、`docs/db/sql/req_platform_mcp_key_plain_key.sql` | 基线表结构和已有库幂等升级脚本新增 `plain_key`。 |
 | `ReqMcpUserKeyServiceImplTest.java`、`ReqflowCodexSetupPackageTemplateTest.java`、`ReqCodexInstallControllerTest.java` | 覆盖明文持久、历史指令返回明文、统一命令交互选择和脚本内容。 |
+| `ReqMcpKeyControllerTest.java` | 覆盖 MCP 请求地址配置接口 admin-only、地址回显、插入系统配置和非法 URL 拒绝。 |
 | `docs/ai-harness/**`、`docs/db/**`、`docs/process/local-harness-workflow.md` | 同步 API、模块、数据库、展示约束和 `active/`/`done/` 执行边界。 |
 | `scripts/check-harness.sh`、`scripts/test-check-harness.sh` | 限制 `--spec` 只能指向 `docs/specs/active/`，并补充 done 目录失败用例。 |
 | `ruoyi-requirement/src/main/resources/harness-template/docs/process/local-harness-workflow.md`、`ruoyi-requirement/src/main/resources/harness-template/scripts/check-harness.sh`、`ruoyi-requirement/src/main/resources/harness-template/scripts/test-check-harness.sh` | 同步项目接入初始化下发模板的 active-only `--spec` 约束、流程说明和自测。 |
 | `McpServiceTest.java` | 锁定 `get_harness_template` 下发内容必须包含 active-only 约束、done 失败用例和流程说明。 |
 | `ReqDemandServiceImpl.java`、`ReqflowCodexGlobalSkillTemplate.java`、`docs/process/**`、`docs/specs/README.md`、`ruoyi-requirement/src/main/resources/harness-template/docs/**` | 同步归档、办结、结束任务时的 `active -> done` 收尾规范，要求在任务分支完成迁移后再 squash merge。 |
 | `ReqDemandServiceImplTest.java`、`ReqflowCodexGlobalSkillTemplateTest.java`、`McpServiceTest.java` | 覆盖归档指令、全局 skill 和模板下发内容必须包含 `git mv "$SPEC_DIR" docs/specs/done/` 收尾动作。 |
-| `../reqflow-ui/src/views/requirement/mcpKey/index.vue`、`../reqflow-ui/scripts/test-mcp-install-dialog-unified.js` | 页面不展示明文 Key 和 Key 前缀字段，仅用明文渲染统一安装命令；静态检查防回归。 |
+| `../reqflow-ui/src/api/requirement/mcpKey.js`、`../reqflow-ui/src/views/requirement/mcpKey/index.vue`、`../reqflow-ui/scripts/test-mcp-install-dialog-unified.js` | 页面不展示明文 Key 和 Key 前缀字段，仅用明文渲染统一安装命令；管理员展示 MCP 请求地址配置栏；静态检查防回归。 |
 
 ## 模块知识库沉淀
 
-- 影响模块：MCP 管理、MCP Key 持久化、多客户端安装脚本、本地 Harness 门禁、合并归档指令
+- 影响模块：MCP 管理、MCP 请求地址配置、MCP Key 持久化、多客户端安装脚本、本地 Harness 门禁、合并归档指令
 - 模块知识库动作：更新
 - 模块知识库文档：`docs/ai-harness/modules/requirement-platform.md`、`docs/ai-harness/contracts/requirement-platform-api.md`
 
@@ -48,20 +50,21 @@
 | 层级 | 验收 ID | 命令或方式 | 结果 |
 |---|---|---|---|
 | L2 | AC-001、AC-002、AC-003、AC-004 | `mvn -pl ruoyi-requirement -am -Dtest=ReqflowCodexSetupPackageTemplateTest,ReqMcpUserKeyServiceImplTest,ReqCodexInstallControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，15 个测试通过 |
-| L2 | AC-005 | `node scripts/test-mcp-install-dialog-unified.js`（companion 前端） | 通过 |
+| L2 | AC-010 | `mvn -pl ruoyi-requirement -am -Dtest=ReqMcpKeyControllerTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，9 个测试通过 |
+| L2 | AC-002、AC-005、AC-011 | `node scripts/test-mcp-install-dialog-unified.js`（companion 前端） | 通过 |
 | L2 | AC-007 | `sh scripts/test-check-harness.sh` | 通过 |
 | L2 | AC-008 | `sh ruoyi-requirement/src/main/resources/harness-template/scripts/test-check-harness.sh` | 通过 |
 | L2 | AC-008 | `mvn -pl ruoyi-requirement -am -Dtest=McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，29 个测试通过 |
 | L2 | AC-009 | `mvn -pl ruoyi-requirement -am -Dtest=ReqDemandServiceImplTest,ReqflowCodexGlobalSkillTemplateTest,McpServiceTest -Dsurefire.failIfNoSpecifiedTests=false test` | 通过，67 个测试通过 |
 | L1 | AC-005 | `npm run build:prod`（companion 前端） | 通过，存在历史体积告警 |
-| L0 | AC-006、AC-007、AC-008、AC-009 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` | 通过 |
+| L0 | AC-006、AC-007、AC-008、AC-009、AC-010、AC-011 | `sh scripts/check-docs.sh && sh scripts/check-harness.sh complete --spec docs/specs/active/REQ-022-MCP-Key明文持久与交互安装` | 通过 |
 
 ## 运行态证据
 
 - 执行目录：当前后端子仓库根目录、companion 前端子仓库根目录
 - 启动命令：未启动服务
 - profile/env/mode：本地单测、静态检查和构建验证
-- 原始错误摘要：后端先红于缺少 `plainKey` 持久字段和交互脚本入口；前端先红于列表未按新约束隐藏字段
+- 原始错误摘要：后端先红于缺少 `plainKey` 持久字段和交互脚本入口；前端先红于列表未按新约束隐藏字段；本轮补充先红于缺少管理员 MCP 请求地址配置栏
 - screenshot/trace 路径：无
 - 是否代表用户环境：否，仅代表当前执行 agent 环境
 - 后续补验环境：如需真实客户端安装，应在用户本机执行统一命令并选择目标工具验证。
@@ -72,6 +75,7 @@
 - 用户指出执行中不应写 `docs/specs/done/`，已将当前 spec 移回 `active/`，并收紧 `check-harness.sh --spec` 目标路径。
 - 用户补充“harness 模板也要同步更新”，已将同样约束同步到项目接入初始化模板源。
 - 用户补充“本地 harness 在收到归档、办结等结束任务指令时也要将 active 迁到 done”，已同步本地流程、MCP 合并归档指令、全局 skill 和模板。
+- 用户补充“MCP 明文 KEY 下次打开仍放在指令里”和“MCP 请求地址加到 MCP 管理页且仅管理员可配置”，已补后端配置接口、前端管理员配置栏和静态检查。
 
 ## Review 返修记录
 
