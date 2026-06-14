@@ -11,7 +11,7 @@ public final class ReqflowCodexInstallScriptTemplate
 
     public static String shellScript()
     {
-        return """
+        return normalizeSkillEmbedding("""
                 #!/usr/bin/env bash
                 set -euo pipefail
 
@@ -102,6 +102,28 @@ public final class ReqflowCodexInstallScriptTemplate
 
                 record_skill_install() {
                   SKILL_CLIENTS=$(append_unique_word "$SKILL_CLIENTS" "$1")
+                }
+
+                sync_skill_to_dir() {
+                  local source_file="$1"
+                  local target_root="$2"
+                  local target_dir="$target_root/reqflow-mcp"
+                  mkdir -p "$target_dir"
+                  cp "$source_file" "$target_dir/SKILL.md"
+                }
+
+                sync_known_skill_locations() {
+                  local target_client="$1"
+                  local source_file="$2"
+                  case "$target_client" in
+                    codex)
+                      sync_skill_to_dir "$source_file" "${CODEX_HOME:-$HOME/.codex}/skills"
+                      sync_skill_to_dir "$source_file" "${AGENTS_HOME:-$HOME/.agents}/skills"
+                      ;;
+                    claude-code)
+                      sync_skill_to_dir "$source_file" "${CLAUDE_HOME:-$HOME/.claude}/skills"
+                      ;;
+                  esac
                 }
 
                 toml_escape() {
@@ -364,6 +386,7 @@ public final class ReqflowCodexInstallScriptTemplate
                 {{REQFLOW_SKILL_CONTENT}}
                 REQFLOW_SKILL_EOF
                   npx skills add "$SKILL_DIR" -g -a "$target_client" --copy -y
+                  sync_known_skill_locations "$target_client" "$skill_file"
                   record_skill_install "$target_client"
                 }
 
@@ -483,12 +506,12 @@ public final class ReqflowCodexInstallScriptTemplate
                 fi
                 echo "Do not call reqflow MCP tools automatically after installation."
                 echo "Restart or refresh the selected client, then verify the reqflow MCP server is loaded."
-                """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent());
+                """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent()));
     }
 
     public static String powerShellScript()
     {
-                return """
+        return normalizeSkillEmbedding("""
                 param(
                   [string]$Client = "",
                   [string]$McpUrl,
@@ -525,6 +548,27 @@ public final class ReqflowCodexInstallScriptTemplate
                 function Add-SkillClient([string]$Client) {
                   if (-not $SkillClients.Contains($Client)) {
                     [void]$SkillClients.Add($Client)
+                  }
+                }
+
+                function Sync-SkillToDirectory([string]$SourceFile, [string]$TargetRoot) {
+                  $targetDir = Join-Path $TargetRoot "reqflow-mcp"
+                  New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+                  Copy-Item -Force -Path $SourceFile -Destination (Join-Path $targetDir "SKILL.md")
+                }
+
+                function Sync-KnownSkillLocations([string]$TargetClient, [string]$SourceFile) {
+                  switch ($TargetClient) {
+                    "codex" {
+                      $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
+                      $agentsHome = if ($env:AGENTS_HOME) { $env:AGENTS_HOME } else { Join-Path $HOME ".agents" }
+                      Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $codexHome "skills")
+                      Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $agentsHome "skills")
+                    }
+                    "claude-code" {
+                      $claudeHome = if ($env:CLAUDE_HOME) { $env:CLAUDE_HOME } else { Join-Path $HOME ".claude" }
+                      Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $claudeHome "skills")
+                    }
                   }
                 }
 
@@ -782,9 +826,10 @@ public final class ReqflowCodexInstallScriptTemplate
                   # Writes reqflow-mcp/SKILL.md before npx skills add copies it to the selected agent.
                   $skillContent = @'
                 {{REQFLOW_SKILL_CONTENT}}
-                '@
+                  '@
                   Set-Content -Encoding UTF8 -Path $SkillFile -Value $skillContent
                   npx skills add $SkillDir -g -a $TargetClient --copy -y
+                  Sync-KnownSkillLocations -TargetClient $TargetClient -SourceFile $SkillFile
                   Add-SkillClient -Client $TargetClient
                 }
 
@@ -870,6 +915,13 @@ public final class ReqflowCodexInstallScriptTemplate
                 }
                 Write-Host "Do not call reqflow MCP tools automatically after installation."
                 Write-Host "Restart or refresh the selected client, then verify the reqflow MCP server is loaded."
-                """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent());
+                """.replace("{{REQFLOW_SKILL_CONTENT}}", ReqflowCodexGlobalSkillTemplate.skillContent()));
+    }
+
+    private static String normalizeSkillEmbedding(String script)
+    {
+        return script.replaceAll("(?m)^\\s+---$", "---")
+                .replaceAll("(?m)^\\s+REQFLOW_SKILL_EOF$", "REQFLOW_SKILL_EOF")
+                .replaceAll("(?m)^\\s+'@$", "'@");
     }
 }

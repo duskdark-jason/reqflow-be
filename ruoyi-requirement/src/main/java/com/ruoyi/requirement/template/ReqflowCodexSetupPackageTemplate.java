@@ -50,6 +50,7 @@ public final class ReqflowCodexSetupPackageTemplate
     {
         return "Install the reqflow MCP configuration and the reqflow-mcp global skill with one generic instruction. "
                 + "Prefer installCommands[]; it calls install.sh/install.ps1 once and lets the user choose Codex, Claude Code, Trae, Qoder, CodeBuddy, OpenCode, or all clients after execution. "
+                + "Codex and Claude Code modes refresh known global skill directories after npx skills add so stale reqflow-mcp skills are overwritten. "
                 + "The script prints automatic MCP configuration results separately from clients that require manual JSON import. "
                 + "clientInstructions[] is kept as advanced per-client fallback material. "
                 + "Do not call reqflow MCP tools automatically after installation.";
@@ -73,7 +74,7 @@ public final class ReqflowCodexSetupPackageTemplate
 
     private static String installPrompt()
     {
-        return "请优先执行 installCommands 中的统一安装指令，执行后选择要安装的工具，可选 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 或全部工具；全局 skill 由脚本通过 npx skills add 安装。配置完成后只确认 MCP server 与 skill 已安装，"
+        return "请优先执行 installCommands 中的统一安装指令，执行后选择要安装的工具，可选 Codex、Claude Code、Trae、Qoder、CodeBuddy、OpenCode 或全部工具；全局 skill 由脚本通过 npx skills add 安装，Codex 和 Claude Code 模式会额外刷新已知全局 skill 目录以覆盖旧版本。配置完成后只确认 MCP server 与 skill 已安装，"
                 + "如果脚本输出 Manual MCP import required，必须按对应片段在目标工具中手工导入后再确认 MCP server 已安装；不要自动调用 publish_repository_index 或其他 reqflow MCP 工具；不要把 plainKey 或 actionToken 写入 skill 文件。";
     }
 
@@ -158,7 +159,7 @@ public final class ReqflowCodexSetupPackageTemplate
         client.put("commands", clientInstallCommands(mcpAddress, "codex", "Codex"));
         client.put("skillInstall", npxSkillInstall(mcpAddress, "codex", "Codex"));
         client.put("notes", List.of(
-                "通用脚本会写入 ~/.codex/config.toml，并通过 npx skills add -a codex 安装全局 skill。",
+                "通用脚本会写入 ~/.codex/config.toml，通过 npx skills add -a codex 安装全局 skill，并同步覆盖 ~/.codex/skills 与 ~/.agents/skills 下的 reqflow-mcp。",
                 "安装后可重启 Codex 或刷新 MCP 与 skill 列表。"));
         return client;
     }
@@ -171,7 +172,7 @@ public final class ReqflowCodexSetupPackageTemplate
         client.put("skillInstall", npxSkillInstall(mcpAddress, "claude-code", "Claude Code"));
         client.put("notes", List.of(
                 "通用脚本优先调用 claude mcp add 写入用户级 MCP 配置，命令不可用或失败时输出 .mcp.json 片段并列入 Manual MCP import required。",
-                "全局 skill 通过 npx skills add -a claude-code 安装。"));
+                "全局 skill 通过 npx skills add -a claude-code 安装，并同步覆盖 ~/.claude/skills 下的 reqflow-mcp。"));
         return client;
     }
 
