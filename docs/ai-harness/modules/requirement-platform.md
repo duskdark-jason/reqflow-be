@@ -62,7 +62,7 @@
 - 人员 `X-MCP-Key` 只负责认证和权限；项目分支动作 `actionToken` 只负责动作上下文定位，二者不能互相替代。
 - MCP `get_action_context` 必须保持只读轻量：不消费 actionToken，不返回资料包正文，只返回阶段、允许工具、资源 URI、资料包版本号、内容哈希、token 持久化建议和写平台确认策略。执行端必须用 `packageVersions` 对比本地 `meta.md platformSync`，本地版本一致时不重复拉取平台全文，只有缺失或 stale 的资源才按 `requirement://{demandNo}/package/{artifactType}` 等 URI 读取。执行端还必须把当前阶段 actionToken 写入本地 `meta.md platformSync.actionToken`，以支持多轮本地迭代或上下文压缩后继续回写。
 - 发布默认后端 context-path 为 `/reqflow-api`，MCP 客户端入口为 `/reqflow-api/requirement/mcp`。前端访问项目名 `/reqflow/` 只用于静态资源和页面路由，不参与 MCP endpoint 拼接。
-- 项目初始化默认复制指令只保留短动态上下文，必须包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，确保接入项目能触发全局 skill 并定位到指定 MCP server 的指定 tool。
+- 项目初始化默认复制指令只保留短动态上下文，必须只包含 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index`、`mcpTool: reqflow.publish_repository_index` 和一个 `actionToken`；不得在复制正文中展开 `targetMethod`、`projectId`、`variantId`、项目名称、分支名称、有效期说明或调用解释。项目、分支、仓库和模板细节由全局 skill 先调用 `get_action_context` 获取。
 - `/requirement/mcp` 必须支持 MCP `initialize -> notifications/initialized -> tools/list` lifecycle；新增 tool 时必须同步 `tools/list` 的描述和 `inputSchema`。
 - `/requirement/mcp` 的协议级错误必须返回标准 JSON-RPC `error.code/error.message`，不能同时带 `result:null`；`tools/call` 内的业务错误必须返回 MCP tool result，并设置 `isError=true`。
 - 项目接入初始化由平台存储和下发 harness 模板，后端不直接执行 Git、shell 或写用户本地文件；执行初始化的 agent 必须在目标仓库先拉取默认基线分支最新代码，初始化校验通过后提交并推送 harness 文件，再登记初始化结果。
@@ -81,7 +81,7 @@
 - 全局 `reqflow-mcp` skill 模板的 `SKILL.md` frontmatter 必须保持合法 YAML；`name` 和 `description` 使用双引号包裹，描述中不得出现未转义的 `: `，避免 Codex、Claude Code、Trae、Qoder、CodeBuddy 或 OpenCode 启动扫描时跳过该 skill。skill 正文必须要求先调用 `get_action_context`，再维护阶段工具映射表，让返回的 `stage` 映射到允许调用的 MCP tools、本地文件边界和停止条件，并按 `platformSync` 规则减少全文拉取。
 - MCP lifecycle 或 HTTP Controller 调整时，必须用真实 HTTP 冒烟验证 `initialize`、`notifications/initialized`、`resources/templates/list` 和 `tools/list`，不能只看 Service 单测。
 - MCP `tools/call` 错误响应调整时，必须覆盖成功、权限失败、参数校验失败和业务导入失败路径；接入项目侧不能再只看到 `Unexpected response type`，应能读到 `content` 中的业务错误。
-- 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先调用 `get_harness_template` 写入本地 harness，再运行 `check-docs.sh`、`check-harness.sh init`，最后才发布索引和登记初始化结果。
+- 项目接入初始化指令调整时，默认复制内容不得重复完整 1-7 步流程，也不得直接暴露项目、分支和有效期等平台字段；完整顺序由全局 `reqflow-mcp` skill 承接，必须保证 agent 能先用 `get_action_context` 解析 actionToken，再调用 `get_harness_template` 写入本地 harness、运行 `check-docs.sh` 和 `check-harness.sh init`，最后才发布索引和登记初始化结果。
 - Harness 模板或脚本调整时，必须同步后端模板源、当前后端 harness、前端 harness 和 `search-map.md`；确认点门禁不能只写在文档里，必须由 `scripts/check-harness.sh` 测试覆盖。`--spec` 只允许检查 `docs/specs/active/` 下执行中的需求，完成态门禁通过后才可按需归档到 `docs/specs/done/`；项目接入初始化模板也必须包含同样约束，避免新项目初始化后继续在 `done/` 中执行。
 - 需求分析和需求生成指令调整时，必须保持阶段收敛：平台指令只给 actionToken，`get_action_context` 返回允许工具；需求分析阶段只允许 `upload_requirement_assessment`，需求生成阶段只允许 `save_requirement_package`。结论允许继续后，才在需求生成阶段落地 `requirement.md`；平台版本回写必须等待用户明确确认。开发阶段只能沿用该分支生成 `plan.md` 和实现。
 - 返修指令调整时，必须保持同一任务分支和同一 spec 目录，平台指令只给同一个返修阶段 actionToken，`get_action_context` 返回 `upload_execution_report`、`upload_review_report` 允许工具，持续追加本地 `execution-report.md` 与 `review-report.md`，不得携带执行计划或需求设计生成要求；平台回写必须等待用户明确确认。

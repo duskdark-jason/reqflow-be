@@ -68,11 +68,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         ReqActionInstruction instruction = createInstruction(ACTION_PROJECT_INIT, project.getProjectId(), variant.getVariantId(),
                 null, PROJECT_INIT_TOOL_NAME, prompt, "复制初始化指令", operator);
         // 项目初始化指令必须绑定项目分支，后续 publish_repository_index 才能自动校验远端和分支归属。
-        instruction.setContent(projectInitInstructionContent(prompt, instruction.getTargetMethod(), instruction.getToken(),
-                        project.getProjectId(), variant.getVariantId())
-                + "\n项目：" + firstNotEmpty(project.getProjectName(), project.getProjectCode())
-                + "\n分支：" + firstNotEmpty(variant.getVariantName(), variant.getVariantCode())
-                + "\n真实分支：" + firstNotEmpty(variant.getBaselineBranch(), "未填写"));
+        instruction.setContent(projectInitInstructionContent(instruction.getToken()));
         return instruction;
     }
 
@@ -294,31 +290,13 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         }
     }
 
-    private String firstNotEmpty(String... values)
+    private String projectInitInstructionContent(String actionToken)
     {
-        for (String value : values)
-        {
-            if (StringUtils.isNotEmpty(value))
-            {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private String projectInitInstructionContent(String prompt, String targetMethod, String actionToken, Long projectId, Long variantId)
-    {
-        return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。"
+        return "请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。"
                 + "\nmcpServer: " + PROJECT_INIT_MCP_SERVER
                 + "\ntoolName: " + PROJECT_INIT_TOOL_NAME
                 + "\nmcpTool: " + PROJECT_INIT_MCP_SERVER + "." + PROJECT_INIT_TOOL_NAME
-                + "\ntargetMethod: " + targetMethod
-                + "\nprojectId: " + projectId
-                + "\nvariantId: " + variantId
-                + "\nactionToken: " + actionToken
-                + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。";
+                + "\nactionToken: " + actionToken;
     }
 
     private static class GeneratedToken

@@ -55,13 +55,13 @@
   "token": "reqflow_action_xxx",
   "tokenPrefix": "reqflow_action_xxx",
   "prompt": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。",
-  "content": "请执行项目分支初始化，调用 reqflow MCP server 的 publish_repository_index tool 发布当前仓库索引。\n请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。\nmcpServer: reqflow\ntoolName: publish_repository_index\nmcpTool: reqflow.publish_repository_index\ntargetMethod: publish_repository_index\nprojectId: 1\nvariantId: 2\nactionToken: reqflow_action_xxx\n有效期：24小时内有效，仅可使用一次；过期或已使用后需重新生成。\n要求：actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。",
+  "content": "请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。\nmcpServer: reqflow\ntoolName: publish_repository_index\nmcpTool: reqflow.publish_repository_index\nactionToken: reqflow_action_xxx",
   "copyLabel": "复制初始化指令",
   "expireTime": "2026-06-12 10:00:00"
 }
 ```
 
-`initInstruction.content` 是给接入项目复制的短动态上下文，不再重复完整执行步骤。内容必须保留 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index` 和 `mcpTool: reqflow.publish_repository_index`，避免接入项目在存在多个 MCP server 或同名能力描述时无法定位到需求平台工具。`projectId` 用于先读取 `get_harness_template`，`actionToken` 是项目分支动作 token，只能作为 `publish_repository_index` 的 `arguments.actionToken` 传入，不能写入 `X-MCP-Key` 请求头；完整初始化顺序由全局 `reqflow-mcp` skill 承接。初始化 actionToken 生成后 24 小时内有效且仅可使用一次，过期或已使用后必须重新生成初始化指令。
+`initInstruction.content` 是给接入项目复制的短动态上下文，不再重复完整执行步骤。内容只保留 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index`、`mcpTool: reqflow.publish_repository_index` 和一个项目初始化 `actionToken`，不得在复制正文中展开 `targetMethod`、`projectId`、`variantId`、项目名称、分支名称、有效期说明或调用解释。执行端必须先由全局 `reqflow-mcp` skill 使用 actionToken 调用 `get_action_context` 获取项目、项目分支、仓库和模板上下文，再按上下文调用 `get_harness_template` 与 `publish_repository_index`；完整初始化顺序由全局 skill 承接。初始化 actionToken 生成后 24 小时内有效且仅可使用一次，过期或已使用后必须重新生成初始化指令。
 
 初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成兼容字段，前端主展示以 `initInstruction` 为准。
 
