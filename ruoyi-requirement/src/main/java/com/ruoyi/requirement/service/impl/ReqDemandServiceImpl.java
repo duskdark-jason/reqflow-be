@@ -392,7 +392,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             instruction.setContent(requirementAnalysisInstructionContent(prompt, instruction.getToken(), demand, taskBranch));
             return instruction;
         }
-        String prompt = "请在需求生成阶段本地生成需求设计，展示给用户确认或修改；用户确认后再回写平台。";
+        String prompt = "请在需求生成阶段本地生成需求设计，支持研发人员人工微调；研发人员确认后再回写平台。";
         ReqActionInstruction instruction = actionTokenService.createInstruction(
                 IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
                 demand.getProjectId(),
@@ -425,7 +425,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
         }
         if ("repairing".equals(demand.getStatus()))
         {
-            String repairPrompt = "请在返修阶段根据 Review 返修项完成修复、验证和复审，并通过 reqflow MCP 回写返修执行报告和 Review 报告。";
+            String repairPrompt = "请在返修阶段本地完成修复和复审，支持开发人员人工微调；开发人员确认后再回写平台。";
             ReqActionInstruction repairInstruction = actionTokenService.createInstruction(
                     IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
                     demand.getProjectId(),
@@ -439,7 +439,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
                     demand, suggestedTaskBranch(demand)));
             return repairInstruction;
         }
-        String developPrompt = "请基于已确认需求设计执行开发，并通过 reqflow MCP 回写执行计划、执行报告和 Review 报告。";
+        String developPrompt = "请在开发阶段本地执行开发，支持开发人员人工微调和初步验证；开发人员确认完成后再回写平台。";
         ReqActionInstruction developInstruction = actionTokenService.createInstruction(
                 IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP,
                 demand.getProjectId(),

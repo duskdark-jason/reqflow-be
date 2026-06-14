@@ -509,15 +509,15 @@ public class McpService
         }
         if (IReqActionTokenService.TARGET_REQUIREMENT_GENERATE.equals(stage))
         {
-            return "requiresExplicitUserConfirmation=true; 先本地生成需求设计并展示给用户确认或修改；用户明确确认提交需求设计后，才可调用 save_requirement_package 回写平台。确认前禁止调用写平台工具。";
+            return "requiresExplicitUserConfirmation=true; 先本地生成需求设计并支持研发人员人工微调；研发人员明确确认提交需求设计后，才可调用 save_requirement_package 回写平台。确认前禁止调用写平台工具。";
         }
         if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(stage))
         {
-            return "requiresExplicitUserConfirmation=true; 先完成本地开发、验证、执行报告和 Review 报告草稿，并展示给开发人员确认；用户明确确认提交验收或回写平台后，才可调用 save_development_plan、upload_execution_report 或 upload_review_report。";
+            return "requiresExplicitUserConfirmation=true; 先完成本地开发、支持开发人员人工微调和初步验证，并准备执行计划、执行报告和 Review 报告草稿；开发人员明确确认提交验收或回写平台后，才可调用 save_development_plan、upload_execution_report 或 upload_review_report。确认前禁止调用写平台工具。";
         }
         if (IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(stage))
         {
-            return "requiresExplicitUserConfirmation=true; 先按返修问题完成本地修复、验证、执行报告增量和复审报告，并展示给开发人员确认；用户明确确认提交返修验收后，才可调用 upload_execution_report 或 upload_review_report。";
+            return "requiresExplicitUserConfirmation=true; 先按返修问题完成本地修复、验证、执行报告增量和复审报告，并支持开发人员人工微调；开发人员明确确认提交返修验收或回写平台后，才可调用 upload_execution_report 或 upload_review_report。确认前禁止调用写平台工具。";
         }
         if ("requirement_closeout".equals(stage))
         {

@@ -833,8 +833,10 @@ class ReqDemandServiceImplTest
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
         assertEquals(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE, instruction.getTargetMethod());
         assertTrue(instruction.getContent().contains("本地生成需求设计"));
-        assertTrue(instruction.getContent().contains("展示给用户确认"));
-        assertTrue(instruction.getContent().contains("确认后再回写平台"));
+        assertTrue(instruction.getContent().contains("研发人员人工微调"));
+        assertTrue(instruction.getContent().contains("研发人员确认后再回写平台"));
+        assertFalse(instruction.getContent().contains("展示给用户确认"));
+        assertFalse(instruction.getContent().contains("用户确认后再回写平台"));
         assertFalse(instruction.getContent().contains("并通过 reqflow MCP 回写需求设计"));
         assertFalse(instruction.getContent().contains("save_requirement_package"));
         assertFalse(instruction.getContent().contains("upload_requirement_assessment"));
@@ -914,6 +916,13 @@ class ReqDemandServiceImplTest
         ReqActionInstruction instruction = service.createRequirementDevelopInstruction(6L, "developer");
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, instruction.getActionType());
+        assertTrue(instruction.getContent().contains("本地执行开发"));
+        assertTrue(instruction.getContent().contains("开发人员人工微调和初步验证"));
+        assertTrue(instruction.getContent().contains("开发人员确认完成后再回写平台"));
+        assertFalse(instruction.getContent().contains("并通过 reqflow MCP 回写执行计划、执行报告和 Review 报告"));
+        assertFalse(instruction.getContent().contains("save_development_plan"));
+        assertFalse(instruction.getContent().contains("upload_execution_report"));
+        assertFalse(instruction.getContent().contains("upload_review_report"));
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
         assertFalse(instruction.getContent().contains("mcpTool:"));
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
@@ -991,6 +1000,9 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, instruction.getActionType());
         assertEquals(IReqActionTokenService.TARGET_REQUIREMENT_REPAIR, instruction.getTargetMethod());
+        assertTrue(instruction.getContent().contains("本地完成修复和复审"));
+        assertTrue(instruction.getContent().contains("开发人员人工微调"));
+        assertTrue(instruction.getContent().contains("开发人员确认后再回写平台"));
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
         assertFalse(instruction.getContent().contains("mcpTool:"));
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
