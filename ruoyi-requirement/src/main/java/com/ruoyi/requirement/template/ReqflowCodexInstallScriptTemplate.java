@@ -115,13 +115,25 @@ public final class ReqflowCodexInstallScriptTemplate
                 sync_known_skill_locations() {
                   local target_client="$1"
                   local source_file="$2"
+                  sync_skill_to_dir "$source_file" "${AGENTS_HOME:-$HOME/.agents}/skills"
                   case "$target_client" in
                     codex)
                       sync_skill_to_dir "$source_file" "${CODEX_HOME:-$HOME/.codex}/skills"
-                      sync_skill_to_dir "$source_file" "${AGENTS_HOME:-$HOME/.agents}/skills"
                       ;;
                     claude-code)
                       sync_skill_to_dir "$source_file" "${CLAUDE_HOME:-$HOME/.claude}/skills"
+                      ;;
+                    trae)
+                      sync_skill_to_dir "$source_file" "${TRAE_HOME:-$HOME/.trae}/skills"
+                      ;;
+                    qoder)
+                      sync_skill_to_dir "$source_file" "${QODER_HOME:-$HOME/.qoder}/skills"
+                      ;;
+                    codebuddy)
+                      sync_skill_to_dir "$source_file" "${CODEBUDDY_HOME:-$HOME/.codebuddy}/skills"
+                      ;;
+                    opencode)
+                      sync_skill_to_dir "$source_file" "${OPENCODE_HOME:-${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}}/skills"
                       ;;
                   esac
                 }
@@ -558,16 +570,32 @@ public final class ReqflowCodexInstallScriptTemplate
                 }
 
                 function Sync-KnownSkillLocations([string]$TargetClient, [string]$SourceFile) {
+                  $agentsHome = if ($env:AGENTS_HOME) { $env:AGENTS_HOME } else { Join-Path $HOME ".agents" }
+                  Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $agentsHome "skills")
                   switch ($TargetClient) {
                     "codex" {
                       $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
-                      $agentsHome = if ($env:AGENTS_HOME) { $env:AGENTS_HOME } else { Join-Path $HOME ".agents" }
                       Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $codexHome "skills")
-                      Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $agentsHome "skills")
                     }
                     "claude-code" {
                       $claudeHome = if ($env:CLAUDE_HOME) { $env:CLAUDE_HOME } else { Join-Path $HOME ".claude" }
                       Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $claudeHome "skills")
+                    }
+                    "trae" {
+                      $traeHome = if ($env:TRAE_HOME) { $env:TRAE_HOME } else { Join-Path $HOME ".trae" }
+                      Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $traeHome "skills")
+                    }
+                    "qoder" {
+                      $qoderHome = if ($env:QODER_HOME) { $env:QODER_HOME } else { Join-Path $HOME ".qoder" }
+                      Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $qoderHome "skills")
+                    }
+                    "codebuddy" {
+                      $codeBuddyHome = if ($env:CODEBUDDY_HOME) { $env:CODEBUDDY_HOME } else { Join-Path $HOME ".codebuddy" }
+                      Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $codeBuddyHome "skills")
+                    }
+                    "opencode" {
+                      $openCodeHome = if ($env:OPENCODE_HOME) { $env:OPENCODE_HOME } elseif ($env:OPENCODE_CONFIG_DIR) { $env:OPENCODE_CONFIG_DIR } else { Join-Path (Join-Path $HOME ".config") "opencode" }
+                      Sync-SkillToDirectory -SourceFile $SourceFile -TargetRoot (Join-Path $openCodeHome "skills")
                     }
                   }
                 }

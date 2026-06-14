@@ -32,6 +32,7 @@ class ReqflowCodexSetupPackageTemplateTest
         assertTrue(packageText.contains("\"type\": \"streamable-http\""), packageText);
         assertTrue(packageText.contains("\"type\": \"remote\""), packageText);
         assertTrue(packageText.contains("执行后选择要安装的工具"), packageText);
+        assertTrue(packageText.contains("按所选工具额外刷新对应全局 skill 目录以覆盖旧版本"), packageText);
         assertTrue(packageText.contains("Manual MCP import required"), packageText);
         assertTrue(packageText.contains("写入或合并 OpenCode 全局 opencode.json"), packageText);
         assertTrue(packageText.contains("写入或合并 CodeBuddy 用户级 MCP 配置"), packageText);
@@ -52,6 +53,10 @@ class ReqflowCodexSetupPackageTemplateTest
         assertTrue(packageText.contains("-Client \"codebuddy\""), packageText);
         assertTrue(packageText.contains("-Client \"opencode\""), packageText);
         assertTrue(packageText.contains("npx skills add"), packageText);
+        assertTrue(packageText.contains("~/.trae/skills"), packageText);
+        assertTrue(packageText.contains("~/.qoder/skills"), packageText);
+        assertTrue(packageText.contains("~/.codebuddy/skills"), packageText);
+        assertTrue(packageText.contains("~/.config/opencode/skills"), packageText);
         assertTrue(packageText.contains("-a codex"), packageText);
         assertTrue(packageText.contains("-a claude-code"), packageText);
         assertTrue(packageText.contains("-a trae"), packageText);
