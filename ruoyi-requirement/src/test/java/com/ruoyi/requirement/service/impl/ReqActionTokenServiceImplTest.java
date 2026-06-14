@@ -42,18 +42,23 @@ class ReqActionTokenServiceImplTest
         assertNotNull(instruction.getToken());
         assertTrue(instruction.getToken().startsWith("reqflow_action_"));
         assertTrue(instruction.getPrompt().contains("项目分支初始化"));
-        assertTrue(instruction.getContent().contains(instruction.getPrompt()));
         assertTrue(instruction.getContent().contains(instruction.getToken()));
-        assertTrue(instruction.getContent().contains("最长保留24小时"));
-        assertTrue(instruction.getContent().contains("已使用后需重新生成"));
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
         assertTrue(instruction.getContent().contains("toolName: publish_repository_index"));
         assertTrue(instruction.getContent().contains("mcpTool: reqflow.publish_repository_index"));
         assertTrue(instruction.getContent().contains("reqflow-mcp"));
-        assertTrue(instruction.getContent().contains("actionToken 是 publish_repository_index 的 arguments.actionToken"));
         assertTrue(instruction.getContent().contains("publish_repository_index"));
-        assertTrue(instruction.getContent().contains("需求平台"));
-        assertTrue(instruction.getContent().contains("main"));
+        assertFalse(instruction.getContent().contains(instruction.getPrompt()));
+        assertFalse(instruction.getContent().contains("targetMethod:"));
+        assertFalse(instruction.getContent().contains("projectId:"));
+        assertFalse(instruction.getContent().contains("variantId:"));
+        assertFalse(instruction.getContent().contains("最长保留24小时"));
+        assertFalse(instruction.getContent().contains("已使用后需重新生成"));
+        assertFalse(instruction.getContent().contains("actionToken 是 publish_repository_index 的 arguments.actionToken"));
+        assertFalse(instruction.getContent().contains("项目："));
+        assertFalse(instruction.getContent().contains("分支："));
+        assertFalse(instruction.getContent().contains("真实分支："));
+        assertFalse(instruction.getContent().contains("main"));
         assertFalse(instruction.getContent().contains("调用要求："));
         assertFalse(instruction.getContent().contains("\n1."));
         assertFalse(instruction.getContent().contains("写入或合并本地 harness 文件"));
@@ -106,6 +111,8 @@ class ReqActionTokenServiceImplTest
         ReqActionTokenServiceImpl service = newService(mapper);
         String plainToken = "reqflow_action_test_token";
         ReqActionToken stored = token(88L, "0");
+        stored.setActionType("single_action");
+        stored.setTargetMethod("single_method");
         stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
         when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
         when(mapper.updateLastUsed(88L)).thenReturn(1);
@@ -149,6 +156,8 @@ class ReqActionTokenServiceImplTest
         ReqActionTokenServiceImpl service = newService(mapper);
         String plainToken = "reqflow_action_used_token";
         ReqActionToken stored = token(91L, "0");
+        stored.setActionType("single_action");
+        stored.setTargetMethod("single_method");
         stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
         stored.setLastUsedTime(new Date(System.currentTimeMillis() - 1000));
         when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
@@ -254,12 +263,32 @@ class ReqActionTokenServiceImplTest
     }
 
     @Test
+    void projectInitTokenCanResolveAfterPreviousRepositoryPublish()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_project_init_token";
+        ReqActionToken stored = reusableToken(98L, IReqActionTokenService.ACTION_PROJECT_INIT,
+                IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.touchLastUsed(98L)).thenReturn(1);
+
+        ReqActionToken resolved = service.resolveToken(plainToken);
+
+        assertEquals(98L, resolved.getTokenId());
+        verify(mapper).touchLastUsed(98L);
+        verify(mapper, never()).updateLastUsed(98L);
+    }
+
+    @Test
     void rejectsTokenWhenLastUsedUpdateDoesNotWin()
     {
         ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
         ReqActionTokenServiceImpl service = newService(mapper);
         String plainToken = "reqflow_action_race_token";
         ReqActionToken stored = token(92L, "0");
+        stored.setActionType("single_action");
+        stored.setTargetMethod("single_method");
         stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
         when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
         when(mapper.updateLastUsed(92L)).thenReturn(0);

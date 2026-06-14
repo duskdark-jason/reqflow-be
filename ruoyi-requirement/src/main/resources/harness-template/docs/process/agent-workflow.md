@@ -32,7 +32,7 @@ docs/specs/active/REQ-001-中文需求标题/
 - 如果需求涉及菜单、页面、接口、权限、核心流程或数据口径，必须在 `requirement.md` 中声明执行阶段需要更新 `docs/ai-harness/modules/*.md`。
 - 如果存在不确定项，必须在计划阶段标记为阻断或假设，不能让执行阶段自行猜测。
 - 需求平台需求设计 Key 视为授权 Plan Agent 在最新基线创建或切换到平台建议的 ASCII 任务分支，并在本地保留最终 `requirement.md`；同一需求的补充调整必须继续使用同一任务分支和同一 spec 目录。
-- Plan Agent 写完或调整可行性评估和 `requirement.md` 后必须停止，等待用户确认是否回写平台；完成 MCP 回写或本地闭环后继续等待明确执行授权。不得修改业务代码、写 `plan.md`、写 `execution-report.md` 或写 `review-report.md`。
+- Plan Agent 写完或调整可行性评估和 `requirement.md` 后必须停止；需求分析评估等待用户确认是否回写平台，需求设计等待研发人员确认是否回写平台。完成 MCP 回写或本地闭环后继续等待明确执行授权。不得修改业务代码、写 `plan.md`、写 `execution-report.md` 或写 `review-report.md`。
 - 本地多轮需求设计也必须停在 `planning`；用户补充调整时继续迭代 `requirement.md`，不得提前写 `plan.md`。
 
 ### 执行阶段（Execution Agent）
@@ -44,7 +44,7 @@ docs/specs/active/REQ-001-中文需求标题/
 - 不自行扩展需求范围，不新增计划外接口、字段、依赖或架构。
 - 如果发现计划缺失、冲突或无法执行，停止并在 `execution-report.md` 写明阻断点。
 - 完成后写 `execution-report.md`，包含修改文件、验证命令、结果、未验证风险和与计划的偏差。
-- MCP 接入模式下，每次执行、返修或补验后都要先更新同一个 `execution-report.md`；用户明确确认提交验收、提交返修验收或回写平台后，才通过 MCP `upload_execution_report` 回写新版本。
+- MCP 接入模式下，每次执行、返修或补验后都要先更新同一个 `execution-report.md`，支持开发人员人工微调和初步验证；开发人员明确确认提交验收、提交返修验收或回写平台后，才通过 MCP `upload_execution_report` 回写新版本。
 - 本地 Harness 模式下，每次执行、返修或补验后也要更新同一个 `execution-report.md`，但只能记录“未接入 MCP，本地文件闭环”，不得伪造平台回写成功。
 - 完成后必须在 `execution-report.md` 记录模块知识库动作、模块文档路径和无需更新原因；新增或更新动作必须对应实际 `docs/ai-harness/modules/*.md` 文件。
 - L3 失败或跳过，或已选择 L4 但失败/跳过时，必须记录启动命令、执行目录、profile/env 或 mode、检查命令、错误摘要和补验环境；不得把当前 agent 环境问题写成用户环境问题。
@@ -58,7 +58,7 @@ docs/specs/active/REQ-001-中文需求标题/
 - 只做审查，不直接修改代码。
 - 审查输入包括 `requirement.md`、`plan.md`、`execution-report.md`、代码 diff、测试结果和相关 harness 文档。
 - 输出 `review-report.md`，结论只能是：`通过`、`有条件通过`、`阻断`。
-- MCP 接入模式下，每次 Review、返修复审或补充验收后都要先更新同一个 `review-report.md`；用户明确确认提交验收、提交返修验收或回写平台后，才通过 MCP `upload_review_report` 回写新版本。
+- MCP 接入模式下，每次 Review、返修复审或补充验收后都要先更新同一个 `review-report.md`，支持开发人员人工微调；开发人员明确确认提交验收、提交返修验收或回写平台后，才通过 MCP `upload_review_report` 回写新版本。
 - 本地 Harness 模式下，每次 Review、返修复审或补充验收后也要更新同一个 `review-report.md`，但不执行 MCP 回写。
 - 阻断问题必须给出文件、行为、风险和可复现验证方式。
 - `review-report.md` 是唯一 Review 结论与返修交接文件；不要另建 `fix-request.md`、`review-fix.md` 等并行文件。

@@ -8,6 +8,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -36,6 +37,13 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("install_all_clients"));
         assertTrue(script.contains("reqflow-mcp/SKILL.md"));
         assertTrue(script.contains("npx skills add \"$SKILL_DIR\" -g -a \"$target_client\" --copy -y"));
+        assertTrue(script.contains("sync_known_skill_locations \"$target_client\" \"$skill_file\""));
+        assertTrue(script.contains("${CODEX_HOME:-$HOME/.codex}/skills"));
+        assertTrue(script.contains("${AGENTS_HOME:-$HOME/.agents}/skills"));
+        assertTrue(script.contains("${TRAE_HOME:-$HOME/.trae}/skills"));
+        assertTrue(script.contains("${QODER_HOME:-$HOME/.qoder}/skills"));
+        assertTrue(script.contains("${CODEBUDDY_HOME:-$HOME/.codebuddy}/skills"));
+        assertTrue(script.contains("${OPENCODE_HOME:-${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}}/skills"));
         assertTrue(script.contains("merge_json_config"));
         assertTrue(script.contains("record_manual_import \"trae\""));
         assertTrue(script.contains("record_manual_import \"qoder\""));
@@ -44,6 +52,7 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("name: \"reqflow-mcp\""));
         assertTrue(script.contains("description: \"Use when"));
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));
+        assertFalse(script.matches("(?s).*\\n\\s+REQFLOW_SKILL_EOF\\n.*"));
         assertFalse(script.contains("Reqflow MCP and reqflow-mcp global skill installed for:$SELECTED_CLIENTS."));
         assertFalse(script.contains("reqflow_mcp_test_secret"));
     }
@@ -69,6 +78,13 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("Install-AllClients"));
         assertTrue(script.contains("reqflow-mcp/SKILL.md"));
         assertTrue(script.contains("npx skills add $SkillDir -g -a $TargetClient --copy -y"));
+        assertTrue(script.contains("Sync-KnownSkillLocations -TargetClient $TargetClient -SourceFile $SkillFile"));
+        assertTrue(script.contains("Join-Path $codexHome \"skills\""));
+        assertTrue(script.contains("Join-Path $agentsHome \"skills\""));
+        assertTrue(script.contains("Join-Path $traeHome \"skills\""));
+        assertTrue(script.contains("Join-Path $qoderHome \"skills\""));
+        assertTrue(script.contains("Join-Path $codeBuddyHome \"skills\""));
+        assertTrue(script.contains("Join-Path $openCodeHome \"skills\""));
         assertTrue(script.contains("Merge-JsonConfig"));
         assertTrue(script.contains("Add-ManualMcpImport -Client \"trae\""));
         assertTrue(script.contains("Add-ManualMcpImport -Client \"qoder\""));
@@ -77,8 +93,112 @@ class ReqCodexInstallControllerTest
         assertTrue(script.contains("name: \"reqflow-mcp\""));
         assertTrue(script.contains("description: \"Use when"));
         assertTrue(script.contains("Do not call reqflow MCP tools automatically"));
+        assertFalse(script.matches("(?s).*\\n\\s+'@\\n.*"));
         assertFalse(script.contains("Reqflow MCP and reqflow-mcp global skill installed for: "));
         assertFalse(script.contains("reqflow_mcp_test_secret"));
+    }
+
+    @Test
+    void shellInstallScriptOverwritesCodexSkillLocationsWhenNpxDoesNotCopy(@TempDir Path tempDir) throws Exception
+    {
+        Path home = tempDir.resolve("home");
+        Files.createDirectories(home);
+        Path staleCodexSkill = home.resolve(".codex/skills/reqflow-mcp/SKILL.md");
+        Path staleAgentsSkill = home.resolve(".agents/skills/reqflow-mcp/SKILL.md");
+        Files.createDirectories(staleCodexSkill.getParent());
+        Files.createDirectories(staleAgentsSkill.getParent());
+        Files.writeString(staleCodexSkill, "old codex skill", StandardCharsets.UTF_8);
+        Files.writeString(staleAgentsSkill, "old agents skill", StandardCharsets.UTF_8);
+
+        Path bin = tempDir.resolve("bin");
+        Files.createDirectories(bin);
+        Path npx = bin.resolve("npx");
+        Files.writeString(npx, "#!/usr/bin/env bash\nexit 0\n", StandardCharsets.UTF_8);
+        npx.toFile().setExecutable(true);
+
+        Path installScript = tempDir.resolve("install.sh");
+        Files.writeString(installScript, new ReqCodexInstallController().installShellScript(), StandardCharsets.UTF_8);
+        installScript.toFile().setExecutable(true);
+
+        ProcessBuilder processBuilder = new ProcessBuilder("bash", installScript.toString(),
+                "--client", "codex",
+                "--url", "http://127.0.0.1:8080/requirement/mcp",
+                "--key", "reqflow_secret");
+        processBuilder.redirectErrorStream(true);
+        processBuilder.environment().put("HOME", home.toString());
+        processBuilder.environment().put("REQFLOW_INSTALL_DIR", tempDir.resolve("support").toString());
+        processBuilder.environment().put("PATH", bin + File.pathSeparator + System.getenv("PATH"));
+
+        Process process = processBuilder.start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int exitCode = process.waitFor();
+
+        assertEquals(0, exitCode, output);
+        String codexSkill = Files.readString(staleCodexSkill);
+        String agentsSkill = Files.readString(staleAgentsSkill);
+        assertTrue(codexSkill.contains("Stop after local implementation and developer verification"), codexSkill);
+        assertTrue(agentsSkill.contains("Stop after local implementation and developer verification"), agentsSkill);
+        assertFalse(codexSkill.contains("old codex skill"), codexSkill);
+        assertFalse(agentsSkill.contains("old agents skill"), agentsSkill);
+        assertFalse(codexSkill.contains("Continue through implementation and automatic review"), codexSkill);
+        assertTrue(Files.readString(home.resolve(".codex/config.toml")).contains("X-MCP-Key"));
+    }
+
+    @Test
+    void shellInstallScriptOverwritesEveryClientSkillLocationWhenNpxDoesNotCopy(@TempDir Path tempDir) throws Exception
+    {
+        Path home = tempDir.resolve("home");
+        Files.createDirectories(home);
+        List<Path> staleSkillFiles = List.of(
+                home.resolve(".agents/skills/reqflow-mcp/SKILL.md"),
+                home.resolve(".codex/skills/reqflow-mcp/SKILL.md"),
+                home.resolve(".claude/skills/reqflow-mcp/SKILL.md"),
+                home.resolve(".trae/skills/reqflow-mcp/SKILL.md"),
+                home.resolve(".qoder/skills/reqflow-mcp/SKILL.md"),
+                home.resolve(".codebuddy/skills/reqflow-mcp/SKILL.md"),
+                home.resolve(".config/opencode/skills/reqflow-mcp/SKILL.md"));
+        for (Path skillFile : staleSkillFiles)
+        {
+            Files.createDirectories(skillFile.getParent());
+            Files.writeString(skillFile, "old skill at " + skillFile, StandardCharsets.UTF_8);
+        }
+
+        Path bin = tempDir.resolve("bin");
+        Files.createDirectories(bin);
+        Path npx = bin.resolve("npx");
+        Files.writeString(npx, "#!/usr/bin/env bash\nexit 0\n", StandardCharsets.UTF_8);
+        npx.toFile().setExecutable(true);
+        Path claude = bin.resolve("claude");
+        Files.writeString(claude, "#!/usr/bin/env bash\nexit 1\n", StandardCharsets.UTF_8);
+        claude.toFile().setExecutable(true);
+        Path codebuddy = bin.resolve("codebuddy");
+        Files.writeString(codebuddy, "#!/usr/bin/env bash\nexit 1\n", StandardCharsets.UTF_8);
+        codebuddy.toFile().setExecutable(true);
+
+        Path installScript = tempDir.resolve("install.sh");
+        Files.writeString(installScript, new ReqCodexInstallController().installShellScript(), StandardCharsets.UTF_8);
+        installScript.toFile().setExecutable(true);
+
+        ProcessBuilder processBuilder = new ProcessBuilder("bash", installScript.toString(),
+                "--client", "all",
+                "--url", "http://127.0.0.1:8080/requirement/mcp",
+                "--key", "reqflow_secret");
+        processBuilder.redirectErrorStream(true);
+        processBuilder.environment().put("HOME", home.toString());
+        processBuilder.environment().put("REQFLOW_INSTALL_DIR", tempDir.resolve("support").toString());
+        processBuilder.environment().put("PATH", bin + File.pathSeparator + System.getenv("PATH"));
+
+        Process process = processBuilder.start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        int exitCode = process.waitFor();
+
+        assertEquals(0, exitCode, output);
+        for (Path skillFile : staleSkillFiles)
+        {
+            String skill = Files.readString(skillFile);
+            assertTrue(skill.contains("Stop after local implementation and developer verification"), skillFile + "\n" + skill);
+            assertFalse(skill.contains("old skill at"), skillFile + "\n" + skill);
+        }
     }
 
     @Test

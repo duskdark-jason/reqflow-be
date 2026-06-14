@@ -182,6 +182,14 @@ class McpServiceTest
         assertTrue(String.valueOf(content.get("resources")).contains("requirement://REQ-20260609-001"));
         assertTrue(String.valueOf(content.get("packageVersions")).contains("versionNo=3"),
                 String.valueOf(content.get("packageVersions")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("本地开发"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("开发人员人工微调和初步验证"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("开发人员明确确认提交验收或回写平台后"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("确认前禁止调用写平台工具"),
+                String.valueOf(content.get("writebackPolicy")));
         assertFalse(String.valueOf(content).contains("需求设计正文不应直接进入上下文"), String.valueOf(content));
         verify(actionTokenService).resolveTokenForContext("reqflow_action_develop");
         verify(actionTokenService, never()).resolveToken("reqflow_action_develop");
@@ -245,6 +253,94 @@ class McpServiceTest
                 String.valueOf(content.get("tokenPersistence")));
         verify(actionTokenService).resolveTokenForContext("reqflow_action_closeout");
         verify(actionTokenService, never()).resolveToken("reqflow_action_closeout");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void requirementGenerateActionContextRequiresUserConfirmationBeforeWriteback()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE);
+        token.setProjectId(10L);
+        token.setVariantId(31L);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveTokenForContext("reqflow_action_generate")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "plan_pending"));
+        when(packageService.selectReqPackageVersionListByDemandId(9L)).thenReturn(Collections.emptyList());
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", mock(ReqVariantMapper.class));
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_generate");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("get_action_context", arguments)));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        Map<String, Object> content = (Map<String, Object>) result.get("structuredContent");
+        assertEquals("requirement_generate", content.get("stage"));
+        assertTrue(String.valueOf(content.get("allowedTools")).contains("save_requirement_package"));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("先本地生成需求设计"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("研发人员人工微调"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("研发人员明确确认提交需求设计后"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("save_requirement_package"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("确认前禁止调用写平台工具"),
+                String.valueOf(content.get("writebackPolicy")));
+        verify(actionTokenService).resolveTokenForContext("reqflow_action_generate");
+        verify(actionTokenService, never()).resolveToken("reqflow_action_generate");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void requirementRepairActionContextRequiresDeveloperConfirmationBeforeWriteback()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_REPAIR);
+        token.setProjectId(10L);
+        token.setVariantId(31L);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveTokenForContext("reqflow_action_repair")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "repairing"));
+        when(packageService.selectReqPackageVersionListByDemandId(9L)).thenReturn(Collections.emptyList());
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", mock(ReqVariantMapper.class));
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_repair");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("get_action_context", arguments)));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        Map<String, Object> content = (Map<String, Object>) result.get("structuredContent");
+        assertEquals("requirement_repair", content.get("stage"));
+        assertTrue(String.valueOf(content.get("allowedTools")).contains("upload_execution_report"));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("开发人员人工微调"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("开发人员明确确认提交返修验收或回写平台后"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("确认前禁止调用写平台工具"),
+                String.valueOf(content.get("writebackPolicy")));
+        verify(actionTokenService).resolveTokenForContext("reqflow_action_repair");
+        verify(actionTokenService, never()).resolveToken("reqflow_action_repair");
     }
 
     @Test

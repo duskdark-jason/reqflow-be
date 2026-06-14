@@ -68,11 +68,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         ReqActionInstruction instruction = createInstruction(ACTION_PROJECT_INIT, project.getProjectId(), variant.getVariantId(),
                 null, PROJECT_INIT_TOOL_NAME, prompt, "复制初始化指令", operator);
         // 项目初始化指令必须绑定项目分支，后续 publish_repository_index 才能自动校验远端和分支归属。
-        instruction.setContent(projectInitInstructionContent(prompt, instruction.getTargetMethod(), instruction.getToken(),
-                        project.getProjectId(), variant.getVariantId())
-                + "\n项目：" + firstNotEmpty(project.getProjectName(), project.getProjectCode())
-                + "\n分支：" + firstNotEmpty(variant.getVariantName(), variant.getVariantCode())
-                + "\n真实分支：" + firstNotEmpty(variant.getBaselineBranch(), "未填写"));
+        instruction.setContent(projectInitInstructionContent(instruction.getToken()));
         return instruction;
     }
 
@@ -129,7 +125,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         {
             throw new ServiceException("动作Token已使用，请重新生成");
         }
-        // 解析成功后记录使用时间。普通动作通过条件更新保证一次性消费，开发阶段 Token 仅刷新最近使用时间。
+        // 解析成功后记录使用时间。普通动作通过条件更新保证一次性消费，可复用阶段或初始化 Token 仅刷新最近使用时间。
         if (token.getTokenId() != null)
         {
             int updated = reusableStageToken
@@ -246,6 +242,10 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
             return TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod())
                     || TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod());
         }
+        if (ACTION_PROJECT_INIT.equals(token.getActionType()))
+        {
+            return TARGET_PUBLISH_REPOSITORY_INDEX.equals(token.getTargetMethod());
+        }
         return ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType())
                 && TARGET_PUBLISH_REPOSITORY_INDEX.equals(token.getTargetMethod());
     }
@@ -294,31 +294,13 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         }
     }
 
-    private String firstNotEmpty(String... values)
+    private String projectInitInstructionContent(String actionToken)
     {
-        for (String value : values)
-        {
-            if (StringUtils.isNotEmpty(value))
-            {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private String projectInitInstructionContent(String prompt, String targetMethod, String actionToken, Long projectId, Long variantId)
-    {
-        return prompt
-                + "\n请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。"
+        return "请按全局 skill `reqflow-mcp` 执行 Reqflow 项目接入初始化。"
                 + "\nmcpServer: " + PROJECT_INIT_MCP_SERVER
                 + "\ntoolName: " + PROJECT_INIT_TOOL_NAME
                 + "\nmcpTool: " + PROJECT_INIT_MCP_SERVER + "." + PROJECT_INIT_TOOL_NAME
-                + "\ntargetMethod: " + targetMethod
-                + "\nprojectId: " + projectId
-                + "\nvariantId: " + variantId
-                + "\nactionToken: " + actionToken
-                + "\n" + ACTION_TOKEN_USAGE_RULE
-                + "\n要求：actionToken 是 publish_repository_index 的 arguments.actionToken，不是 X-MCP-Key。";
+                + "\nactionToken: " + actionToken;
     }
 
     private static class GeneratedToken

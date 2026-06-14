@@ -485,7 +485,7 @@ class ReqDemandServiceImplTest
     }
 
     @Test
-    void creatorCanSubmitSupplementAndReturnDemandToDesignStage()
+    void creatorCanSubmitAnalysisSupplementAndReturnDemandToAnalysisStage()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
         ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
@@ -495,7 +495,7 @@ class ReqDemandServiceImplTest
         current.setDemandNo("REQ-005");
         current.setStatus("supplement_required");
         when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
-        when(reqDemandMapper.updateReqDemandStatus(5L, "plan_pending", "creator")).thenReturn(1);
+        when(reqDemandMapper.updateReqDemandStatus(5L, "submitted", "creator")).thenReturn(1);
         mockLoginUser(7L, "requirement_user");
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
@@ -507,9 +507,58 @@ class ReqDemandServiceImplTest
 
         verify(packageVersionMapper).insertReqPackageVersion(argThat(packageVersion ->
                 hasPackage(packageVersion, "requirement_supplement", "补充业务规则", "验收口径")));
+        verify(reqDemandMapper).updateReqDemandStatus(5L, "submitted", "creator");
+        verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_supplement_submitted"),
+                eq("web"), contains("提交补充说明"), isNull());
+    }
+
+    @Test
+    void creatorCanSubmitDesignSupplementAndReturnDemandToDesignStage()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("supplement_required");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(packageVersionMapper.selectLatestByDemandIdAndArtifactType(5L, "requirement"))
+                .thenReturn(packageVersion(21L, "requirement", 2_000L));
+        when(reqDemandMapper.updateReqDemandStatus(5L, "plan_pending", "creator")).thenReturn(1);
+        mockLoginUser(7L, "requirement_user");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "packageVersionMapper", packageVersionMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.submitDemandSupplement(5L, "补充需求设计缺失的边界规则", "creator"));
+
+        verify(packageVersionMapper).insertReqPackageVersion(argThat(packageVersion ->
+                hasPackage(packageVersion, "requirement_supplement", "补充需求设计", "边界规则")));
         verify(reqDemandMapper).updateReqDemandStatus(5L, "plan_pending", "creator");
         verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_supplement_submitted"),
                 eq("web"), contains("提交补充说明"), isNull());
+    }
+
+    @Test
+    void rejectsGenericStatusChangeFromSupplementRequiredWithoutSupplementContent()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setStatus("supplement_required");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.updateReqDemandStatus(5L, "submitted", "creator"));
+
+        assertTrue(exception.getMessage().contains("请先填写补充说明"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
     }
 
     @Test
@@ -783,6 +832,12 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
         assertEquals(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE, instruction.getTargetMethod());
+        assertTrue(instruction.getContent().contains("本地生成需求设计"));
+        assertTrue(instruction.getContent().contains("研发人员人工微调"));
+        assertTrue(instruction.getContent().contains("研发人员确认后再回写平台"));
+        assertFalse(instruction.getContent().contains("展示给用户确认"));
+        assertFalse(instruction.getContent().contains("用户确认后再回写平台"));
+        assertFalse(instruction.getContent().contains("并通过 reqflow MCP 回写需求设计"));
         assertFalse(instruction.getContent().contains("save_requirement_package"));
         assertFalse(instruction.getContent().contains("upload_requirement_assessment"));
         assertFalse(instruction.getContent().contains("save_development_plan"));
@@ -861,6 +916,13 @@ class ReqDemandServiceImplTest
         ReqActionInstruction instruction = service.createRequirementDevelopInstruction(6L, "developer");
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, instruction.getActionType());
+        assertTrue(instruction.getContent().contains("本地执行开发"));
+        assertTrue(instruction.getContent().contains("开发人员人工微调和初步验证"));
+        assertTrue(instruction.getContent().contains("开发人员确认完成后再回写平台"));
+        assertFalse(instruction.getContent().contains("并通过 reqflow MCP 回写执行计划、执行报告和 Review 报告"));
+        assertFalse(instruction.getContent().contains("save_development_plan"));
+        assertFalse(instruction.getContent().contains("upload_execution_report"));
+        assertFalse(instruction.getContent().contains("upload_review_report"));
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
         assertFalse(instruction.getContent().contains("mcpTool:"));
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));
@@ -938,6 +1000,9 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_DEVELOP, instruction.getActionType());
         assertEquals(IReqActionTokenService.TARGET_REQUIREMENT_REPAIR, instruction.getTargetMethod());
+        assertTrue(instruction.getContent().contains("本地完成修复和复审"));
+        assertTrue(instruction.getContent().contains("开发人员人工微调"));
+        assertTrue(instruction.getContent().contains("开发人员确认后再回写平台"));
         assertTrue(instruction.getContent().contains("请按全局 skill `reqflow-mcp`"));
         assertFalse(instruction.getContent().contains("mcpTool:"));
         assertTrue(instruction.getContent().contains("mcpServer: reqflow"));

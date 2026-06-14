@@ -1,6 +1,7 @@
 package com.ruoyi.requirement.template;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
@@ -30,8 +31,16 @@ class ReqflowCodexGlobalSkillTemplateTest
         assertTrue(skillContent.contains("Call `mcp__reqflow.get_action_context` first"), skillContent);
         assertTrue(skillContent.contains("platformSync"), skillContent);
         assertTrue(skillContent.contains("Persist the copied `actionToken` in local `meta.md`"), skillContent);
-        assertTrue(skillContent.contains("Do not call writeback tools until the user explicitly confirms"), skillContent);
+        assertTrue(skillContent.contains("Do not call writeback tools until the stage owner explicitly confirms"), skillContent);
         assertTrue(skillContent.contains("resume after context compaction"), skillContent);
+        assertTrue(skillContent.contains("Stop after local requirement design draft and R&D manual adjustments"), skillContent);
+        assertTrue(skillContent.contains("present the generated requirement design for R&D confirmation or manual adjustments"), skillContent);
+        assertFalse(skillContent.contains("Stop after requirement package upload"), skillContent);
+        assertTrue(skillContent.contains("Stop after local implementation and developer verification"), skillContent);
+        assertTrue(skillContent.contains("guide the developer through manual smoke checks or requested adjustments"), skillContent);
+        assertTrue(skillContent.contains("Fix only repair items, support developer manual adjustments"), skillContent);
+        assertTrue(skillContent.contains("stop for developer confirmation before `mcp__reqflow.upload_execution_report`"), skillContent);
+        assertFalse(skillContent.contains("Continue through implementation and automatic review"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_analysis"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_generate"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_develop"), skillContent);
