@@ -10,9 +10,7 @@ import org.junit.jupiter.api.Test;
 
 class ReqPlatformRoleSqlTest
 {
-    private static final String ROLE_SQL = "docs/db/sql/req_platform_req016_role_permissions.sql";
-
-    private static final String MENU_SQL = "docs/db/sql/req_platform_menu.sql";
+    private static final String INIT_SQL = "docs/db/sql/req_platform_init.sql";
 
     @Test
     void rolePermissionSqlDefinesRequirementAndDeveloperRoles() throws IOException
@@ -23,13 +21,15 @@ class ReqPlatformRoleSqlTest
         assertTrue(sql.contains("'requirement_user'"), sql);
         assertTrue(sql.contains("'开发人员'"), sql);
         assertTrue(sql.contains("'requirement_developer'"), sql);
-        assertTrue(sql.contains("role_key = 'admin'"), sql);
+        assertTrue(sql.contains("role_key=admin"), sql);
     }
 
     @Test
     void requirementRoleOnlyGetsDemandAndStatisticsPermissions() throws IOException
     {
-        String requirementSection = section(readRoleSql(), "-- 需求人员角色权限", "-- 开发人员角色权限");
+        String requirementSection = section(readRoleSql(),
+                "DELETE FROM sys_role_menu WHERE role_id = @requirement_user_role_id;",
+                "DELETE FROM sys_role_menu WHERE role_id = @requirement_developer_role_id;");
 
         assertTrue(requirementSection.contains("req:demand:list"), requirementSection);
         assertTrue(requirementSection.contains("req:demand:query"), requirementSection);
@@ -46,7 +46,9 @@ class ReqPlatformRoleSqlTest
     @Test
     void developerRoleGetsDemandMcpStatisticsAndHiddenPackageSavePermissions() throws IOException
     {
-        String developerSection = section(readRoleSql(), "-- 开发人员角色权限", "-- 超级管理员说明");
+        String developerSection = section(readRoleSql(),
+                "DELETE FROM sys_role_menu WHERE role_id = @requirement_developer_role_id;",
+                "-- Admin role_key=admin remains");
 
         assertTrue(developerSection.contains("req:demand:list"), developerSection);
         assertTrue(developerSection.contains("req:demand:query"), developerSection);
@@ -75,12 +77,12 @@ class ReqPlatformRoleSqlTest
 
     private String readRoleSql() throws IOException
     {
-        return readSql(ROLE_SQL);
+        return readSql(INIT_SQL);
     }
 
     private String readMenuSql() throws IOException
     {
-        return readSql(MENU_SQL);
+        return readSql(INIT_SQL);
     }
 
     private String readSql(String path) throws IOException

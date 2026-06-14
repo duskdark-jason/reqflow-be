@@ -9,15 +9,14 @@ import org.junit.jupiter.api.Test;
 
 class ReqDemandSchemaSqlTest
 {
-    private static final String SCHEMA_SQL = "docs/db/sql/req_platform_schema.sql";
-    private static final String MIGRATION_SQL = "docs/db/sql/req_platform_req016_demand_form_fields.sql";
-    private static final String DEVELOPER_LOCK_MIGRATION_SQL = "docs/db/sql/req_platform_req017_demand_developer_lock.sql";
+    private static final String INIT_SQL = "docs/db/sql/req_platform_init.sql";
 
     @Test
     void demandSchemaContainsSourceAndAttachmentColumns() throws IOException
     {
-        String sql = readSql(SCHEMA_SQL);
+        String sql = readSql(INIT_SQL);
 
+        assertTrue(sql.contains("CREATE TABLE IF NOT EXISTS req_demand"), sql);
         assertTrue(sql.contains("demand_source"), sql);
         assertTrue(sql.contains("attachments"), sql);
         assertTrue(sql.contains("developer_user_id"), sql);
@@ -25,23 +24,21 @@ class ReqDemandSchemaSqlTest
     }
 
     @Test
-    void migrationSqlAddsSourceAndAttachmentColumns() throws IOException
+    void cleanInitSqlContainsSourceAndAttachmentColumns() throws IOException
     {
-        String sql = readSql(MIGRATION_SQL);
+        String sql = readSql(INIT_SQL);
 
-        assertTrue(sql.contains("demand_source"), sql);
-        assertTrue(sql.contains("attachments"), sql);
-        assertTrue(sql.contains("REQ-016"), sql);
+        assertTrue(sql.contains("demand_source VARCHAR(64) NOT NULL DEFAULT 'BUSINESS'"), sql);
+        assertTrue(sql.contains("attachments TEXT"), sql);
     }
 
     @Test
-    void migrationSqlAddsDeveloperLockColumnAndIndex() throws IOException
+    void cleanInitSqlContainsDeveloperLockColumnAndIndex() throws IOException
     {
-        String sql = readSql(DEVELOPER_LOCK_MIGRATION_SQL);
+        String sql = readSql(INIT_SQL);
 
-        assertTrue(sql.contains("developer_user_id"), sql);
-        assertTrue(sql.contains("idx_req_demand_developer"), sql);
-        assertTrue(sql.contains("REQ-017"), sql);
+        assertTrue(sql.contains("developer_user_id BIGINT DEFAULT NULL"), sql);
+        assertTrue(sql.contains("KEY idx_req_demand_developer (developer_user_id)"), sql);
     }
 
     private String readSql(String relativePath) throws IOException
