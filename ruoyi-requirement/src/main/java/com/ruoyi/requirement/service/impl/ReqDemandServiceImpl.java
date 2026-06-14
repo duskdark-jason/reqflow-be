@@ -379,7 +379,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
         String taskBranch = suggestedTaskBranch(demand);
         if ("submitted".equals(demand.getStatus()))
         {
-            String prompt = "请在需求分析阶段完成需求可行性评估和风险判断，并通过 reqflow MCP 回写评估报告。";
+            String prompt = "请在需求分析阶段本地生成可行性评估，展示给用户确认；用户确认后再回写平台。";
             ReqActionInstruction instruction = actionTokenService.createInstruction(
                     IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
                     demand.getProjectId(),
@@ -392,7 +392,7 @@ public class ReqDemandServiceImpl implements IReqDemandService
             instruction.setContent(requirementAnalysisInstructionContent(prompt, instruction.getToken(), demand, taskBranch));
             return instruction;
         }
-        String prompt = "请在需求生成阶段基于已确认可继续的评估结论生成详细需求设计，并通过 reqflow MCP 回写需求设计。";
+        String prompt = "请在需求生成阶段本地生成需求设计，展示给用户确认或修改；用户确认后再回写平台。";
         ReqActionInstruction instruction = actionTokenService.createInstruction(
                 IReqActionTokenService.ACTION_REQUIREMENT_PLAN,
                 demand.getProjectId(),

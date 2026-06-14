@@ -248,6 +248,52 @@ class McpServiceTest
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void requirementGenerateActionContextRequiresUserConfirmationBeforeWriteback()
+    {
+        IReqPackageService packageService = mock(IReqPackageService.class);
+        IReqActionTokenService actionTokenService = mock(IReqActionTokenService.class);
+        ReqActionToken token = new ReqActionToken();
+        token.setActionType(IReqActionTokenService.ACTION_REQUIREMENT_PLAN);
+        token.setTargetMethod(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE);
+        token.setProjectId(10L);
+        token.setVariantId(31L);
+        token.setDemandId(9L);
+        when(actionTokenService.resolveTokenForContext("reqflow_action_generate")).thenReturn(token);
+        ReqDemandMapper demandMapper = mock(ReqDemandMapper.class);
+        when(demandMapper.selectReqDemandByDemandId(9L)).thenReturn(demand(9L, "plan_pending"));
+        when(packageService.selectReqPackageVersionListByDemandId(9L)).thenReturn(Collections.emptyList());
+
+        McpService service = new TestableMcpService(true);
+        ReflectionTestUtils.setField(service, "reqPackageService", packageService);
+        ReflectionTestUtils.setField(service, "actionTokenService", actionTokenService);
+        ReflectionTestUtils.setField(service, "reqDemandMapper", demandMapper);
+        ReflectionTestUtils.setField(service, "variantMapper", mock(ReqVariantMapper.class));
+
+        Map<String, Object> arguments = new HashMap<>();
+        arguments.put("actionToken", "reqflow_action_generate");
+
+        McpResponse response = service.handle(request("tools/call", toolParams("get_action_context", arguments)));
+
+        Map<String, Object> result = (Map<String, Object>) response.getResult();
+        Map<String, Object> content = (Map<String, Object>) result.get("structuredContent");
+        assertEquals("requirement_generate", content.get("stage"));
+        assertTrue(String.valueOf(content.get("allowedTools")).contains("save_requirement_package"));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("先本地生成需求设计"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("展示给用户确认或修改"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("用户明确确认提交需求设计后"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("save_requirement_package"),
+                String.valueOf(content.get("writebackPolicy")));
+        assertTrue(String.valueOf(content.get("writebackPolicy")).contains("确认前禁止调用写平台工具"),
+                String.valueOf(content.get("writebackPolicy")));
+        verify(actionTokenService).resolveTokenForContext("reqflow_action_generate");
+        verify(actionTokenService, never()).resolveToken("reqflow_action_generate");
+    }
+
+    @Test
     void resourceTemplatesListReturnsMcpTemplates()
     {
         McpResponse response = new McpService().handle(request("resources/templates/list", null));

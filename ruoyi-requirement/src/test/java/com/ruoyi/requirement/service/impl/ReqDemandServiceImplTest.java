@@ -832,6 +832,10 @@ class ReqDemandServiceImplTest
 
         assertEquals(IReqActionTokenService.ACTION_REQUIREMENT_PLAN, instruction.getActionType());
         assertEquals(IReqActionTokenService.TARGET_REQUIREMENT_GENERATE, instruction.getTargetMethod());
+        assertTrue(instruction.getContent().contains("本地生成需求设计"));
+        assertTrue(instruction.getContent().contains("展示给用户确认"));
+        assertTrue(instruction.getContent().contains("确认后再回写平台"));
+        assertFalse(instruction.getContent().contains("并通过 reqflow MCP 回写需求设计"));
         assertFalse(instruction.getContent().contains("save_requirement_package"));
         assertFalse(instruction.getContent().contains("upload_requirement_assessment"));
         assertFalse(instruction.getContent().contains("save_development_plan"));

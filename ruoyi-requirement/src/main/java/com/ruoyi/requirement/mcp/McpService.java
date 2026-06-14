@@ -496,8 +496,38 @@ public class McpService
         }
         context.put("syncPolicy", "先读取本地 meta.md 的 platformSync；仅当平台 versionNo 或 contentHash 更新时，再按 resourceUri 读取对应全文。");
         context.put("tokenPersistence", "Persist the copied actionToken in local meta.md platformSync.actionToken so agents can resume after context compaction and later write back with the same stage token.");
-        context.put("writebackPolicy", "requiresExplicitUserConfirmation=true; Do not call writeback tools until the user explicitly confirms submission, acceptance, upload, or publish.");
+        context.put("writebackPolicy", writebackPolicy(token));
         return context;
+    }
+
+    private String writebackPolicy(ReqActionToken token)
+    {
+        String stage = stageForToken(token);
+        if (IReqActionTokenService.TARGET_REQUIREMENT_ANALYSIS.equals(stage))
+        {
+            return "requiresExplicitUserConfirmation=true; 先本地生成需求可行性评估并展示给用户确认或修改；用户明确确认提交评估后，才可调用 upload_requirement_assessment 回写平台。确认前禁止调用写平台工具。";
+        }
+        if (IReqActionTokenService.TARGET_REQUIREMENT_GENERATE.equals(stage))
+        {
+            return "requiresExplicitUserConfirmation=true; 先本地生成需求设计并展示给用户确认或修改；用户明确确认提交需求设计后，才可调用 save_requirement_package 回写平台。确认前禁止调用写平台工具。";
+        }
+        if (IReqActionTokenService.TARGET_REQUIREMENT_DEVELOP.equals(stage))
+        {
+            return "requiresExplicitUserConfirmation=true; 先完成本地开发、验证、执行报告和 Review 报告草稿，并展示给开发人员确认；用户明确确认提交验收或回写平台后，才可调用 save_development_plan、upload_execution_report 或 upload_review_report。";
+        }
+        if (IReqActionTokenService.TARGET_REQUIREMENT_REPAIR.equals(stage))
+        {
+            return "requiresExplicitUserConfirmation=true; 先按返修问题完成本地修复、验证、执行报告增量和复审报告，并展示给开发人员确认；用户明确确认提交返修验收后，才可调用 upload_execution_report 或 upload_review_report。";
+        }
+        if ("requirement_closeout".equals(stage))
+        {
+            return "requiresExplicitUserConfirmation=true; 先完成本地 active 到 done 归档迁移、squash merge 和 push；用户明确确认发布归档索引后，才可调用 publish_repository_index。";
+        }
+        if ("project_init".equals(stage))
+        {
+            return "requiresExplicitUserConfirmation=true; 先完成本地 harness 初始化、校验、commit 和 push；用户确认发布初始化结果后，才可调用 publish_repository_index 或 register_harness_init_result。";
+        }
+        return "requiresExplicitUserConfirmation=true; Do not call writeback tools until the user explicitly confirms submission, acceptance, upload, or publish.";
     }
 
     private void validateActionContextStage(ReqActionToken token)

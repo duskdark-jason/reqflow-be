@@ -1,6 +1,7 @@
 package com.ruoyi.requirement.template;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
@@ -32,6 +33,9 @@ class ReqflowCodexGlobalSkillTemplateTest
         assertTrue(skillContent.contains("Persist the copied `actionToken` in local `meta.md`"), skillContent);
         assertTrue(skillContent.contains("Do not call writeback tools until the user explicitly confirms"), skillContent);
         assertTrue(skillContent.contains("resume after context compaction"), skillContent);
+        assertTrue(skillContent.contains("Stop after local requirement design draft"), skillContent);
+        assertTrue(skillContent.contains("present the generated requirement design to the user for confirmation or edits"), skillContent);
+        assertFalse(skillContent.contains("Stop after requirement package upload"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_analysis"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_generate"), skillContent);
         assertTrue(skillContent.contains("stage: requirement_develop"), skillContent);

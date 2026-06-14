@@ -45,7 +45,7 @@ REQ-001-中文需求标题.md
 ## 使用流程
 
 1. 新需求开始前，在 `active/` 下创建需求目录，并复制 `meta.md`。
-2. 如果任务来自需求平台 Key，先按 `../process/platform-key-workflow.md` 校验模式；需求设计模式必须在最新基线创建或切换任务分支，先回写需求可行性评估，评估允许继续后只生成/调整 `requirement.md` 并回写平台版本；开发模式沿用该任务分支。
+2. 如果任务来自需求平台 Key，先按 `../process/platform-key-workflow.md` 校验模式；需求设计模式必须在最新基线创建或切换任务分支，先本地生成需求可行性评估并等待用户确认回写，评估允许继续后只生成/调整 `requirement.md`，用户确认定稿后再回写平台版本；开发模式沿用该任务分支。
 3. Plan Agent 复制模板并填写 `requirement.md`；MCP 接入模式和本地 Harness 模式在需求设计确认前都不得生成 `plan.md`。
 4. Execution Agent 基于最终 `requirement.md` 先分析是否适合拆分为多个 subagent 并行执行，再生成或更新 `plan.md`，按 `plan.md` 实现，并填写 `execution-report.md`；除用户明确要求“只执行不 Review”外，执行结束后自动进入 Review 阶段。
 5. Review Agent 只读审查，并填写 `review-report.md`；需要返修时使用 `RF-001` 形式编号。
