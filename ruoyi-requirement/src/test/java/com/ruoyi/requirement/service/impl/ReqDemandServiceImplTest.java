@@ -485,7 +485,7 @@ class ReqDemandServiceImplTest
     }
 
     @Test
-    void creatorCanSubmitSupplementAndReturnDemandToDesignStage()
+    void creatorCanSubmitAnalysisSupplementAndReturnDemandToAnalysisStage()
     {
         ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
         ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
@@ -495,7 +495,7 @@ class ReqDemandServiceImplTest
         current.setDemandNo("REQ-005");
         current.setStatus("supplement_required");
         when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
-        when(reqDemandMapper.updateReqDemandStatus(5L, "plan_pending", "creator")).thenReturn(1);
+        when(reqDemandMapper.updateReqDemandStatus(5L, "submitted", "creator")).thenReturn(1);
         mockLoginUser(7L, "requirement_user");
 
         ReqDemandServiceImpl service = new ReqDemandServiceImpl();
@@ -507,9 +507,58 @@ class ReqDemandServiceImplTest
 
         verify(packageVersionMapper).insertReqPackageVersion(argThat(packageVersion ->
                 hasPackage(packageVersion, "requirement_supplement", "补充业务规则", "验收口径")));
+        verify(reqDemandMapper).updateReqDemandStatus(5L, "submitted", "creator");
+        verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_supplement_submitted"),
+                eq("web"), contains("提交补充说明"), isNull());
+    }
+
+    @Test
+    void creatorCanSubmitDesignSupplementAndReturnDemandToDesignStage()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqPackageVersionMapper packageVersionMapper = mock(ReqPackageVersionMapper.class);
+        ReqActivityLogService activityLogService = mock(ReqActivityLogService.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setDemandNo("REQ-005");
+        current.setStatus("supplement_required");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+        when(packageVersionMapper.selectLatestByDemandIdAndArtifactType(5L, "requirement"))
+                .thenReturn(packageVersion(21L, "requirement", 2_000L));
+        when(reqDemandMapper.updateReqDemandStatus(5L, "plan_pending", "creator")).thenReturn(1);
+        mockLoginUser(7L, "requirement_user");
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+        ReflectionTestUtils.setField(service, "packageVersionMapper", packageVersionMapper);
+        ReflectionTestUtils.setField(service, "activityLogService", activityLogService);
+
+        assertEquals(1, service.submitDemandSupplement(5L, "补充需求设计缺失的边界规则", "creator"));
+
+        verify(packageVersionMapper).insertReqPackageVersion(argThat(packageVersion ->
+                hasPackage(packageVersion, "requirement_supplement", "补充需求设计", "边界规则")));
         verify(reqDemandMapper).updateReqDemandStatus(5L, "plan_pending", "creator");
         verify(activityLogService).record(anyLong(), eq(10L), eq(5L), eq("demand_supplement_submitted"),
                 eq("web"), contains("提交补充说明"), isNull());
+    }
+
+    @Test
+    void rejectsGenericStatusChangeFromSupplementRequiredWithoutSupplementContent()
+    {
+        ReqDemandMapper reqDemandMapper = mock(ReqDemandMapper.class);
+        ReqDemand current = demand(10L, 31L);
+        current.setDemandId(5L);
+        current.setStatus("supplement_required");
+        when(reqDemandMapper.selectReqDemandByDemandId(5L)).thenReturn(current);
+
+        ReqDemandServiceImpl service = new ReqDemandServiceImpl();
+        ReflectionTestUtils.setField(service, "reqDemandMapper", reqDemandMapper);
+
+        ServiceException exception = assertThrows(ServiceException.class,
+                () -> service.updateReqDemandStatus(5L, "submitted", "creator"));
+
+        assertTrue(exception.getMessage().contains("请先填写补充说明"));
+        verify(reqDemandMapper, never()).updateReqDemandStatus(anyLong(), any(), any());
     }
 
     @Test

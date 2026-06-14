@@ -187,6 +187,11 @@ public class ReqDemandServiceImpl implements IReqDemandService
         {
             throw new ServiceException("需求状态流转不允许");
         }
+        if ("supplement_required".equals(current.getStatus())
+                && ("submitted".equals(status) || "plan_pending".equals(status)))
+        {
+            throw new ServiceException("请先填写补充说明");
+        }
         if ("review".equals(current.getStatus()) && "repairing".equals(status))
         {
             throw new ServiceException("请先填写返修问题说明");
@@ -278,8 +283,9 @@ public class ReqDemandServiceImpl implements IReqDemandService
         }
 
         String versionNote = designAdjustment ? "需求设计调整说明" : "需求人补充说明";
+        String targetStatus = designAdjustment ? "plan_pending" : statusAfterSupplement(demandId);
         savePackageVersion(demandId, "requirement_supplement", content.trim(), versionNote, updateBy);
-        int rows = reqDemandMapper.updateReqDemandStatus(demandId, "plan_pending", updateBy);
+        int rows = reqDemandMapper.updateReqDemandStatus(demandId, targetStatus, updateBy);
         if (rows < 1)
         {
             throw new ServiceException("补充说明提交失败");
@@ -293,6 +299,12 @@ public class ReqDemandServiceImpl implements IReqDemandService
                     null);
         }
         return rows;
+    }
+
+    private String statusAfterSupplement(Long demandId)
+    {
+        ReqPackageVersion requirement = packageVersionMapper.selectLatestByDemandIdAndArtifactType(demandId, "requirement");
+        return requirement == null ? "submitted" : "plan_pending";
     }
 
     @Override

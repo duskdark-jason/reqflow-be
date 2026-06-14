@@ -124,7 +124,7 @@ Codex 完成初始化后，通过 `register_harness_init_result` 或 `/requireme
 | `/requirement/demand/{demandIds}` | DELETE | `req:demand:remove` | 管理员删除一个或多个需求，并删除关联资料包版本和动作 token |
 | `/requirement/demand/upload` | POST | `req:demand:add` 或 `req:demand:edit` | 上传需求附件，单文件不超过 2MB |
 | `/requirement/demand/{demandId}/status/{status}` | POST | `req:demand:edit` | 状态流转 |
-| `/requirement/demand/{demandId}/supplement` | POST | `req:demand:edit` | 需求创建人在待补充说明或需求设计待确认状态提交补充/调整内容，并回到待生成需求设计 |
+| `/requirement/demand/{demandId}/supplement` | POST | `req:demand:edit` | 需求创建人在待补充说明或需求设计待确认状态提交补充/调整内容；需求分析退回补充后回到待需求分析，需求设计退回补充或设计待确认调整后回到待生成需求设计 |
 | `/requirement/demand/{demandId}/plan-instruction` | GET | `req:demand:query` | 按当前状态获取需求分析或需求生成 MCP 指令 |
 | `/requirement/demand/{demandId}/develop-instruction` | GET | `req:demand:query` | 按当前状态获取开发执行、返修或合并归档 MCP 指令 |
 | `/requirement/demand/{demandId}/closeout-verification` | GET | `req:demand:query` | 查询合并归档平台验证结果，供前端决定是否展示确认归档完成 |
@@ -154,6 +154,7 @@ plan_pending -> plan_ready
 plan_pending -> supplement_required
 plan_pending -> rejected
 supplement_required -> plan_pending
+supplement_required -> submitted
 plan_ready -> plan_pending
 plan_ready -> confirmed
 confirmed -> developing
@@ -166,9 +167,9 @@ completed -> archived
 rejected -> archived
 ```
 
-其中 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> closeout_pending -> completed` 是主流程；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发，`closeout_pending` 表示需求人验收通过后待指定开发人员合并归档。`submitted` 和 `plan_pending` 可由指定开发人员选择 `supplement_required` 或 `rejected` 作为结论分支：`supplement_required` 表示需要需求创建人补充说明，补充后通过专用补充接口回到 `plan_pending`；`plan_ready -> plan_pending` 表示需求创建人对已生成需求设计提出调整说明并重新进入需求生成阶段；`rejected` 表示当前需求无法实现，可由管理员归档。`review -> repairing -> review` 是验收返修分支，但 `review -> repairing` 必须通过返修问题说明接口提交，普通状态接口不得绕过说明内容；`closeout_pending -> completed` 必须由指定开发人员完成本地任务分支合并、push 和平台知识库归档验证后才能提交；`archived` 用于兼容历史归档场景。不允许其他跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
+其中 `draft -> submitted -> plan_pending -> plan_ready -> confirmed -> developing -> review -> closeout_pending -> completed` 是主流程；`submitted` 表示待需求分析，`plan_pending` 表示待生成需求设计，`plan_ready` 表示需求设计待需求人员确认，`confirmed` 表示待执行开发，`closeout_pending` 表示需求人验收通过后待指定开发人员合并归档。`submitted` 和 `plan_pending` 可由指定开发人员选择 `supplement_required` 或 `rejected` 作为结论分支：`supplement_required` 表示需要需求创建人补充说明，补充后必须通过专用补充接口推进，不允许普通状态接口绕过补充正文；尚未存在 `requirement` 需求设计版本时补充后回到 `submitted`，由指定开发人员重新进行需求可行性评估，已存在 `requirement` 需求设计版本时补充后回到 `plan_pending`。`plan_ready -> plan_pending` 表示需求创建人对已生成需求设计提出调整说明并重新进入需求生成阶段；`rejected` 表示当前需求无法实现，可由管理员归档。`review -> repairing -> review` 是验收返修分支，但 `review -> repairing` 必须通过返修问题说明接口提交，普通状态接口不得绕过说明内容；`closeout_pending -> completed` 必须由指定开发人员完成本地任务分支合并、push 和平台知识库归档验证后才能提交；`archived` 用于兼容历史归档场景。不允许其他跳转或倒退，违反时抛出业务异常 `需求状态流转不允许`。
 
-`/requirement/demand/{demandId}/supplement` 请求体为 `{ "content": "补充说明正文" }`。该接口只允许需求创建人或管理员在 `supplement_required` 或 `plan_ready` 状态调用：`supplement_required` 表示补充基础需求信息，`plan_ready` 表示对已生成需求设计提出调整说明。调用成功后追加 `requirement_supplement` 资料包版本并把需求状态改回 `plan_pending`；开发人员必须重新通过需求生成指令回写新的 `requirement` 版本后，才能把 `plan_pending` 提交为 `plan_ready`。如果状态不是待补充说明或需求设计待确认、内容为空或操作者不是创建人，会返回业务异常。普通 `/requirement/package/{demandId}/{artifactType}` 保存接口仍不开放给需求人员写入补充说明。
+`/requirement/demand/{demandId}/supplement` 请求体为 `{ "content": "补充说明正文" }`。该接口只允许需求创建人或管理员在 `supplement_required` 或 `plan_ready` 状态调用：`supplement_required` 表示补充基础需求信息，`plan_ready` 表示对已生成需求设计提出调整说明。调用成功后追加 `requirement_supplement` 资料包版本；如果当前还没有 `requirement` 需求设计版本，状态改回 `submitted`，开发人员必须重新生成并回写需求可行性评估后再反馈分析结论；如果已经存在 `requirement` 需求设计版本，状态改回 `plan_pending`，开发人员必须重新通过需求生成指令回写新的 `requirement` 版本后，才能把 `plan_pending` 提交为 `plan_ready`。如果状态不是待补充说明或需求设计待确认、内容为空或操作者不是创建人，会返回业务异常。普通 `/requirement/package/{demandId}/{artifactType}` 保存接口仍不开放给需求人员写入补充说明，普通状态接口也不得从 `supplement_required` 直接推进到 `submitted` 或 `plan_pending`。
 
 `/requirement/demand/{demandId}/repair` 请求体为 `{ "content": "返修问题说明正文" }`。该接口只允许需求创建人或管理员在 `review` 待验收状态调用，内容不能为空。调用成功后追加 `requirement_supplement` 资料包版本，`versionNote=需求人返修问题说明`，并把需求状态改为 `repairing`；指定开发人员复制返修任务指令时必须读取 Review 报告和需求人返修问题说明，只处理本轮返修项，不重新生成需求设计或执行计划。普通 `/requirement/demand/{demandId}/status/repairing` 必须返回业务异常，提示先填写返修问题说明。
 
