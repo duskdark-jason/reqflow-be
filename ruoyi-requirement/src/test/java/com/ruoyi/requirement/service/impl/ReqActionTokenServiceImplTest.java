@@ -111,6 +111,8 @@ class ReqActionTokenServiceImplTest
         ReqActionTokenServiceImpl service = newService(mapper);
         String plainToken = "reqflow_action_test_token";
         ReqActionToken stored = token(88L, "0");
+        stored.setActionType("single_action");
+        stored.setTargetMethod("single_method");
         stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
         when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
         when(mapper.updateLastUsed(88L)).thenReturn(1);
@@ -154,6 +156,8 @@ class ReqActionTokenServiceImplTest
         ReqActionTokenServiceImpl service = newService(mapper);
         String plainToken = "reqflow_action_used_token";
         ReqActionToken stored = token(91L, "0");
+        stored.setActionType("single_action");
+        stored.setTargetMethod("single_method");
         stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
         stored.setLastUsedTime(new Date(System.currentTimeMillis() - 1000));
         when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
@@ -259,12 +263,32 @@ class ReqActionTokenServiceImplTest
     }
 
     @Test
+    void projectInitTokenCanResolveAfterPreviousRepositoryPublish()
+    {
+        ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
+        ReqActionTokenServiceImpl service = newService(mapper);
+        String plainToken = "reqflow_action_project_init_token";
+        ReqActionToken stored = reusableToken(98L, IReqActionTokenService.ACTION_PROJECT_INIT,
+                IReqActionTokenService.TARGET_PUBLISH_REPOSITORY_INDEX);
+        when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
+        when(mapper.touchLastUsed(98L)).thenReturn(1);
+
+        ReqActionToken resolved = service.resolveToken(plainToken);
+
+        assertEquals(98L, resolved.getTokenId());
+        verify(mapper).touchLastUsed(98L);
+        verify(mapper, never()).updateLastUsed(98L);
+    }
+
+    @Test
     void rejectsTokenWhenLastUsedUpdateDoesNotWin()
     {
         ReqActionTokenMapper mapper = mock(ReqActionTokenMapper.class);
         ReqActionTokenServiceImpl service = newService(mapper);
         String plainToken = "reqflow_action_race_token";
         ReqActionToken stored = token(92L, "0");
+        stored.setActionType("single_action");
+        stored.setTargetMethod("single_method");
         stored.setExpireTime(new Date(System.currentTimeMillis() + 60 * 60 * 1000));
         when(mapper.selectReqActionTokenByTokenHash(service.hashTokenForTest(plainToken))).thenReturn(stored);
         when(mapper.updateLastUsed(92L)).thenReturn(0);

@@ -61,7 +61,7 @@
 }
 ```
 
-`initInstruction.content` 是给接入项目复制的短动态上下文，不再重复完整执行步骤。内容只保留 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index`、`mcpTool: reqflow.publish_repository_index` 和一个项目初始化 `actionToken`，不得在复制正文中展开 `targetMethod`、`projectId`、`variantId`、项目名称、分支名称、有效期说明或调用解释。执行端必须先由全局 `reqflow-mcp` skill 使用 actionToken 调用 `get_action_context` 获取项目、项目分支、仓库和模板上下文，再按上下文调用 `get_harness_template` 与 `publish_repository_index`；完整初始化顺序由全局 skill 承接。初始化 actionToken 生成后 24 小时内有效且仅可使用一次，过期或已使用后必须重新生成初始化指令。
+`initInstruction.content` 是给接入项目复制的短动态上下文，不再重复完整执行步骤。内容只保留 `reqflow-mcp`、`mcpServer: reqflow`、`toolName: publish_repository_index`、`mcpTool: reqflow.publish_repository_index` 和一个项目初始化 `actionToken`，不得在复制正文中展开 `targetMethod`、`projectId`、`variantId`、项目名称、分支名称、有效期说明或调用解释。执行端必须先由全局 `reqflow-mcp` skill 使用 actionToken 调用 `get_action_context` 获取项目、项目分支、仓库和模板上下文，再按上下文调用 `get_harness_template` 与 `publish_repository_index`；完整初始化顺序由全局 skill 承接。初始化 actionToken 生成后 24 小时内有效，在当前项目分支初始化动作内可复用，支持同一项目分支的前端、后端等多个仓库连续发布索引。
 
 初始化保存请求 `project` 必须包含项目名称和项目编码；`repositories` 至少包含一条有效代码仓库，且仓库名称、仓库类型、Git 远端和默认分支不能为空，允许纯后端服务只维护一条 `BACKEND` 仓库；`variants` 至少包含一条项目分支，且分支中文标签 `branchLabel` 和真实分支名 `baselineBranch` 不能为空。`variantCode` 可以为空，后端会按真实分支名生成稳定兼容编码；`mcpKey` 可以为空，后端会按 `项目编码:分支编码` 生成兼容字段，前端主展示以 `initInstruction` 为准。
 
@@ -242,7 +242,7 @@ requirement_closeout
 
 `req_action_token.target_method` 对需求流程使用阶段级目标：`requirement_analysis` 只允许 `submitted` 状态调用 `upload_requirement_assessment`；`requirement_generate` 只允许 `plan_pending` 状态调用 `save_requirement_package`；`requirement_develop` 只允许 `developing` 状态调用 `save_development_plan`、`upload_execution_report` 和 `upload_review_report`；`requirement_repair` 只允许 `repairing` 状态调用 `upload_execution_report` 和 `upload_review_report`；`publish_repository_index` 可用于项目初始化或 `closeout_pending` 合并归档阶段发布完整知识库快照。
 
-动作 token 不是人员认证 Key，不能替代 MCP 请求头 `X-MCP-Key`；人员 Key 负责认证和权限，动作 token 负责让 MCP 服务识别应该调用哪个接口以及绑定到哪个项目、分支或需求上下文。动作 token 必须绑定流程阶段：需求分析 token 随 `submitted -> plan_pending` 失效，需求生成 token 随 `plan_pending -> plan_ready` 失效，开发阶段 token 随 `developing -> review` 失效，返修阶段 token 随 `repairing -> review` 失效，合并归档 token 随 `closeout_pending -> completed` 失效；`expire_time` 是最长保留兜底，超过 24 小时也必须重新生成。需求分析、需求生成、开发、返修和合并归档 token 都是阶段内可复用 token，可在有效阶段内多次用于本阶段允许的回写工具；项目初始化 token 仍按一次性动作 token 处理。任何列表、日志或前端持久化都不得展示 `token_hash`；明文 actionToken 只能写入对应本地 spec 的 `meta.md platformSync.actionToken`，用于当前阶段恢复和回写，不得写入 skill 文件、安装脚本、操作日志或公开文档。
+动作 token 不是人员认证 Key，不能替代 MCP 请求头 `X-MCP-Key`；人员 Key 负责认证和权限，动作 token 负责让 MCP 服务识别应该调用哪个接口以及绑定到哪个项目、分支或需求上下文。动作 token 必须绑定流程阶段或动作上下文：项目初始化 token 绑定项目分支初始化动作，需求分析 token 随 `submitted -> plan_pending` 失效，需求生成 token 随 `plan_pending -> plan_ready` 失效，开发阶段 token 随 `developing -> review` 失效，返修阶段 token 随 `repairing -> review` 失效，合并归档 token 随 `closeout_pending -> completed` 失效；`expire_time` 是最长保留兜底，超过 24 小时也必须重新生成。项目初始化、需求分析、需求生成、开发、返修和合并归档 token 都是上下文内可复用 token，可在有效上下文内多次用于本阶段允许的回写工具或索引发布；项目初始化 token 复用于同一项目分支的多个仓库索引发布。任何列表、日志或前端持久化都不得展示 `token_hash`；明文 actionToken 只能写入对应本地 spec 的 `meta.md platformSync.actionToken`，用于当前阶段恢复和回写，不得写入 skill 文件、安装脚本、操作日志或公开文档。
 
 ## MCP人员Key管理接口
 

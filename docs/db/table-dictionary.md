@@ -83,7 +83,7 @@
 | `req_action_token` | `project_id`、`variant_id`、`demand_id` | 动作上下文 | 必须和平台返回的项目、分支和需求一致。 |
 | `req_action_token` | `remark` | 动作补充说明 | 合并归档 token 是需求级阶段 token，不再通过 `remark` 绑定单个仓库；各仓库通过 `publish_repository_index.remoteUrl` 在 token 绑定的项目和项目分支内定位。 |
 | `req_repository_index_batch` | `remark` | 合并归档批次上下文 | 合并归档阶段通过 actionToken 发布索引时写入 `remark=closeoutDemandId={demandId};repoId={repoId}`；`closeout_pending -> completed` 必须逐仓确认存在该上下文的 `imported` 批次，旧索引批次不能替代本轮归档。 |
-| `req_action_token` | `expire_time`、`last_used_time` | 有效期和使用记录 | 动作 token 以流程阶段为有效边界，流转到下一流程即失效；`expire_time` 是最长 24 小时兜底。项目初始化 token 一次性消费；需求分析、需求生成、开发、返修和合并归档 token 在对应阶段内可复用并刷新 `last_used_time`。 |
+| `req_action_token` | `expire_time`、`last_used_time` | 有效期和使用记录 | 动作 token 以流程阶段或动作上下文为有效边界，流转到下一流程即失效；`expire_time` 是最长 24 小时兜底。项目初始化 token 在当前项目分支初始化动作内可复用，用于同一项目分支多个仓库发布索引；需求分析、需求生成、开发、返修和合并归档 token 在对应阶段内可复用并刷新 `last_used_time`。 |
 | `req_activity_log` | `event_type`、`metadata_json` | 事件类型和扩展信息 | 扩展 JSON 只存可审计摘要，不写敏感明文。 |
 
 ## 系统表关联点

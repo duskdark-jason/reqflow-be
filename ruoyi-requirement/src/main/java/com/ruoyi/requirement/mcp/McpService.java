@@ -414,7 +414,7 @@ public class McpService
         if ("publish_repository_index".equals(name))
         {
             ReqRepositoryIndexImportRequest indexRequest = toIndexRequest(arguments);
-            // 有 actionToken 时由索引服务按项目初始化或需求归档上下文做一次性校验；无 token 的管理导入仍要求全局索引权限。
+            // 有 actionToken 时由索引服务按项目初始化或需求归档上下文校验；无 token 的管理导入仍要求全局索引权限。
             if (indexRequest.getActionToken() == null || indexRequest.getActionToken().isEmpty())
             {
                 requirePermission("publish_repository_index", "req:index:import");
@@ -1460,7 +1460,7 @@ public class McpService
     private Map<String, Object> actionContextSchema()
     {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("actionToken", property("string", "平台复制指令中的动作 token；仅用于读取轻量阶段上下文，不消费一次性 token"));
+        properties.put("actionToken", property("string", "平台复制指令中的动作 token；仅用于读取轻量阶段上下文，不消费动作 token"));
         return objectSchema(properties, Collections.singletonList("actionToken"));
     }
 

@@ -125,7 +125,7 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         {
             throw new ServiceException("动作Token已使用，请重新生成");
         }
-        // 解析成功后记录使用时间。普通动作通过条件更新保证一次性消费，开发阶段 Token 仅刷新最近使用时间。
+        // 解析成功后记录使用时间。普通动作通过条件更新保证一次性消费，可复用阶段或初始化 Token 仅刷新最近使用时间。
         if (token.getTokenId() != null)
         {
             int updated = reusableStageToken
@@ -241,6 +241,10 @@ public class ReqActionTokenServiceImpl implements IReqActionTokenService
         {
             return TARGET_REQUIREMENT_DEVELOP.equals(token.getTargetMethod())
                     || TARGET_REQUIREMENT_REPAIR.equals(token.getTargetMethod());
+        }
+        if (ACTION_PROJECT_INIT.equals(token.getActionType()))
+        {
+            return TARGET_PUBLISH_REPOSITORY_INDEX.equals(token.getTargetMethod());
         }
         return ACTION_REQUIREMENT_CLOSEOUT.equals(token.getActionType())
                 && TARGET_PUBLISH_REPOSITORY_INDEX.equals(token.getTargetMethod());
